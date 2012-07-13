@@ -39,7 +39,6 @@ func (m *M) AddBuy(b *trade.Order) {
 	m.process()
 }
 
-// Currently when a match is made we favour the seller by always matching at the buyer's limit price
 // Does not currently allow for 'market' trades - will do in the future 
 func (m *M) process() {
 	for {
@@ -51,7 +50,7 @@ func (m *M) process() {
 		if b.Price >= s.Price {
 			if b.Amount > s.Amount {
 				amount := s.Amount
-				price := b.Price
+				price := price(b.Price, s.Price)
 				m.sells.Pop()
 				b.Amount -= amount // Dangerous in place modification
 				completeTrade(b,s,amount, price)
@@ -59,7 +58,7 @@ func (m *M) process() {
 			}
 			if s.Amount > b.Amount {
 				amount := b.Amount
-				price := b.Price
+				price := price(b.Price, s.Price)
 				m.buys.Pop()
 				s.Amount -= amount // Dangerous in place modification
 				completeTrade(b,s,amount, price)
@@ -67,7 +66,7 @@ func (m *M) process() {
 			}
 			if s.Amount == b.Amount {
 				amount := s.Amount
-				price := b.Price
+				price := price(b.Price, s.Price)
 				m.buys.Pop()
 				m.sells.Pop()
 				completeTrade(b,s,amount, price)
@@ -77,6 +76,11 @@ func (m *M) process() {
 			return
 		}
 	}
+}
+
+func price(bPrice, sPrice int64) int64 {
+	d := bPrice - sPrice
+	return sPrice + (d>>1)
 }
 
 func completeTrade(b, s *trade.Order, amount, price int64) {
