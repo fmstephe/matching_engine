@@ -70,7 +70,7 @@ func TestSimpleMatch(t *testing.T) {
 	s := trade.NewSell(2, 1, 2, stockId, trader2, trader2Chan)
 	m.AddBuy(b)
 	m.AddSell(s)
-	verify(t, <-trader1Chan, 1, 1, 2, trader2)
+	verify(t, <-trader1Chan, 1, 1, -2, trader2)
 	verify(t, <-trader2Chan, 2, 1, 2, trader1)
 }
 
@@ -84,10 +84,10 @@ func TestDoubleSellMatch(t *testing.T) {
 	trader3Chan := responseChan()
 	m.AddBuy(trade.NewBuy(1, 2, 2, stockId, trader1, trader1Chan))
 	m.AddSell(trade.NewSell(2, 1, 2, stockId, trader2, trader2Chan))
-	verify(t, <-trader1Chan, 1, 1, 2, trader2)
+	verify(t, <-trader1Chan, 1, 1, -2, trader2)
 	verify(t, <-trader2Chan, 2, 1, 2, trader1)
 	m.AddSell(trade.NewSell(3, 1, 2, stockId, trader3, trader3Chan))
-	verify(t, <-trader1Chan, 1, 1, 2, trader3)
+	verify(t, <-trader1Chan, 1, 1, -2, trader3)
 	verify(t, <-trader3Chan, 3, 1, 2, trader1)
 }
 
@@ -102,10 +102,10 @@ func TestDoubleBuyMatch(t *testing.T) {
 	m.AddSell(trade.NewSell(1, 2, 2, stockId, trader1, trader1Chan))
 	m.AddBuy(trade.NewBuy(2, 1, 2, stockId, trader2, trader2Chan))
 	verify(t, <-trader1Chan, 1, 1, 2, trader2)
-	verify(t, <-trader2Chan, 2, 1, 2, trader1)
+	verify(t, <-trader2Chan, 2, 1, -2, trader1)
 	m.AddBuy(trade.NewBuy(3, 1, 2, stockId, trader3, trader3Chan))
 	verify(t, <-trader1Chan, 1, 1, 2, trader3)
-	verify(t, <-trader3Chan, 3, 1, 2, trader1)
+	verify(t, <-trader3Chan, 3, 1, -2, trader1)
 }
 
 // Test matches lonely buy/sell pair, with same quantity, uses the mid-price point for trade price
@@ -117,7 +117,7 @@ func TestMidPrice(t *testing.T) {
 	trader2Chan := responseChan()
 	m.AddBuy(trade.NewBuy(1, 1, 6, stockId, trader1, trader1Chan))
 	m.AddSell(trade.NewSell(1, 1, 2, stockId, trader2, trader2Chan))
-	verify(t, <-trader1Chan, 1, 1, 4, trader2)
+	verify(t, <-trader1Chan, 1, 1, -4, trader2)
 	verify(t, <-trader2Chan, 1, 1, 4, trader1)
 }
 
@@ -130,7 +130,7 @@ func TestMidPriceBigSell(t *testing.T) {
 	trader2Chan := responseChan()
 	m.AddBuy(trade.NewBuy(1, 1, 6, stockId, trader1, trader1Chan))
 	m.AddSell(trade.NewSell(1, 10, 2, stockId, trader2, trader2Chan))
-	verify(t, <-trader1Chan, 1, 1, 4, trader2)
+	verify(t, <-trader1Chan, 1, 1, -4, trader2)
 	verify(t, <-trader2Chan, 1, 1, 4, trader1)
 }
 
@@ -143,7 +143,7 @@ func TestMidPriceBigBuy(t *testing.T) {
 	trader2Chan := responseChan()
 	m.AddBuy(trade.NewBuy(1, 10, 6, stockId, trader1, trader1Chan))
 	m.AddSell(trade.NewSell(1, 1, 2, stockId, trader2, trader2Chan))
-	verify(t, <-trader1Chan, 1, 1, 4, trader2)
+	verify(t, <-trader1Chan, 1, 1, -4, trader2)
 	verify(t, <-trader2Chan, 1, 1, 4, trader1)
 }
 

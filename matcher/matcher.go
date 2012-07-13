@@ -84,6 +84,6 @@ func price(bPrice, sPrice int64) int64 {
 }
 
 func completeTrade(b, s *trade.Order, amount, price int64) {
-	b.ResponseChan <- trade.NewResponse(b.TradeId, amount, price, s.Trader)
+	b.ResponseChan <- trade.NewResponse(b.TradeId, amount, -price, s.Trader)
 	s.ResponseChan <- trade.NewResponse(s.TradeId, amount, price, b.Trader)
 }
