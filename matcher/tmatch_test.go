@@ -2,18 +2,28 @@ package matcher
 
 import (
 	"testing"
-	"fmt"
 	"github.com/fmstephe/matching_engine/trade"
 )
 
 const (
-	stockId = "stock1"
-	trader1 = "trader1"
-	trader2 = "trader2"
-	trader3 = "trader3"
+	stockId = 1
+	trader1 = 1
+	trader2 = 2
+	trader3 = 3
 )
 
-func verify(t *testing.T, r *trade.Response, tradeId, amount, price int64, counterParty string) {
+type verifyVals struct {
+	price int64
+	amount uint32
+	tradeId uint32
+	counterParty uint32
+}
+
+func verify(t *testing.T, r *trade.Response, vals verifyVals) {
+	price := vals.price
+	amount := vals.amount
+	tradeId := vals.tradeId
+	counterParty := vals.counterParty
 	if (r.TradeId != tradeId) {
 		t.Errorf("Expecting %d trade-id, got %d instead", tradeId, r.TradeId)
 	}
@@ -30,6 +40,12 @@ func verify(t *testing.T, r *trade.Response, tradeId, amount, price int64, count
 
 func responseChan() chan *trade.Response {
 	return make(chan *trade.Response, 256)
+}
+
+func responseFunc(rc chan *trade.Response) func(*trade.Response) {
+	return func(response *trade.Response) {
+		rc <- response
+	}
 }
 
 func TestMidPoint(t *testing.T) {
@@ -62,119 +78,145 @@ func midpoint(t *testing.T, bPrice, sPrice, expected int64) {
 // Basic test matches lonely buy/sell trade pair which match exactly
 func TestSimpleMatch(t *testing.T) {
 	m := New(stockId)
-	addLowBuys(m, 1)
+	addLowBuys(m, 5)
 	addHighSells(m, 10)
 	trader1Chan := responseChan()
 	trader2Chan := responseChan()
-	b := trade.NewBuy(1, 1, 2, stockId, trader1, trader1Chan)
-	s := trade.NewSell(2, 1, 2, stockId, trader2, trader2Chan)
-	m.AddBuy(b)
-	m.AddSell(s)
-	verify(t, <-trader1Chan, 1, 1, -2, trader2)
-	verify(t, <-trader2Chan, 2, 1, 2, trader1)
+	// Add Buy
+	costData := trade.CostData{Price: 7, Amount: 1}
+	tradeData := trade.TradeData{TraderId: trader1, TradeId: 1, StockId: stockId}
+	m.AddBuy(trade.NewBuy(costData, tradeData, responseFunc(trader1Chan)))
+	// Add sell
+	costData = trade.CostData{Price: 7, Amount: 1}
+	tradeData = trade.TradeData{TraderId: trader2, TradeId: 2, StockId: stockId}
+	m.AddSell(trade.NewSell(costData, tradeData, responseFunc(trader2Chan)))
+	// Verify
+	verify(t, <-trader1Chan, verifyVals{price: -7, amount: 1, tradeId: 1, counterParty: trader2})
+	verify(t, <-trader2Chan, verifyVals{price: 7, amount: 1, tradeId: 2, counterParty: trader1})
 }
 
 // Test matches one buy order to two separate sells
 func TestDoubleSellMatch(t *testing.T) {
 	m := New(stockId)
-	addLowBuys(m, 1)
+	addLowBuys(m, 5)
 	addHighSells(m, 10)
 	trader1Chan := responseChan()
 	trader2Chan := responseChan()
 	trader3Chan := responseChan()
-	m.AddBuy(trade.NewBuy(1, 2, 2, stockId, trader1, trader1Chan))
-	m.AddSell(trade.NewSell(2, 1, 2, stockId, trader2, trader2Chan))
-	verify(t, <-trader1Chan, 1, 1, -2, trader2)
-	verify(t, <-trader2Chan, 2, 1, 2, trader1)
-	m.AddSell(trade.NewSell(3, 1, 2, stockId, trader3, trader3Chan))
-	verify(t, <-trader1Chan, 1, 1, -2, trader3)
-	verify(t, <-trader3Chan, 3, 1, 2, trader1)
+	// Add Buy
+	costData := trade.CostData{Price: 7, Amount: 2}
+	tradeData := trade.TradeData{TraderId: trader1, TradeId: 1, StockId: stockId}
+	m.AddBuy(trade.NewBuy(costData, tradeData, responseFunc(trader1Chan)))
+	// Add Sell
+	costData = trade.CostData{Price: 7, Amount: 1}
+	tradeData = trade.TradeData{TraderId: trader2, TradeId: 2, StockId: stockId}
+	m.AddSell(trade.NewSell(costData, tradeData, responseFunc(trader2Chan)))
+	// Verify
+	verify(t, <-trader1Chan, verifyVals{price: -7, amount: 1, tradeId: 1,counterParty: trader2})
+	verify(t, <-trader2Chan, verifyVals{price: 7, amount: 1, tradeId: 2, counterParty: trader1})
+	// Add Sell
+	costData = trade.CostData{Price: 7, Amount: 1}
+	tradeData = trade.TradeData{TraderId: trader3, TradeId: 3, StockId: stockId}
+	m.AddSell(trade.NewSell(costData, tradeData, responseFunc(trader3Chan)))
+	// Verify
+	verify(t, <-trader1Chan, verifyVals{price: -7, amount: 1, tradeId: 1, counterParty: trader3})
+	verify(t, <-trader3Chan, verifyVals{price: 7, amount: 1, tradeId: 3, counterParty: trader1})
 }
 
 // Test matches two buy orders to one sell
 func TestDoubleBuyMatch(t *testing.T) {
 	m := New(stockId)
-	addLowBuys(m, 1)
+	addLowBuys(m, 5)
 	addHighSells(m, 10)
 	trader1Chan := responseChan()
 	trader2Chan := responseChan()
 	trader3Chan := responseChan()
-	m.AddSell(trade.NewSell(1, 2, 2, stockId, trader1, trader1Chan))
-	m.AddBuy(trade.NewBuy(2, 1, 2, stockId, trader2, trader2Chan))
-	verify(t, <-trader1Chan, 1, 1, 2, trader2)
-	verify(t, <-trader2Chan, 2, 1, -2, trader1)
-	m.AddBuy(trade.NewBuy(3, 1, 2, stockId, trader3, trader3Chan))
-	verify(t, <-trader1Chan, 1, 1, 2, trader3)
-	verify(t, <-trader3Chan, 3, 1, -2, trader1)
+	// Add Sell
+	costData := trade.CostData{Price: 7, Amount: 2}
+	tradeData := trade.TradeData{TraderId: trader1, TradeId: 1, StockId: stockId}
+	m.AddSell(trade.NewSell(costData, tradeData, responseFunc(trader1Chan)))
+	// Add Buy
+	costData = trade.CostData{Price: 7, Amount: 1}
+	tradeData = trade.TradeData{TraderId: trader2, TradeId: 2, StockId: stockId}
+	m.AddBuy(trade.NewBuy(costData, tradeData, responseFunc(trader2Chan)))
+	verify(t, <-trader1Chan, verifyVals{price: 7, amount: 1, tradeId: 1, counterParty: trader2})
+	verify(t, <-trader2Chan, verifyVals{price: -7, amount: 1, tradeId: 2, counterParty: trader1})
+	// Add Buy
+	costData = trade.CostData{Price: 7, Amount: 1}
+	tradeData = trade.TradeData{TraderId: trader3, TradeId: 3, StockId: stockId}
+	m.AddBuy(trade.NewBuy(costData, tradeData, responseFunc(trader3Chan)))
+	verify(t, <-trader1Chan, verifyVals{price: 7, amount: 1, tradeId: 1, counterParty: trader3})
+	verify(t, <-trader3Chan, verifyVals{price: -7, amount: 1, tradeId: 3, counterParty: trader1})
 }
 
 // Test matches lonely buy/sell pair, with same quantity, uses the mid-price point for trade price
 func TestMidPrice(t *testing.T) {
 	m := New(stockId)
-	addLowBuys(m, 1)
+	addLowBuys(m, 5)
 	addHighSells(m, 10)
 	trader1Chan := responseChan()
 	trader2Chan := responseChan()
-	m.AddBuy(trade.NewBuy(1, 1, 6, stockId, trader1, trader1Chan))
-	m.AddSell(trade.NewSell(1, 1, 2, stockId, trader2, trader2Chan))
-	verify(t, <-trader1Chan, 1, 1, -4, trader2)
-	verify(t, <-trader2Chan, 1, 1, 4, trader1)
+	// Add Buy
+	costData := trade.CostData{Price: 9, Amount: 1}
+	tradeData := trade.TradeData{TraderId: trader1, TradeId: 1, StockId: stockId}
+	m.AddBuy(trade.NewBuy(costData, tradeData, responseFunc(trader1Chan)))
+	// Add Sell
+	costData = trade.CostData{Price: 6, Amount: 1}
+	tradeData = trade.TradeData{TraderId: trader2, TradeId: 1, StockId: stockId}
+	m.AddSell(trade.NewSell(costData, tradeData, responseFunc(trader2Chan)))
+	verify(t, <-trader1Chan, verifyVals{price: -7, amount: 1, tradeId: 1, counterParty: trader2})
+	verify(t, <-trader2Chan, verifyVals{price: 7, amount: 1, tradeId: 1, counterParty: trader1})
 }
 
 // Test matches lonely buy/sell pair, sell > quantity, and uses the mid-price point for trade price
 func TestMidPriceBigSell(t *testing.T) {
 	m := New(stockId)
-	addLowBuys(m, 1)
+	addLowBuys(m, 5)
 	addHighSells(m, 10)
 	trader1Chan := responseChan()
 	trader2Chan := responseChan()
-	m.AddBuy(trade.NewBuy(1, 1, 6, stockId, trader1, trader1Chan))
-	m.AddSell(trade.NewSell(1, 10, 2, stockId, trader2, trader2Chan))
-	verify(t, <-trader1Chan, 1, 1, -4, trader2)
-	verify(t, <-trader2Chan, 1, 1, 4, trader1)
+	// Add Buy
+	costData := trade.CostData{Price: 9, Amount: 1}
+	tradeData := trade.TradeData{TraderId: trader1, TradeId: 1, StockId: stockId}
+	m.AddBuy(trade.NewBuy(costData, tradeData, responseFunc(trader1Chan)))
+	// Add Sell
+	costData = trade.CostData{Price: 6, Amount: 10}
+	tradeData = trade.TradeData{TraderId: trader2, TradeId: 1, StockId: stockId}
+	m.AddSell(trade.NewSell(costData, tradeData, responseFunc(trader2Chan)))
+	// Verify
+	verify(t, <-trader1Chan, verifyVals{price: -7, amount: 1, tradeId: 1, counterParty: trader2})
+	verify(t, <-trader2Chan, verifyVals{price: 7, amount: 1, tradeId: 1, counterParty: trader1})
 }
 
 // Test matches lonely buy/sell pair, buy > quantity, and uses the mid-price point for trade price
 func TestMidPriceBigBuy(t *testing.T) {
 	m := New(stockId)
-	addLowBuys(m, 1)
+	addLowBuys(m, 5)
 	addHighSells(m, 10)
 	trader1Chan := responseChan()
 	trader2Chan := responseChan()
-	m.AddBuy(trade.NewBuy(1, 10, 6, stockId, trader1, trader1Chan))
-	m.AddSell(trade.NewSell(1, 1, 2, stockId, trader2, trader2Chan))
-	verify(t, <-trader1Chan, 1, 1, -4, trader2)
-	verify(t, <-trader2Chan, 1, 1, 4, trader1)
+	// Add Buy
+	costData := trade.CostData{Price: 9, Amount: 10}
+	tradeData := trade.TradeData{TraderId: trader1, TradeId: 1, StockId: stockId}
+	m.AddBuy(trade.NewBuy(costData, tradeData, responseFunc(trader1Chan)))
+	// Add Sell
+	costData = trade.CostData{Price: 6, Amount: 1}
+	tradeData = trade.TradeData{TraderId: trader2, TradeId: 1, StockId: stockId}
+	m.AddSell(trade.NewSell(costData, tradeData, responseFunc(trader2Chan)))
+	verify(t, <-trader1Chan, verifyVals{price: -7, amount: 1, tradeId: 1, counterParty: trader2})
+	verify(t, <-trader2Chan, verifyVals{price: 7, amount: 1, tradeId: 1, counterParty: trader1})
 }
 
 func addLowBuys(m *M, highestPrice int64) {
-	price := highestPrice
-	for i := 0; i < 10; i++ {
-		rc := responseChan()
-		m.AddBuy(trade.NewBuy(1, 1, price, stockId, fmt.Sprintf("spamBuyTrader%d",i), rc))
-		go func() {
-			println(fmt.Sprintf("%v", <-rc))
-			println("I should not have sucessfully made a buy")
-		}()
-		price--
-		if price == 0 {
-			price = highestPrice
-		}
+	buys := mkBuys(10, 1, highestPrice)
+	for _, buy := range buys {
+		m.AddBuy(buy)
 	}
 }
 
 func addHighSells(m *M, lowestPrice int64) {
-	price := lowestPrice
-	for i := 0; i < 10; i++ {
-		rc := responseChan()
-		m.AddSell(trade.NewSell(1, 1, price, stockId, fmt.Sprintf("spamSellTrader%d",i), rc))
-		go func() {
-			println(fmt.Sprintf("%v", <-rc))
-			println("I should not have successfully make a sell")
-		}()
-		price++
-		if price == lowestPrice*2 {
-			price = lowestPrice
-		}
+	sells := mkSells(10, lowestPrice, lowestPrice+10000)
+	for _, sell := range sells {
+		m.AddSell(sell)
 	}
 }

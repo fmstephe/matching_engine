@@ -1,59 +1,60 @@
 package trade
 
 import(
-	"github.com/fmstephe/heap"
 )
 
 const (
-	SELL = TradeType(-1)
-	BUY = TradeType(1)
+	SELL = TradeType(true)
+	BUY = TradeType(false)
 	MarketPrice = 0
 )
 
-type TradeType int32
+type TradeType bool
+
+type CostData struct {
+	Price int64 // The highest/lowest acceptable price for a buy/sell
+	Amount uint32 // The number of units desired to buy/sell
+}
+
+type TradeData struct {
+	TraderId uint32 // Identifies the submitting trader
+	TradeId uint32 // Identifies this trade to the submitting trader
+	StockId uint32 // Identifies the stock for trade
+}
 
 type Order struct {
-	TradeId int64 // Identifies this trade to the submitting trader
-	Amount int64 // The number of units desired to buy/sell
-	Price int64 // The highest/lowest acceptable price for a buy/sell
-	StockId string
-	Trader string
+	CostData
+	TradeData
+	ResponseFunc func(*Response)
 	BuySell TradeType // Indicates whether this trade is a buy or a sell
-	ResponseChan chan *Response
-	// Matching engine fields
-	Seq int64 // Unique sequence number 
-	Index int // The index of this trade in the heap
+	// Linked List fields
+	Next *Order // The next order in this limit
+	Incoming **Order // The pointer pointing to this order - used for deletion
 }
 
-// TODO this does not account for Seq, which it should
-func (t *Order) Less(e heap.Elem) bool {
-	ot := e.(*Order)
-	return (ot.Price - t.Price) * int64(t.BuySell) < 0
+func (o *Order) GUID() uint64 {
+	return (uint64(o.TraderId) << 32) | uint64(o.TradeId)
 }
 
-func (t *Order) SetIndex(i int) {
-	t.Index = i
+func NewBuy(costData CostData, tradeData TradeData, responseFunc func(*Response)) *Order {
+	return NewOrder(costData, tradeData, responseFunc, BUY)
 }
 
-func NewBuy(tradeId, amount, price int64, stockId, trader string, rc chan *Response) *Order {
-	return NewOrder(tradeId, amount, price, stockId, trader, rc, BUY)
+func NewSell(costData CostData, tradeData TradeData, responseFunc func(*Response)) *Order {
+	return NewOrder(costData, tradeData, responseFunc, SELL)
 }
 
-func NewSell(tradeId, amount, price int64, stockId, trader string, rc chan *Response) *Order {
-	return NewOrder(tradeId, amount, price, stockId, trader, rc, SELL)
-}
-
-func NewOrder(tradeId, amount, price int64, stockId, trader string, rc chan *Response, buySell TradeType) *Order {
-	return &Order{TradeId: tradeId, Amount: amount, Price: price, StockId: stockId, Trader: trader, ResponseChan: rc, BuySell: buySell}
+func NewOrder(costData CostData, tradeData TradeData,responseFunc func(*Response), buySell TradeType) *Order {
+	return &Order{CostData:costData, TradeData:tradeData, ResponseFunc:responseFunc, BuySell: buySell}
 }
 
 type Response struct {
-	TradeId int64 // Links this trade back to a previously submitted Order
-	Amount int64 // The number of units actually bought or sold
 	Price int64 // The actual trade price, will be negative if a purchase was made
-	CounterParty string // The trader-id of the other half of this trade
+	Amount uint32 // The number of units actually bought or sold
+	TradeId uint32 // Links this trade back to a previously submitted Order
+	CounterParty uint32 // The trader-id of the other half of this trade
 }
 
-func NewResponse(tradeId, amount, price int64, counterParty string) *Response {
-	return &Response{TradeId: tradeId, Amount: amount, Price: price, CounterParty: counterParty}
+func NewResponse(price int64, amount, tradeId, counterParty uint32) *Response {
+	return &Response{Price: price, Amount: amount, TradeId: tradeId, CounterParty: counterParty}
 }

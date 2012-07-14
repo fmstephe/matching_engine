@@ -1,7 +1,6 @@
 package matcher
 
 import (
-	"fmt"
 	"github.com/fmstephe/matching_engine/trade"
 	"testing"
 	"math/rand"
@@ -17,9 +16,7 @@ var sells []*trade.Order
 
 func init() {
 	buys = mkBuys(orderNum, 1000, 1500)
-	println("Finished Buys")
 	sells  = mkSells(orderNum, 1000, 1500)
-	println("Finished Sells")
 }
 
 func valRange(n int, low, high int64) []int64 {
@@ -42,11 +39,12 @@ func mkOrders(n int, low, high int64, buySell trade.TradeType) []*trade.Order {
 	prices := valRange(n, low, high)
 	orders := make([]*trade.Order, n)
 	for i, price := range prices {
-		rc := make(chan *trade.Response, 256)
-		orders[i] = trade.NewOrder(int64(i), 1, price, stockId, fmt.Sprintf("benchTrader%d",i), rc, buySell)
-		go func() {
-			<-rc
-		}()
+		responseFunc := func(response *trade.Response) {
+			// Do Nothing
+		}
+		costData := trade.CostData{Price: price, Amount: 1}
+		tradeData := trade.TradeData{TraderId: uint32(i), TradeId: uint32(i), StockId: stockId}
+		orders[i] = trade.NewOrder(costData, tradeData, responseFunc, buySell)
 	}
 	return orders
 }

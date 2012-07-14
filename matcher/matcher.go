@@ -3,17 +3,17 @@ package matcher
 import (
 	"fmt"
 	"github.com/fmstephe/matching_engine/trade"
-	"github.com/fmstephe/heap"
+	"github.com/fmstephe/matching_engine/heap"
 )
 
 type M struct {
 	buys, sells heap.Interface
-	stockId string
+	stockId uint32
 }
 
-func New(stockId string) *M {
-	buys := heap.New()
-	sells := heap.New()
+func New(stockId uint32) *M {
+	buys := heap.New(trade.BUY)
+	sells := heap.New(trade.SELL)
 	return &M{buys: buys, sells: sells, stockId: stockId}
 }
 
@@ -47,15 +47,15 @@ func (m *M) process() {
 		if m.buys.Len() == 0 || m.sells.Len() == 0 {
 			return
 		}
-		b := m.buys.Peek().(*trade.Order)
-		s := m.sells.Peek().(*trade.Order)
+		b := m.buys.Peek()
+		s := m.sells.Peek()
 		if b.Price >= s.Price {
 			if b.Amount > s.Amount {
 				amount := s.Amount
 				price := price(b.Price, s.Price)
 				m.sells.Pop()
 				b.Amount -= amount // Dangerous in place modification
-				completeTrade(b,s,amount, price)
+				completeTrade(b, s, price, amount)
 				continue
 			}
 			if s.Amount > b.Amount {
@@ -63,7 +63,7 @@ func (m *M) process() {
 				price := price(b.Price, s.Price)
 				m.buys.Pop()
 				s.Amount -= amount // Dangerous in place modification
-				completeTrade(b,s,amount, price)
+				completeTrade(b, s, price, amount)
 				continue
 			}
 			if s.Amount == b.Amount {
@@ -71,7 +71,7 @@ func (m *M) process() {
 				price := price(b.Price, s.Price)
 				m.buys.Pop()
 				m.sells.Pop()
-				completeTrade(b,s,amount, price)
+				completeTrade(b, s, price, amount)
 				continue
 			}
 		} else {
@@ -88,7 +88,7 @@ func price(bPrice, sPrice int64) int64 {
 	return sPrice + (d>>1)
 }
 
-func completeTrade(b, s *trade.Order, amount, price int64) {
-	b.ResponseChan <- trade.NewResponse(b.TradeId, amount, -price, s.Trader)
-	s.ResponseChan <- trade.NewResponse(s.TradeId, amount, price, b.Trader)
+func completeTrade(b, s *trade.Order, price int64, amount uint32) {
+	b.ResponseFunc(trade.NewResponse(-price, amount, b.TradeId, s.TraderId))
+	s.ResponseFunc(trade.NewResponse(price, amount, s.TradeId, b.TraderId))
 }
