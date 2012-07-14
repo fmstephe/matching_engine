@@ -35,14 +35,14 @@ func (t *Order) SetIndex(i int) {
 }
 
 func NewBuy(tradeId, amount, price int64, stockId, trader string, rc chan *Response) *Order {
-	return newOrder(tradeId, amount, price, stockId, trader, rc, BUY)
+	return NewOrder(tradeId, amount, price, stockId, trader, rc, BUY)
 }
 
 func NewSell(tradeId, amount, price int64, stockId, trader string, rc chan *Response) *Order {
-	return newOrder(tradeId, amount, price, stockId, trader, rc, SELL)
+	return NewOrder(tradeId, amount, price, stockId, trader, rc, SELL)
 }
 
-func newOrder(tradeId, amount, price int64, stockId, trader string, rc chan *Response, buySell TradeType) *Order {
+func NewOrder(tradeId, amount, price int64, stockId, trader string, rc chan *Response, buySell TradeType) *Order {
 	return &Order{TradeId: tradeId, Amount: amount, Price: price, StockId: stockId, Trader: trader, ResponseChan: rc, BuySell: buySell}
 }
 
