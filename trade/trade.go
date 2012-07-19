@@ -5,11 +5,12 @@ import(
 )
 
 const (
-	SELL = -1
-	BUY = 1
+	SELL = TradeType(-1)
+	BUY = TradeType(1)
+	MarketPrice = 0
 )
 
-type TradeType int64
+type TradeType int32
 
 type Order struct {
 	TradeId int64 // Identifies this trade to the submitting trader
@@ -27,7 +28,7 @@ type Order struct {
 // TODO this does not account for Seq, which it should
 func (t *Order) Less(e heap.Elem) bool {
 	ot := e.(*Order)
-	return (ot.Price - t.Price) * int64(t.BuySell) < 0
+	return (ot.Price - t.Price) * int32(t.BuySell) < 0
 }
 
 func (t *Order) SetIndex(i int) {

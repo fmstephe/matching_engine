@@ -35,11 +35,13 @@ func (m *M) AddBuy(b *trade.Order) {
 	if b.StockId != m.stockId {
 		panic(fmt.Sprintf("Added buy trade with stock-id %s expecting %s", b.StockId, m.stockId))
 	}
+	if b.Price == trade.MarketPrice {
+		panic("It is illegal to submit a buy at market price")
+	}
 	m.buys.Push(b)
 	m.process()
 }
 
-// Does not currently allow for 'market' trades - will do in the future 
 func (m *M) process() {
 	for {
 		if m.buys.Len() == 0 || m.sells.Len() == 0 {
@@ -79,6 +81,9 @@ func (m *M) process() {
 }
 
 func price(bPrice, sPrice int64) int64 {
+	if sPrice == trade.MarketPrice {
+		return bPrice
+	}
 	d := bPrice - sPrice
 	return sPrice + (d>>1)
 }
