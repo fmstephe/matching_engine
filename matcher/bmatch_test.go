@@ -2,8 +2,8 @@ package matcher
 
 import (
 	"github.com/fmstephe/matching_engine/trade"
-	"testing"
 	"math/rand"
+	"testing"
 )
 
 const (
@@ -20,7 +20,7 @@ func prepare(b *testing.B) {
 		buys = mkBuys(orderNum, 1000, 1500)
 	}
 	if sells == nil {
-		sells  = mkSells(orderNum, 1000, 1500)
+		sells = mkSells(orderNum, 1000, 1500)
 	}
 	b.StartTimer()
 }
@@ -28,7 +28,7 @@ func prepare(b *testing.B) {
 func valRange(n int, low, high int64) []int64 {
 	vals := make([]int64, n)
 	for i := 0; i < n; i++ {
-		vals[i] = rand.Int63n(high - low) + low
+		vals[i] = rand.Int63n(high-low) + low
 	}
 	return vals
 }

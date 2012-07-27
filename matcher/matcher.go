@@ -2,13 +2,13 @@ package matcher
 
 import (
 	"fmt"
-	"github.com/fmstephe/matching_engine/trade"
 	"github.com/fmstephe/matching_engine/heap"
+	"github.com/fmstephe/matching_engine/trade"
 )
 
 type M struct {
 	buys, sells heap.Interface
-	stockId uint32
+	stockId     uint32
 }
 
 func New(stockId uint32) *M {
@@ -85,7 +85,7 @@ func price(bPrice, sPrice int64) int64 {
 		return bPrice
 	}
 	d := bPrice - sPrice
-	return sPrice + (d>>1)
+	return sPrice + (d >> 1)
 }
 
 func completeTrade(b, s *trade.Order, price int64, amount uint32) {

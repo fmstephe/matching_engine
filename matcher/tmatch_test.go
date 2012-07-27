@@ -1,8 +1,8 @@
 package matcher
 
 import (
-	"testing"
 	"github.com/fmstephe/matching_engine/trade"
+	"testing"
 )
 
 const (
@@ -13,9 +13,9 @@ const (
 )
 
 type verifyVals struct {
-	price int64
-	amount uint32
-	tradeId uint32
+	price        int64
+	amount       uint32
+	tradeId      uint32
 	counterParty uint32
 }
 
@@ -24,16 +24,16 @@ func verify(t *testing.T, r *trade.Response, vals verifyVals) {
 	amount := vals.amount
 	tradeId := vals.tradeId
 	counterParty := vals.counterParty
-	if (r.TradeId != tradeId) {
+	if r.TradeId != tradeId {
 		t.Errorf("Expecting %d trade-id, got %d instead", tradeId, r.TradeId)
 	}
-	if (r.Amount != amount) {
+	if r.Amount != amount {
 		t.Errorf("Expecting %d amount, got %d instead", amount, r.Amount)
 	}
-	if (r.Price != price) {
+	if r.Price != price {
 		t.Errorf("Expecting %d price, got %d instead", price, r.Price)
 	}
-	if (r.CounterParty != counterParty) {
+	if r.CounterParty != counterParty {
 		t.Errorf("Expecting %d counter party, got %d instead", counterParty, r.CounterParty)
 	}
 }
@@ -112,7 +112,7 @@ func TestDoubleSellMatch(t *testing.T) {
 	tradeData = trade.TradeData{TraderId: trader2, TradeId: 2, StockId: stockId}
 	m.AddSell(trade.NewSell(costData, tradeData, responseFunc(trader2Chan)))
 	// Verify
-	verify(t, <-trader1Chan, verifyVals{price: -7, amount: 1, tradeId: 1,counterParty: trader2})
+	verify(t, <-trader1Chan, verifyVals{price: -7, amount: 1, tradeId: 1, counterParty: trader2})
 	verify(t, <-trader2Chan, verifyVals{price: 7, amount: 1, tradeId: 2, counterParty: trader1})
 	// Add Sell
 	costData = trade.CostData{Price: 7, Amount: 1}
