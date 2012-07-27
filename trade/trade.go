@@ -28,7 +28,7 @@ type Order struct {
 // TODO this does not account for Seq, which it should
 func (t *Order) Less(e heap.Elem) bool {
 	ot := e.(*Order)
-	return (ot.Price - t.Price) * int32(t.BuySell) < 0
+	return (ot.Price - t.Price) * int64(t.BuySell) < 0
 }
 
 func (t *Order) SetIndex(i int) {
