@@ -7,16 +7,22 @@ import (
 )
 
 const (
-	orderNum = 1000 * 10
+	orderNum = 1000 * 1000
 )
 
 var benchRand = rand.New(rand.NewSource(1))
 var buys []*trade.Order
 var sells []*trade.Order
 
-func init() {
-	buys = mkBuys(orderNum, 1000, 1500)
-	sells  = mkSells(orderNum, 1000, 1500)
+func prepare(b *testing.B) {
+	b.StopTimer()
+	if buys == nil {
+		buys = mkBuys(orderNum, 1000, 1500)
+	}
+	if sells == nil {
+		sells  = mkSells(orderNum, 1000, 1500)
+	}
+	b.StartTimer()
 }
 
 func valRange(n int, low, high int64) []int64 {
@@ -50,6 +56,7 @@ func mkOrders(n int, low, high int64, buySell trade.TradeType) []*trade.Order {
 }
 
 func BenchmarkAddBuy(b *testing.B) {
+	prepare(b)
 	m := New(stockId)
 	for _, buy := range buys {
 		m.AddBuy(buy)
@@ -57,6 +64,7 @@ func BenchmarkAddBuy(b *testing.B) {
 }
 
 func BenchmarkAddSell(b *testing.B) {
+	prepare(b)
 	m := New(stockId)
 	for _, buy := range buys {
 		m.AddBuy(buy)
@@ -64,6 +72,7 @@ func BenchmarkAddSell(b *testing.B) {
 }
 
 func BenchmarkMatch(b *testing.B) {
+	prepare(b)
 	m := New(stockId)
 	for i := 0; i < orderNum; i++ {
 		m.AddBuy(buys[i])
