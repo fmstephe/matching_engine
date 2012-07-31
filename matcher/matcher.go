@@ -2,23 +2,21 @@ package matcher
 
 import (
 	"fmt"
-	"github.com/fmstephe/matching_engine/heap"
-	"github.com/fmstephe/matching_engine/trade"
 )
 
 type M struct {
-	buys, sells heap.Interface
+	buys, sells *heap
 	stockId     uint32
 }
 
-func New(stockId uint32) *M {
-	buys := heap.New(trade.BUY)
-	sells := heap.New(trade.SELL)
+func NewMatcher(stockId uint32) *M {
+	buys := newHeap(BUY)
+	sells := newHeap(SELL)
 	return &M{buys: buys, sells: sells, stockId: stockId}
 }
 
-func (m *M) AddSell(s *trade.Order) {
-	if s.BuySell != trade.SELL {
+func (m *M) AddSell(s *Order) {
+	if s.BuySell != SELL {
 		panic("Added non-sell trade as a sell")
 	}
 	if s.StockId != m.stockId {
@@ -28,14 +26,14 @@ func (m *M) AddSell(s *trade.Order) {
 	m.process()
 }
 
-func (m *M) AddBuy(b *trade.Order) {
-	if b.BuySell != trade.BUY {
+func (m *M) AddBuy(b *Order) {
+	if b.BuySell != BUY {
 		panic("Added non-buy trade as a buy")
 	}
 	if b.StockId != m.stockId {
 		panic(fmt.Sprintf("Added buy trade with stock-id %s expecting %s", b.StockId, m.stockId))
 	}
-	if b.Price == trade.MarketPrice {
+	if b.Price == MarketPrice {
 		panic("It is illegal to submit a buy at market price")
 	}
 	m.buys.Push(b)
@@ -81,14 +79,14 @@ func (m *M) process() {
 }
 
 func price(bPrice, sPrice int64) int64 {
-	if sPrice == trade.MarketPrice {
+	if sPrice == MarketPrice {
 		return bPrice
 	}
 	d := bPrice - sPrice
 	return sPrice + (d >> 1)
 }
 
-func completeTrade(b, s *trade.Order, price int64, amount uint32) {
-	b.ResponseFunc(trade.NewResponse(-price, amount, b.TradeId, s.TraderId))
-	s.ResponseFunc(trade.NewResponse(price, amount, s.TradeId, b.TraderId))
+func completeTrade(b, s *Order, price int64, amount uint32) {
+	b.ResponseFunc(NewResponse(-price, amount, b.TradeId, s.TraderId))
+	s.ResponseFunc(NewResponse(price, amount, s.TradeId, b.TraderId))
 }

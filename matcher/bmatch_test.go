@@ -1,7 +1,6 @@
 package matcher
 
 import (
-	"github.com/fmstephe/matching_engine/trade"
 	"math/rand"
 	"testing"
 )
@@ -11,8 +10,8 @@ const (
 )
 
 var benchRand = rand.New(rand.NewSource(1))
-var buys []*trade.Order
-var sells []*trade.Order
+var buys []*Order
+var sells []*Order
 
 func prepare(b *testing.B) {
 	b.StopTimer()
@@ -33,31 +32,31 @@ func valRange(n int, low, high int64) []int64 {
 	return vals
 }
 
-func mkBuys(n int, low, high int64) []*trade.Order {
-	return mkOrders(n, low, high, trade.BUY)
+func mkBuys(n int, low, high int64) []*Order {
+	return mkOrders(n, low, high, BUY)
 }
 
-func mkSells(n int, low, high int64) []*trade.Order {
-	return mkOrders(n, low, high, trade.SELL)
+func mkSells(n int, low, high int64) []*Order {
+	return mkOrders(n, low, high, SELL)
 }
 
-func mkOrders(n int, low, high int64, buySell trade.TradeType) []*trade.Order {
+func mkOrders(n int, low, high int64, buySell TradeType) []*Order {
 	prices := valRange(n, low, high)
-	orders := make([]*trade.Order, n)
+	orders := make([]*Order, n)
 	for i, price := range prices {
-		responseFunc := func(response *trade.Response) {
+		responseFunc := func(response *Response) {
 			// Do Nothing
 		}
-		costData := trade.CostData{Price: price, Amount: 1}
-		tradeData := trade.TradeData{TraderId: uint32(i), TradeId: uint32(i), StockId: stockId}
-		orders[i] = trade.NewOrder(costData, tradeData, responseFunc, buySell)
+		costData := CostData{Price: price, Amount: 1}
+		tradeData := TradeData{TraderId: uint32(i), TradeId: uint32(i), StockId: stockId}
+		orders[i] = NewOrder(costData, tradeData, responseFunc, buySell)
 	}
 	return orders
 }
 
 func BenchmarkAddBuy(b *testing.B) {
 	prepare(b)
-	m := New(stockId)
+	m := NewMatcher(stockId)
 	for _, buy := range buys {
 		m.AddBuy(buy)
 	}
@@ -65,7 +64,7 @@ func BenchmarkAddBuy(b *testing.B) {
 
 func BenchmarkAddSell(b *testing.B) {
 	prepare(b)
-	m := New(stockId)
+	m := NewMatcher(stockId)
 	for _, buy := range buys {
 		m.AddBuy(buy)
 	}
@@ -73,7 +72,7 @@ func BenchmarkAddSell(b *testing.B) {
 
 func BenchmarkMatch(b *testing.B) {
 	prepare(b)
-	m := New(stockId)
+	m := NewMatcher(stockId)
 	for i := 0; i < orderNum; i++ {
 		m.AddBuy(buys[i])
 		m.AddSell(sells[i])
