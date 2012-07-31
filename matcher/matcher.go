@@ -22,7 +22,7 @@ func (m *M) AddSell(s *Order) {
 	if s.StockId != m.stockId {
 		panic(fmt.Sprintf("Added sell trade with stock-id %s expecting %s", s.StockId, m.stockId))
 	}
-	m.sells.Push(s)
+	m.sells.push(s)
 	m.process()
 }
 
@@ -36,22 +36,22 @@ func (m *M) AddBuy(b *Order) {
 	if b.Price == MarketPrice {
 		panic("It is illegal to submit a buy at market price")
 	}
-	m.buys.Push(b)
+	m.buys.push(b)
 	m.process()
 }
 
 func (m *M) process() {
 	for {
-		if m.buys.Len() == 0 || m.sells.Len() == 0 {
+		if m.buys.heapLen() == 0 || m.sells.heapLen() == 0 {
 			return
 		}
-		b := m.buys.Peek()
-		s := m.sells.Peek()
+		b := m.buys.peek()
+		s := m.sells.peek()
 		if b.Price >= s.Price {
 			if b.Amount > s.Amount {
 				amount := s.Amount
 				price := price(b.Price, s.Price)
-				m.sells.Pop()
+				m.sells.pop()
 				b.Amount -= amount // Dangerous in place modification
 				completeTrade(b, s, price, amount)
 				continue
@@ -59,7 +59,7 @@ func (m *M) process() {
 			if s.Amount > b.Amount {
 				amount := b.Amount
 				price := price(b.Price, s.Price)
-				m.buys.Pop()
+				m.buys.pop()
 				s.Amount -= amount // Dangerous in place modification
 				completeTrade(b, s, price, amount)
 				continue
@@ -67,8 +67,8 @@ func (m *M) process() {
 			if s.Amount == b.Amount {
 				amount := s.Amount
 				price := price(b.Price, s.Price)
-				m.buys.Pop()
-				m.sells.Pop()
+				m.buys.pop()
+				m.sells.pop()
 				completeTrade(b, s, price, amount)
 				continue
 			}

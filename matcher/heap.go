@@ -33,11 +33,11 @@ func newHeap(buySell TradeType) *heap {
 	return &heap{buySell: buySell, priceMap: make(map[int64] *limit), limits: make([]*limit, 0, 10)}
 }
 
-func (h *heap) Len() int {
+func (h *heap) heapLen() int {
 	return len(h.limits)
 }
 
-func (h *heap) Push(o *Order) {
+func (h *heap) push(o *Order) {
 	lim := h.priceMap[o.Price]
 	if lim == nil {
 		lim = &limit{price: o.Price, head: o, tail: o}
@@ -49,7 +49,7 @@ func (h *heap) Push(o *Order) {
 	}
 }
 
-func (h *heap) Pop() *Order {
+func (h *heap) pop() *Order {
 	if len(h.limits) == 0 {
 		return nil
 	}
@@ -67,14 +67,14 @@ func (h *heap) Pop() *Order {
 	return o
 }
 
-func (h *heap) Peek() *Order {
+func (h *heap) peek() *Order {
 	if len(h.limits) == 0 {
 		return nil
 	}
 	return h.limits[0].head
 }
 
-func (h *heap) Remove(guid uint64) *Order {
+func (h *heap) remove(guid uint64) *Order {
 	panic("Remove not supported")
 }
 
