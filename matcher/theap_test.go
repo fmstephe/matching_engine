@@ -1,8 +1,8 @@
 package matcher
 
 import (
-	"testing"
 	"math/rand"
+	"testing"
 )
 
 func verifyHeap(h *heap, t *testing.T) {
@@ -145,9 +145,9 @@ func TestAscendingSell(t *testing.T) {
 	}
 }
 
-func TestBuyRandompushpop(t *testing.T) {
+func TestBuyRandomPushPop(t *testing.T) {
 	h := newHeap(BUY)
-	size := 1000
+	size := 10000
 	priceRange := int64(500)
 	priceBase := int64(1000)
 	buys := make([]*Order, 0, size)
@@ -168,9 +168,9 @@ func TestBuyRandompushpop(t *testing.T) {
 	}
 }
 
-func TestSellRandompushpop(t *testing.T) {
+func TestSellRandomPushPop(t *testing.T) {
 	h := newHeap(SELL)
-	size := 1000
+	size := 10000
 	priceRange := int64(500)
 	priceBase := int64(1000)
 	buys := make([]*Order, 0, size)

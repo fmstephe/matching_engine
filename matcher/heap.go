@@ -1,13 +1,12 @@
 package matcher
 
-import (
-)
+import ()
 
 type limit struct {
 	price int64
 	index int
-	head *Order
-	tail *Order
+	head  *Order
+	tail  *Order
 }
 
 func (l *limit) appendOrder(o *Order) {
@@ -18,19 +17,19 @@ func (l *limit) appendOrder(o *Order) {
 
 func better(l1, l2 *limit, buySell TradeType) bool {
 	if buySell == BUY {
-		return l2.price - l1.price < 0
+		return l2.price-l1.price < 0
 	}
-	return l1.price - l2.price < 0
+	return l1.price-l2.price < 0
 }
 
 type heap struct {
-	buySell TradeType
-	priceMap map[int64] *limit // Maps existing limit prices to limits in the heap
-	limits []*limit
+	buySell  TradeType
+	priceMap map[int64]*limit // Maps existing limit prices to limits in the heap
+	limits   []*limit
 }
 
 func newHeap(buySell TradeType) *heap {
-	return &heap{buySell: buySell, priceMap: make(map[int64] *limit), limits: make([]*limit, 0, 10)}
+	return &heap{buySell: buySell, priceMap: make(map[int64]*limit), limits: make([]*limit, 0, 10)}
 }
 
 func (h *heap) heapLen() int {
@@ -43,7 +42,7 @@ func (h *heap) push(o *Order) {
 		lim = &limit{price: o.Price, head: o, tail: o}
 		h.priceMap[o.Price] = lim
 		h.limits = append(h.limits, lim)
-		h.up(len(h.limits)-1)
+		h.up(len(h.limits) - 1)
 	} else {
 		lim.appendOrder(o)
 	}
@@ -56,8 +55,8 @@ func (h *heap) pop() *Order {
 	lim := h.limits[0]
 	o := lim.head
 	lim.head = o.Next
-	if (lim.head == nil) {
-		n := len(h.limits)-1
+	if lim.head == nil {
+		n := len(h.limits) - 1
 		h.limits[0] = h.limits[n]
 		h.limits[n] = nil
 		h.limits = h.limits[0:n]
@@ -78,34 +77,34 @@ func (h *heap) remove(guid uint64) *Order {
 	panic("Remove not supported")
 }
 
-func (h *heap) up(j int) {
+func (h *heap) up(c int) {
 	limits := h.limits
 	for {
-		i := (j - 1) / 2 // parent
-		if i == j || better(limits[i], limits[j], h.buySell) {
+		p := (c - 1) / 2
+		if p == c || better(limits[p], limits[c], h.buySell) {
 			break
 		}
-		limits[i], limits[j] = limits[j], limits[i]
-		j = i
+		limits[p], limits[c] = limits[c], limits[p]
+		c = p
 	}
 }
 
-func (h *heap) down(i int) {
+func (h *heap) down(p int) {
+	n := len(h.limits)
 	limits := h.limits
-	n := len(limits)
 	for {
-		j1 := 2*i + 1
-		if j1 >= n {
+		c := 2*p + 1
+		if c >= n {
 			break
 		}
-		j := j1 // left child
-		if j2 := j1 + 1; j2 < n && !better(limits[j1], limits[j2], h.buySell) {
-			j = j2 // = 2*i + 2  // right child
+		lc := c
+		if rc := lc + 1; rc < n && !better(limits[lc], limits[rc], h.buySell) {
+			c = rc
 		}
-		if better(limits[i], limits[j], h.buySell) {
+		if better(limits[p], limits[c], h.buySell) {
 			break
 		}
-		limits[i], limits[j] = limits[j], limits[i]
-		i = j
+		limits[p], limits[c] = limits[c], limits[p]
+		p = c
 	}
 }
