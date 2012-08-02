@@ -34,7 +34,7 @@ func verifyLimit(lim *limit, price int64, t *testing.T) {
 	if lim.head == nil {
 		t.Errorf("Limit with no Orders found")
 	}
-	for order := lim.head; order != nil; order = order.Next {
+	for order := lim.head; order != nil; order = order.next {
 		if order.Price != price {
 			t.Errorf("Limit, with price %d, contains order with price %d", price, order.Price)
 		}

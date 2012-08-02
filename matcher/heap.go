@@ -11,7 +11,7 @@ type limit struct {
 
 func (l *limit) appendOrder(o *Order) {
 	tail := l.tail
-	tail.Next = o
+	tail.next = o
 	l.tail = o
 }
 
@@ -54,16 +54,24 @@ func (h *heap) pop() *Order {
 	}
 	lim := h.limits[0]
 	o := lim.head
-	lim.head = o.Next
-	if lim.head == nil {
+	lim.head = o.next
+	h.clearHead()
+	return o
+}
+
+func (h *heap) clearHead() {
+	for len(h.limits) > 0 {
+		lim := h.limits[0]
+		if lim.head != nil {
+			return
+		}
 		n := len(h.limits) - 1
 		h.limits[0] = h.limits[n]
 		h.limits[n] = nil
 		h.limits = h.limits[0:n]
 		h.down(0)
-		delete(h.priceMap, o.Price)
+		delete(h.priceMap, lim.price)
 	}
-	return o
 }
 
 func (h *heap) peek() *Order {
