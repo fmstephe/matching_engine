@@ -191,31 +191,88 @@ func TestSellRandomPushPop(t *testing.T) {
 	}
 }
 
-/*
-func _TestRemove0(t *testing.T) {
-	h := newHeap(BUY)
-	for i := 0; i < 10; i++ {
-		h.push(elem(i))
-	}
-	verifyHeap(h, t)
+func TestRemoveBuy(t *testing.T) {
+	testSimpleRemove(t, newHeap(BUY))
+}
 
-	for h.heapLen() > 0 {
-		i := h.heapLen() - 1
-		x := h.Remove(i)
-		if x != i {
-			t.Errorf("Remove(%d) got %d; want %d", i, x, i)
+func TestRemoveSell(t *testing.T) {
+	testSimpleRemove(t, newHeap(SELL))
+}
+
+func testSimpleRemove(t *testing.T, h *heap) {
+	size := int64(10)
+	buys := make([]*Order, 0, size)
+	for i := int64(1); i <= size; i++ {
+		b := mkPricedBuy(i)
+		h.push(b)
+		buys = append(buys, b)
+		verifyHeap(h, t)
+	}
+	for _, buy := range buys {
+		b := h.remove(buy.GUID(), buy.Price)
+		if b != buy {
+			t.Errorf("Remove() got %v; wanted %v", b, buy)
 		}
 		verifyHeap(h, t)
 	}
 }
 
+func TestRemovePopBuy(t *testing.T) {
+	h := newHeap(BUY)
+	size := int64(10)
+	buys := make([]*Order, 0, size)
+	for i := size; i > 0; i-- {
+		b := mkPricedBuy(i)
+		h.push(b)
+		buys = append(buys, b)
+		verifyHeap(h, t)
+	}
+	for i, buy := range buys {
+		var b *Order
+		if i%2 == 0 {
+			b = h.remove(buy.GUID(), buy.Price)
+		} else {
+			b = h.pop()
+		}
+		if b != buy {
+			t.Errorf("Remove() got %v; wanted %v", b, buy)
+		}
+		verifyHeap(h, t)
+	}
+}
+
+func TestRemovePopSell(t *testing.T) {
+	h := newHeap(SELL)
+	size := int64(10)
+	buys := make([]*Order, 0, size)
+	for i := int64(1); i <= size; i++ {
+		b := mkPricedSell(i)
+		h.push(b)
+		buys = append(buys, b)
+		verifyHeap(h, t)
+	}
+	for i, buy := range buys {
+		var b *Order
+		if i%2 == 0 {
+			b = h.remove(buy.GUID(), buy.Price)
+		} else {
+			b = h.pop()
+		}
+		if b != buy {
+			t.Errorf("Remove() got %v; wanted %v", b, buy)
+		}
+		verifyHeap(h, t)
+	}
+}
+
+/*
+/*
 func TestRemove1(t *testing.T) {
 	h := newHeap(BUY)
 	for i := 0; i < 10; i++ {
 		h.push(elem(i))
 	}
 	verifyHeap(h, t)
-
 	for i := 0; h.heapLen() > 0; i++ {
 		x := h.Remove(0)
 		if x != i {
@@ -233,13 +290,11 @@ func TestRemove2(t *testing.T) {
 		h.push(elem(i))
 	}
 	verifyHeap(h, t)
-
 	m := make(map[int]bool)
 	for h.heapLen() > 0 {
 		m[h.Remove((h.heapLen()-1)/2)] = true
 		verifyHeap(h, t)
 	}
-
 	if len(m) != N {
 		t.Errorf("len(m) = %d; want %d", len(m), N)
 	}

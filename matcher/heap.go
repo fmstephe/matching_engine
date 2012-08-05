@@ -3,16 +3,25 @@ package matcher
 import ()
 
 type limit struct {
-	price int64
-	index int
-	head  *Order
-	tail  *Order
+	price    int64
+	head     *Order
+	tail     *Order
+	orderMap map[uint64]*Order // Maps order's GUIDs to orders in this limit
+}
+
+func newLimit(price int64, o *Order) *limit {
+	orderMap := make(map[uint64]*Order)
+	orderMap[o.GUID()] = o
+	limit := &limit{price: price, head: o, tail: o, orderMap: orderMap}
+	o.incoming = &limit.head
+	return limit
 }
 
 func (l *limit) appendOrder(o *Order) {
 	tail := l.tail
 	tail.next = o
 	l.tail = o
+	l.orderMap[o.GUID()] = o
 }
 
 func better(l1, l2 *limit, buySell TradeType) bool {
@@ -25,12 +34,11 @@ func better(l1, l2 *limit, buySell TradeType) bool {
 type heap struct {
 	buySell  TradeType
 	priceMap map[int64]*limit // Maps existing limit prices to limits in the heap
-	orderMap map[uint64]*Order // Maps order's GUIDs to orders in this heap
 	limits   []*limit
 }
 
 func newHeap(buySell TradeType) *heap {
-	return &heap{buySell: buySell, priceMap: make(map[int64]*limit), orderMap: make(map[uint64]*Order), limits: make([]*limit, 0, 10)}
+	return &heap{buySell: buySell, priceMap: make(map[int64]*limit), limits: make([]*limit, 0, 10)}
 }
 
 func (h *heap) heapLen() int {
@@ -38,10 +46,9 @@ func (h *heap) heapLen() int {
 }
 
 func (h *heap) push(o *Order) {
-	h.orderMap[o.GUID()] = o // This makes the heap very very slow!
 	lim := h.priceMap[o.Price]
 	if lim == nil {
-		lim = &limit{price: o.Price, head: o, tail: o}
+		lim = newLimit(o.Price, o)
 		h.priceMap[o.Price] = lim
 		h.limits = append(h.limits, lim)
 		h.up(len(h.limits) - 1)
@@ -84,8 +91,9 @@ func (h *heap) peek() *Order {
 	return h.limits[0].head
 }
 
-func (h *heap) remove(guid uint64) *Order {
-	o := h.orderMap[guid]
+func (h *heap) remove(guid uint64, price int64) *Order {
+	l := h.priceMap[price]
+	o := l.orderMap[guid]
 	*o.incoming = o.next
 	return o
 }
