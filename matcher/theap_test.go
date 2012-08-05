@@ -5,6 +5,27 @@ import (
 	"testing"
 )
 
+var orders = orderMaker{}
+
+type orderMaker struct {
+	traderId uint32
+}
+
+func (o *orderMaker) mkPricedBuy(price int64) *Order {
+	return orders.mkPricedOrder(price, BUY)
+}
+
+func (o *orderMaker) mkPricedSell(price int64) *Order {
+	return orders.mkPricedOrder(price, SELL)
+}
+
+func (o *orderMaker) mkPricedOrder(price int64, buySell TradeType) *Order {
+	costData := CostData{Price: price, Amount: 1}
+	tradeData := TradeData{TraderId: o.traderId, TradeId: 1, StockId: 1}
+	o.traderId++
+	return NewOrder(costData, tradeData, nil, buySell)
+}
+
 func verifyHeap(h *heap, t *testing.T) {
 	verifyHeapRec(h, t, 0)
 }
@@ -41,24 +62,10 @@ func verifyLimit(lim *limit, price int64, t *testing.T) {
 	}
 }
 
-func mkPricedBuy(price int64) *Order {
-	return mkPricedOrder(price, BUY)
-}
-
-func mkPricedSell(price int64) *Order {
-	return mkPricedOrder(price, SELL)
-}
-
-func mkPricedOrder(price int64, buySell TradeType) *Order {
-	costData := CostData{Price: price, Amount: 1}
-	tradeData := TradeData{TraderId: 1, TradeId: 1, StockId: 1}
-	return NewOrder(costData, tradeData, nil, buySell)
-}
-
 func TestAllSameBuy(t *testing.T) {
 	h := newHeap(BUY)
 	for i := 20; i > 0; i-- {
-		h.push(mkPricedBuy(1))
+		h.push(orders.mkPricedBuy(1))
 	}
 	verifyHeap(h, t)
 	for i := 1; h.heapLen() > 0; i++ {
@@ -73,7 +80,7 @@ func TestAllSameBuy(t *testing.T) {
 func TestAllSameSell(t *testing.T) {
 	h := newHeap(SELL)
 	for i := 20; i > 0; i-- {
-		h.push(mkPricedSell(1))
+		h.push(orders.mkPricedSell(1))
 	}
 	verifyHeap(h, t)
 	for i := 1; h.heapLen() > 0; i++ {
@@ -88,7 +95,7 @@ func TestAllSameSell(t *testing.T) {
 func TestDescendingBuy(t *testing.T) {
 	h := newHeap(BUY)
 	for i := int64(20); i > 0; i-- {
-		h.push(mkPricedBuy(i))
+		h.push(orders.mkPricedBuy(i))
 	}
 	verifyHeap(h, t)
 	for i := int64(20); h.heapLen() > 0; i-- {
@@ -103,7 +110,7 @@ func TestDescendingBuy(t *testing.T) {
 func TestDescendingSell(t *testing.T) {
 	h := newHeap(SELL)
 	for i := int64(20); i > 0; i-- {
-		h.push(mkPricedSell(i))
+		h.push(orders.mkPricedSell(i))
 	}
 	verifyHeap(h, t)
 	for i := int64(1); h.heapLen() > 0; i++ {
@@ -118,7 +125,7 @@ func TestDescendingSell(t *testing.T) {
 func TestAscendingBuy(t *testing.T) {
 	h := newHeap(BUY)
 	for i := int64(1); i <= 20; i++ {
-		h.push(mkPricedBuy(i))
+		h.push(orders.mkPricedBuy(i))
 	}
 	verifyHeap(h, t)
 	for i := int64(20); h.heapLen() > 0; i-- {
@@ -133,7 +140,7 @@ func TestAscendingBuy(t *testing.T) {
 func TestAscendingSell(t *testing.T) {
 	h := newHeap(SELL)
 	for i := int64(1); i <= 20; i++ {
-		h.push(mkPricedSell(i))
+		h.push(orders.mkPricedSell(i))
 	}
 	verifyHeap(h, t)
 	for i := int64(1); h.heapLen() > 0; i++ {
@@ -152,7 +159,7 @@ func TestBuyRandomPushPop(t *testing.T) {
 	priceBase := int64(1000)
 	buys := make([]*Order, 0, size)
 	for i := 0; i < size; i++ {
-		b := mkPricedBuy(rand.Int63n(priceRange) + priceBase)
+		b := orders.mkPricedBuy(rand.Int63n(priceRange) + priceBase)
 		buys = append(buys, b)
 		h.push(b)
 		verifyHeap(h, t)
@@ -175,7 +182,7 @@ func TestSellRandomPushPop(t *testing.T) {
 	priceBase := int64(1000)
 	buys := make([]*Order, 0, size)
 	for i := 0; i < size; i++ {
-		b := mkPricedSell(rand.Int63n(priceRange) + priceBase)
+		b := orders.mkPricedSell(rand.Int63n(priceRange) + priceBase)
 		buys = append(buys, b)
 		h.push(b)
 		verifyHeap(h, t)
@@ -203,7 +210,7 @@ func testSimpleRemove(t *testing.T, h *heap) {
 	size := int64(10)
 	buys := make([]*Order, 0, size)
 	for i := int64(1); i <= size; i++ {
-		b := mkPricedBuy(i)
+		b := orders.mkPricedBuy(i)
 		h.push(b)
 		buys = append(buys, b)
 		verifyHeap(h, t)
@@ -222,7 +229,7 @@ func TestRemovePopBuy(t *testing.T) {
 	size := int64(10)
 	buys := make([]*Order, 0, size)
 	for i := size; i > 0; i-- {
-		b := mkPricedBuy(i)
+		b := orders.mkPricedBuy(i)
 		h.push(b)
 		buys = append(buys, b)
 		verifyHeap(h, t)
@@ -246,7 +253,7 @@ func TestRemovePopSell(t *testing.T) {
 	size := int64(10)
 	buys := make([]*Order, 0, size)
 	for i := int64(1); i <= size; i++ {
-		b := mkPricedSell(i)
+		b := orders.mkPricedSell(i)
 		h.push(b)
 		buys = append(buys, b)
 		verifyHeap(h, t)
