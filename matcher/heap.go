@@ -6,13 +6,10 @@ type limit struct {
 	price    int64
 	head     *Order
 	tail     *Order
-	orderMap map[uint64]*Order // Maps order's GUIDs to orders in this limit
 }
 
 func newLimit(price int64, o *Order) *limit {
-	orderMap := make(map[uint64]*Order)
-	orderMap[o.GUID()] = o
-	limit := &limit{price: price, head: o, tail: o, orderMap: orderMap}
+	limit := &limit{price: price, head: o, tail: o}
 	o.incoming = &limit.head
 	return limit
 }
@@ -21,7 +18,18 @@ func (l *limit) appendOrder(o *Order) {
 	tail := l.tail
 	tail.next = o
 	l.tail = o
-	l.orderMap[o.GUID()] = o
+}
+
+func (l *limit) findOrder(guid uint64) *Order {
+	for o := l.head; o != nil; o = o.next {
+		if o == nil {
+			return nil
+		}
+		if o.GUID() == guid {
+			return o
+		}
+	}
+	panic("Unreachable")
 }
 
 func better(l1, l2 *limit, buySell TradeType) bool {
@@ -93,7 +101,7 @@ func (h *heap) peek() *Order {
 
 func (h *heap) remove(guid uint64, price int64) *Order {
 	l := h.priceMap[price]
-	o := l.orderMap[guid]
+	o := l.findOrder(guid)
 	*o.incoming = o.next
 	return o
 }
