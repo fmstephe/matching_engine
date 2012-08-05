@@ -3,9 +3,9 @@ package matcher
 import ()
 
 type limit struct {
-	price    int64
-	head     *Order
-	tail     *Order
+	price int64
+	head  *Order
+	tail  *Order
 }
 
 func newLimit(price int64, o *Order) *limit {
