@@ -10,24 +10,25 @@ type limit struct {
 
 func newLimit(price int64, o *Order) *limit {
 	limit := &limit{price: price, head: o, tail: o}
-	o.incoming = &limit.head
 	return limit
 }
 
 func (l *limit) appendOrder(o *Order) {
-	tail := l.tail
-	tail.next = o
+	l.tail.next = o
 	l.tail = o
 }
 
-func (l *limit) findOrder(guid uint64) *Order {
+func (l *limit) removeOrder(guid uint64) *Order {
+	incoming := &l.head
 	for o := l.head; o != nil; o = o.next {
 		if o == nil {
 			return nil
 		}
 		if o.GUID() == guid {
+			*incoming = o.next
 			return o
 		}
+		incoming = &o.next
 	}
 	panic("Unreachable")
 }
@@ -101,8 +102,7 @@ func (h *heap) peek() *Order {
 
 func (h *heap) remove(guid uint64, price int64) *Order {
 	l := h.priceMap[price]
-	o := l.findOrder(guid)
-	*o.incoming = o.next
+	o := l.removeOrder(guid)
 	return o
 }
 

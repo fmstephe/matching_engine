@@ -28,7 +28,6 @@ type Order struct {
 	BuySell      TradeType // Indicates whether this trade is a buy or a sell
 	// Linked List fields
 	next     *Order  // The next order in this limit
-	incoming **Order // The pointer pointing to this order - used for deletion
 }
 
 func (o *Order) GUID() uint64 {
