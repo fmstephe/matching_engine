@@ -9,17 +9,35 @@ const (
 	orderNum = 1000 * 1000
 )
 
-var benchRand = rand.New(rand.NewSource(1))
-var buys []*Order
-var sells []*Order
+var (
+	benchRand = rand.New(rand.NewSource(1))
+	buysWide []*Order
+	buysMedium []*Order
+	buysNarrow []*Order
+	sellsWide []*Order
+	sellsMedium []*Order
+	sellsNarrow []*Order
+)
 
 func prepare(b *testing.B) {
 	b.StopTimer()
-	if buys == nil {
-		buys = mkBuys(orderNum, 1000, 1500)
+	if buysWide == nil {
+		buysWide = mkBuys(orderNum, 1000, 100*1000)
 	}
-	if sells == nil {
-		sells = mkSells(orderNum, 1000, 1500)
+	if buysMedium == nil {
+		buysMedium = mkBuys(orderNum, 1000, 5000)
+	}
+	if buysNarrow == nil {
+		buysNarrow = mkBuys(orderNum, 1000, 1500)
+	}
+	if sellsWide == nil {
+		sellsWide = mkSells(orderNum, 1000, 100*1000)
+	}
+	if sellsMedium == nil {
+		sellsMedium = mkSells(orderNum, 1000, 5000)
+	}
+	if sellsNarrow == nil {
+		sellsNarrow = mkSells(orderNum, 1000, 1500)
 	}
 	b.StartTimer()
 }
@@ -54,23 +72,75 @@ func mkOrders(n int, low, high int64, buySell TradeType) []*Order {
 	return orders
 }
 
-func BenchmarkAddBuy(b *testing.B) {
+func BenchmarkAddBuyWide(b *testing.B) {
 	prepare(b)
-	m := NewMatcher(stockId)
-	for _, buy := range buys {
-		m.AddBuy(buy)
+	benchmarkAddBuy(b, buysWide)
+}
+
+func BenchmarkAddBuyMedium(b *testing.B) {
+	prepare(b)
+	benchmarkAddBuy(b, buysMedium)
+}
+
+func BenchmarkAddBuyNarrow(b *testing.B) {
+	prepare(b)
+	benchmarkAddBuy(b, buysNarrow)
+}
+
+func benchmarkAddBuy(b *testing.B, buys []*Order) {
+	for i := 0; i < b.N; i++ {
+		b.StopTimer()
+		m := NewMatcher(stockId)
+		b.StartTimer()
+		for _, buy := range buys {
+			m.AddBuy(buy)
+		}
 	}
 }
 
-func BenchmarkAddSell(b *testing.B) {
+func BenchmarkAddSellWide(b *testing.B) {
 	prepare(b)
-	m := NewMatcher(stockId)
-	for _, buy := range buys {
-		m.AddBuy(buy)
+	benchmarkAddSell(b, sellsWide)
+}
+
+func BenchmarkAddSellMedium(b *testing.B) {
+	prepare(b)
+	benchmarkAddSell(b, sellsMedium)
+}
+
+func BenchmarkAddSellNarrow(b *testing.B) {
+	prepare(b)
+	benchmarkAddSell(b, sellsNarrow)
+}
+
+func benchmarkAddSell(b *testing.B, sells []*Order) {
+	for i := 0; i < b.N; i++ {
+		prepare(b)
+		b.StopTimer()
+		m := NewMatcher(stockId)
+		b.StartTimer()
+		for _, sell := range sells {
+			m.AddSell(sell)
+		}
 	}
 }
 
-func BenchmarkMatch(b *testing.B) {
+func BenchmarkMatchWide(b *testing.B) {
+	prepare(b)
+	benchmarkMatch(b, buysWide, sellsWide)
+}
+
+func BenchmarkMatchMedium(b *testing.B) {
+	prepare(b)
+	benchmarkMatch(b, buysMedium, sellsMedium)
+}
+
+func BenchmarkMatchNarrow(b *testing.B) {
+	prepare(b)
+	benchmarkMatch(b, buysNarrow, sellsNarrow)
+}
+
+func benchmarkMatch(b *testing.B, buys, sells []*Order) {
 	prepare(b)
 	m := NewMatcher(stockId)
 	for i := 0; i < orderNum; i++ {
@@ -78,3 +148,11 @@ func BenchmarkMatch(b *testing.B) {
 		m.AddSell(sells[i])
 	}
 }
+
+/*
+func BenchmarkMatchRemove(b *testing.B) {
+	prepare(b)
+	m := NewMatcher(stockId)
+	numRemove := 500 * 1000
+	removals := make([]*Order, 0, numRemove)
+	*/
