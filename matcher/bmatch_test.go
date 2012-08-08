@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	orderNum = 1000 * 1000
+	orderNum = 500 * 1000
 )
 
 var (
