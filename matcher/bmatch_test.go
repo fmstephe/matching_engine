@@ -141,18 +141,12 @@ func BenchmarkMatchNarrow(b *testing.B) {
 }
 
 func benchmarkMatch(b *testing.B, buys, sells []*Order) {
-	prepare(b)
-	m := NewMatcher(stockId)
-	for i := 0; i < orderNum; i++ {
-		m.AddBuy(buys[i])
-		m.AddSell(sells[i])
+	for i := 0; i < b.N; i++ {
+		prepare(b)
+		m := NewMatcher(stockId)
+		for j := 0; j < orderNum; j++ {
+			m.AddBuy(buys[j])
+			m.AddSell(sells[j])
+		}
 	}
 }
-
-/*
-func BenchmarkMatchRemove(b *testing.B) {
-	prepare(b)
-	m := NewMatcher(stockId)
-	numRemove := 500 * 1000
-	removals := make([]*Order, 0, numRemove)
-	*/
