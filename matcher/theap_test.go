@@ -5,18 +5,18 @@ import (
 	"testing"
 )
 
-var orders = orderMaker{}
+var orderMkr = orderMaker{}
 
 type orderMaker struct {
 	traderId uint32
 }
 
 func (o *orderMaker) mkPricedBuy(price int64) *Order {
-	return orders.mkPricedOrder(price, BUY)
+	return orderMkr.mkPricedOrder(price, BUY)
 }
 
 func (o *orderMaker) mkPricedSell(price int64) *Order {
-	return orders.mkPricedOrder(price, SELL)
+	return orderMkr.mkPricedOrder(price, SELL)
 }
 
 func (o *orderMaker) mkPricedOrder(price int64, buySell TradeType) *Order {
@@ -65,7 +65,7 @@ func verifyLimit(lim *limit, price int64, t *testing.T) {
 func TestAllSameBuy(t *testing.T) {
 	h := newHeap(BUY)
 	for i := 20; i > 0; i-- {
-		h.push(orders.mkPricedBuy(1))
+		h.push(orderMkr.mkPricedBuy(1))
 	}
 	verifyHeap(h, t)
 	for i := 1; h.heapLen() > 0; i++ {
@@ -80,7 +80,7 @@ func TestAllSameBuy(t *testing.T) {
 func TestAllSameSell(t *testing.T) {
 	h := newHeap(SELL)
 	for i := 20; i > 0; i-- {
-		h.push(orders.mkPricedSell(1))
+		h.push(orderMkr.mkPricedSell(1))
 	}
 	verifyHeap(h, t)
 	for i := 1; h.heapLen() > 0; i++ {
@@ -95,7 +95,7 @@ func TestAllSameSell(t *testing.T) {
 func TestDescendingBuy(t *testing.T) {
 	h := newHeap(BUY)
 	for i := int64(20); i > 0; i-- {
-		h.push(orders.mkPricedBuy(i))
+		h.push(orderMkr.mkPricedBuy(i))
 	}
 	verifyHeap(h, t)
 	for i := int64(20); h.heapLen() > 0; i-- {
@@ -110,7 +110,7 @@ func TestDescendingBuy(t *testing.T) {
 func TestDescendingSell(t *testing.T) {
 	h := newHeap(SELL)
 	for i := int64(20); i > 0; i-- {
-		h.push(orders.mkPricedSell(i))
+		h.push(orderMkr.mkPricedSell(i))
 	}
 	verifyHeap(h, t)
 	for i := int64(1); h.heapLen() > 0; i++ {
@@ -125,7 +125,7 @@ func TestDescendingSell(t *testing.T) {
 func TestAscendingBuy(t *testing.T) {
 	h := newHeap(BUY)
 	for i := int64(1); i <= 20; i++ {
-		h.push(orders.mkPricedBuy(i))
+		h.push(orderMkr.mkPricedBuy(i))
 	}
 	verifyHeap(h, t)
 	for i := int64(20); h.heapLen() > 0; i-- {
@@ -140,7 +140,7 @@ func TestAscendingBuy(t *testing.T) {
 func TestAscendingSell(t *testing.T) {
 	h := newHeap(SELL)
 	for i := int64(1); i <= 20; i++ {
-		h.push(orders.mkPricedSell(i))
+		h.push(orderMkr.mkPricedSell(i))
 	}
 	verifyHeap(h, t)
 	for i := int64(1); h.heapLen() > 0; i++ {
@@ -159,7 +159,7 @@ func TestBuyRandomPushPop(t *testing.T) {
 	priceBase := int64(1000)
 	buys := make([]*Order, 0, size)
 	for i := 0; i < size; i++ {
-		b := orders.mkPricedBuy(rand.Int63n(priceRange) + priceBase)
+		b := orderMkr.mkPricedBuy(rand.Int63n(priceRange) + priceBase)
 		buys = append(buys, b)
 		h.push(b)
 		verifyHeap(h, t)
@@ -182,7 +182,7 @@ func TestSellRandomPushPop(t *testing.T) {
 	priceBase := int64(1000)
 	buys := make([]*Order, 0, size)
 	for i := 0; i < size; i++ {
-		b := orders.mkPricedSell(rand.Int63n(priceRange) + priceBase)
+		b := orderMkr.mkPricedSell(rand.Int63n(priceRange) + priceBase)
 		buys = append(buys, b)
 		h.push(b)
 		verifyHeap(h, t)
@@ -199,26 +199,27 @@ func TestSellRandomPushPop(t *testing.T) {
 }
 
 func TestRemoveBuy(t *testing.T) {
-	testSimpleRemove(t, newHeap(BUY))
+	testSimpleRemove(t,BUY)
 }
 
 func TestRemoveSell(t *testing.T) {
-	testSimpleRemove(t, newHeap(SELL))
+	testSimpleRemove(t,SELL)
 }
 
-func testSimpleRemove(t *testing.T, h *heap) {
+func testSimpleRemove(t *testing.T, buySell TradeType) {
+	h := newHeap(buySell)
 	size := int64(10)
-	buys := make([]*Order, 0, size)
+	orders := make([]*Order, 0, size)
 	for i := int64(1); i <= size; i++ {
-		b := orders.mkPricedBuy(i)
-		h.push(b)
-		buys = append(buys, b)
+		order := orderMkr.mkPricedOrder(i, buySell)
+		h.push(order)
+		orders = append(orders, order)
 		verifyHeap(h, t)
 	}
-	for _, buy := range buys {
-		b := h.remove(buy.GUID(), buy.Price)
-		if b != buy {
-			t.Errorf("Remove() got %v; wanted %v", b, buy)
+	for _, order := range orders {
+		removed := h.remove(order.GUID(), order.Price)
+		if removed != order {
+			t.Errorf("Remove() got %v; wanted %v", removed, order)
 		}
 		verifyHeap(h, t)
 	}
@@ -229,7 +230,7 @@ func TestRemovePopBuy(t *testing.T) {
 	size := int64(10)
 	buys := make([]*Order, 0, size)
 	for i := size; i > 0; i-- {
-		b := orders.mkPricedBuy(i)
+		b := orderMkr.mkPricedBuy(i)
 		h.push(b)
 		buys = append(buys, b)
 		verifyHeap(h, t)
@@ -251,64 +252,23 @@ func TestRemovePopBuy(t *testing.T) {
 func TestRemovePopSell(t *testing.T) {
 	h := newHeap(SELL)
 	size := int64(10)
-	buys := make([]*Order, 0, size)
+	sells := make([]*Order, 0, size)
 	for i := int64(1); i <= size; i++ {
-		b := orders.mkPricedSell(i)
-		h.push(b)
-		buys = append(buys, b)
+		s := orderMkr.mkPricedSell(i)
+		h.push(s)
+		sells = append(sells, s)
 		verifyHeap(h, t)
 	}
-	for i, buy := range buys {
-		var b *Order
+	for i, sell := range sells {
+		var removed *Order
 		if i%2 == 0 {
-			b = h.remove(buy.GUID(), buy.Price)
+			removed = h.remove(sell.GUID(), sell.Price)
 		} else {
-			b = h.pop()
+			removed = h.pop()
 		}
-		if b != buy {
-			t.Errorf("Remove() got %v; wanted %v", b, buy)
-		}
-		verifyHeap(h, t)
-	}
-}
-
-/*
-/*
-func TestRemove1(t *testing.T) {
-	h := newHeap(BUY)
-	for i := 0; i < 10; i++ {
-		h.push(elem(i))
-	}
-	verifyHeap(h, t)
-	for i := 0; h.heapLen() > 0; i++ {
-		x := h.Remove(0)
-		if x != i {
-			t.Errorf("Remove(0) got %d; want %d", x, i)
+		if removed != sell {
+			t.Errorf("Remove() got %v; wanted %v", removed, sell)
 		}
 		verifyHeap(h, t)
 	}
 }
-
-func TestRemove2(t *testing.T) {
-	N := 10
-
-	h := newHeap(BUY)
-	for i := 0; i < N; i++ {
-		h.push(elem(i))
-	}
-	verifyHeap(h, t)
-	m := make(map[int]bool)
-	for h.heapLen() > 0 {
-		m[h.Remove((h.heapLen()-1)/2)] = true
-		verifyHeap(h, t)
-	}
-	if len(m) != N {
-		t.Errorf("len(m) = %d; want %d", len(m), N)
-	}
-	for i := 0; i < len(m); i++ {
-		if !m[i] {
-			t.Errorf("m[%d] doesn't exist", i)
-		}
-	}
-}
-*/
