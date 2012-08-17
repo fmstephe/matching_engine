@@ -13,7 +13,21 @@ func newLimit(price int64, o *Order) *limit {
 	return limit
 }
 
-func (l *limit) appendOrder(o *Order) {
+func (l *limit) isEmpty() bool {
+	return l.head == nil
+}
+
+func (l *limit) peek() *Order {
+	return l.head
+}
+
+func (l *limit) pop() *Order {
+	o := l.head
+	l.head = o.next
+	return o
+}
+
+func (l *limit) push(o *Order) {
 	l.tail.next = o
 	l.tail = o
 }
@@ -62,7 +76,7 @@ func (h *heap) push(o *Order) {
 		h.limits = append(h.limits, lim)
 		h.up(len(h.limits) - 1)
 	} else {
-		lim.appendOrder(o)
+		lim.push(o)
 	}
 }
 
@@ -71,17 +85,23 @@ func (h *heap) pop() *Order {
 	if len(h.limits) == 0 {
 		return nil
 	}
-	lim := h.limits[0]
-	o := lim.head
-	lim.head = o.next
+	o := h.limits[0].pop()
 	h.clearHead()
 	return o
+}
+
+func (h *heap) peek() *Order {
+	h.clearHead()
+	if len(h.limits) == 0 {
+		return nil
+	}
+	return h.limits[0].peek()
 }
 
 func (h *heap) clearHead() {
 	for len(h.limits) > 0 {
 		lim := h.limits[0]
-		if lim.head != nil {
+		if !lim.isEmpty() {
 			return
 		}
 		n := len(h.limits) - 1
@@ -91,13 +111,6 @@ func (h *heap) clearHead() {
 		h.down(0)
 		delete(h.priceMap, lim.price)
 	}
-}
-
-func (h *heap) peek() *Order {
-	if len(h.limits) == 0 {
-		return nil
-	}
-	return h.limits[0].head
 }
 
 func (h *heap) remove(guid uint64, price int64) *Order {
