@@ -6,6 +6,7 @@ import (
 	"os"
 	"runtime/pprof"
 	"github.com/fmstephe/matching_engine/matcher"
+	"time"
 )
 
 const (
@@ -29,10 +30,13 @@ func main() {
 	buys := mkBuys(orderNum, 1000, 1500)
 	m := matcher.NewMatcher(stockId)
 	pprof.StartCPUProfile(f)
+	start := time.Now().UnixNano()
 	for i := 0; i < orderNum; i++ {
 		m.AddBuy(buys[i])
 		m.AddSell(sells[i])
 	}
+	total := time.Now().UnixNano() - start
+	println(total)
 	defer pprof.StopCPUProfile()
 }
 
