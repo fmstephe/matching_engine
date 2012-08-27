@@ -7,12 +7,13 @@ import (
 type M struct {
 	buys, sells *heap
 	stockId     uint32
+	output *ResponseBuffer
 }
 
-func NewMatcher(stockId uint32) *M {
+func NewMatcher(stockId uint32, output *ResponseBuffer) *M {
 	buys := newHeap(BUY)
 	sells := newHeap(SELL)
-	return &M{buys: buys, sells: sells, stockId: stockId}
+	return &M{buys: buys, sells: sells, stockId: stockId, output: output}
 }
 
 func (m *M) AddSell(s *Order) {
@@ -54,20 +55,20 @@ func (m *M) fillableBuy(b *Order) bool {
 				price := price(b.Price, s.Price)
 				m.sells.pop()
 				b.Amount -= amount
-				completeTrade(b, s, price, amount)
+				m.completeTrade(b, s, price, amount)
 				continue
 			}
 			if s.Amount > b.Amount {
 				amount := b.Amount
 				price := price(b.Price, s.Price)
 				s.Amount -= amount
-				completeTrade(b, s, price, amount)
+				m.completeTrade(b, s, price, amount)
 				return true // The buy has been used up
 			}
 			if s.Amount == b.Amount {
 				amount := b.Amount
 				price := price(b.Price, s.Price)
-				completeTrade(b, s, price, amount)
+				m.completeTrade(b, s, price, amount)
 				m.sells.pop()
 				return true // The buy has been used up
 			}
@@ -90,21 +91,21 @@ func (m *M) fillableSell(s *Order) bool {
 				price := price(b.Price, s.Price)
 				m.sells.pop()
 				b.Amount -= amount
-				completeTrade(b, s, price, amount)
+				m.completeTrade(b, s, price, amount)
 				return true // The sell has been used up
 			}
 			if s.Amount >  b.Amount {
 				amount := b.Amount
 				price := price(b.Price, s.Price)
 				s.Amount -= amount
-				completeTrade(b, s, price, amount)
+				m.completeTrade(b, s, price, amount)
 				m.sells.pop()
 				continue
 			}
 			if s.Amount == b.Amount {
 				amount := b.Amount
 				price := price(b.Price, s.Price)
-				completeTrade(b, s, price, amount)
+				m.completeTrade(b, s, price, amount)
 				m.sells.pop()
 				return true // The sell has been used up
 			}
@@ -123,7 +124,17 @@ func price(bPrice, sPrice int64) int64 {
 	return sPrice + (d >> 1)
 }
 
-func completeTrade(b, s *Order, price int64, amount uint32) {
-	b.ResponseFunc(NewResponse(-price, amount, b.TradeId, s.TraderId))
-	s.ResponseFunc(NewResponse(price, amount, s.TradeId, b.TraderId))
+func (m *M) completeTrade(b, s *Order, price int64, amount uint32) {
+	// Write the buy response
+	rb := m.output.getForWrite()
+	rb.Price = -price
+	rb.Amount = amount
+	rb.TradeId = b.TradeId
+	rb.CounterParty = s.TraderId
+	// Write the sell response
+	rs := m.output.getForWrite()
+	rs.Price = price
+	rs.Amount = amount
+	rs.TradeId = s.TradeId
+	rs.CounterParty = b.TraderId
 }

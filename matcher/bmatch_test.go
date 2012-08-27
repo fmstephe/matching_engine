@@ -17,6 +17,7 @@ var (
 	sellsWide []*Order
 	sellsMedium []*Order
 	sellsNarrow []*Order
+	output *ResponseBuffer
 )
 
 func prepare(b *testing.B) {
@@ -38,6 +39,11 @@ func prepare(b *testing.B) {
 	}
 	if sellsNarrow == nil {
 		sellsNarrow = mkSells(orderNum, 1000, 1500)
+	}
+	if output == nil {
+		output = NewResponseBuffer(orderNum*32)
+	} else {
+		output.clear()
 	}
 	b.StartTimer()
 }
@@ -90,7 +96,7 @@ func BenchmarkAddBuyNarrow(b *testing.B) {
 func benchmarkAddBuy(b *testing.B, buys []*Order) {
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
-		m := NewMatcher(stockId)
+		m := NewMatcher(stockId, output)
 		b.StartTimer()
 		for _, buy := range buys {
 			m.AddBuy(buy)
@@ -117,7 +123,7 @@ func benchmarkAddSell(b *testing.B, sells []*Order) {
 	for i := 0; i < b.N; i++ {
 		prepare(b)
 		b.StopTimer()
-		m := NewMatcher(stockId)
+		m := NewMatcher(stockId, output)
 		b.StartTimer()
 		for _, sell := range sells {
 			m.AddSell(sell)
@@ -143,7 +149,7 @@ func BenchmarkMatchNarrow(b *testing.B) {
 func benchmarkMatch(b *testing.B, buys, sells []*Order) {
 	for i := 0; i < b.N; i++ {
 		prepare(b)
-		m := NewMatcher(stockId)
+		m := NewMatcher(stockId, output)
 		for j := 0; j < orderNum; j++ {
 			m.AddBuy(buys[j])
 			m.AddSell(sells[j])
