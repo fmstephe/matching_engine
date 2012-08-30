@@ -7,7 +7,7 @@ import (
 type M struct {
 	buys, sells *heap
 	stockId     uint32
-	output *ResponseBuffer
+	output      *ResponseBuffer
 }
 
 func NewMatcher(stockId uint32, output *ResponseBuffer) *M {
@@ -94,7 +94,7 @@ func (m *M) fillableSell(s *Order) bool {
 				m.completeTrade(b, s, price, amount)
 				return true // The sell has been used up
 			}
-			if s.Amount >  b.Amount {
+			if s.Amount > b.Amount {
 				amount := b.Amount
 				price := price(b.Price, s.Price)
 				s.Amount -= amount

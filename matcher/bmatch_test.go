@@ -10,14 +10,14 @@ const (
 )
 
 var (
-	benchRand = rand.New(rand.NewSource(1))
-	buysWide []*Order
-	buysMedium []*Order
-	buysNarrow []*Order
-	sellsWide []*Order
+	benchRand   = rand.New(rand.NewSource(1))
+	buysWide    []*Order
+	buysMedium  []*Order
+	buysNarrow  []*Order
+	sellsWide   []*Order
 	sellsMedium []*Order
 	sellsNarrow []*Order
-	output *ResponseBuffer
+	output      *ResponseBuffer
 )
 
 func prepare(b *testing.B) {
@@ -41,7 +41,7 @@ func prepare(b *testing.B) {
 		sellsNarrow = mkSells(orderNum, 1000, 1500)
 	}
 	if output == nil {
-		output = NewResponseBuffer(orderNum*32)
+		output = NewResponseBuffer(orderNum * 32)
 	} else {
 		output.clear()
 	}

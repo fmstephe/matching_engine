@@ -1,11 +1,10 @@
 package matcher
 
-import(
-)
+import ()
 
 type OrderBuffer struct {
 	read, write int
-	orders []Order
+	orders      []Order
 }
 
 func NewOrderBuffer(size int) *OrderBuffer {
@@ -34,7 +33,7 @@ func (ob *OrderBuffer) clear() {
 
 type ResponseBuffer struct {
 	read, write int
-	responses []Response
+	responses   []Response
 }
 
 func NewResponseBuffer(size int) *ResponseBuffer {

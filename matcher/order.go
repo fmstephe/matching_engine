@@ -27,7 +27,7 @@ type Order struct {
 	ResponseFunc func(*Response)
 	BuySell      TradeType // Indicates whether this trade is a buy or a sell
 	// Linked List fields
-	next     *Order  // The next order in this limit
+	next *Order // The next order in this limit
 }
 
 func (o *Order) GUID() uint64 {

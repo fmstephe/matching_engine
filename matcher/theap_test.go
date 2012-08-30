@@ -199,11 +199,11 @@ func TestSellRandomPushPop(t *testing.T) {
 }
 
 func TestRemoveBuy(t *testing.T) {
-	testSimpleRemove(t,BUY)
+	testSimpleRemove(t, BUY)
 }
 
 func TestRemoveSell(t *testing.T) {
-	testSimpleRemove(t,SELL)
+	testSimpleRemove(t, SELL)
 }
 
 func testSimpleRemove(t *testing.T, buySell TradeType) {
