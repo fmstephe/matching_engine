@@ -28,7 +28,8 @@ func main() {
 	orderNum := 20 * 1000 * 1000
 	sells := mkSells(orderNum, 1000, 1500)
 	buys := mkBuys(orderNum, 1000, 1500)
-	m := matcher.NewMatcher(stockId)
+	buffer := matcher.NewResponseBuffer(2)
+	m := matcher.NewMatcher(stockId, buffer)
 	pprof.StartCPUProfile(f)
 	start := time.Now().UnixNano()
 	for i := 0; i < orderNum; i++ {
