@@ -41,7 +41,7 @@ func prepare(b *testing.B) {
 		sellsNarrow = mkSells(orderNum, 1000, 1500)
 	}
 	if output == nil {
-		output = NewResponseBuffer(orderNum * 32)
+		output = NewResponseBuffer(orderNum * 4)
 	} else {
 		output.clear()
 	}
