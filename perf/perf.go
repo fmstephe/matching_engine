@@ -19,7 +19,6 @@ var (
 	}
 )
 
-
 func main() {
 	f, err := os.Create("cpu.prof")
 	if err != nil {
@@ -41,11 +40,20 @@ func main() {
 	defer pprof.StopCPUProfile()
 }
 
-
-func valRange(n int, low, high int64) []int64 {
+func valRangeFlat(n int, low, high int64) []int64 {
 	vals := make([]int64, n)
 	for i := 0; i < n; i++ {
 		vals[i] = rand.Int63n(high-low) + low
+	}
+	return vals
+}
+
+func valRangePyramid(n int, low, high int64) []int64 {
+	seq := (high - low) / 4
+	vals := make([]int64, n)
+	for i := 0; i < n; i++ {
+		val := rand.Int63n(seq) + rand.Int63n(seq) + rand.Int63n(seq) + rand.Int63n(seq)
+		vals[i] = val + low
 	}
 	return vals
 }
@@ -59,7 +67,7 @@ func mkSells(n int, low, high int64) []*matcher.Order {
 }
 
 func mkOrders(n int, low, high int64, buySell matcher.TradeType) []*matcher.Order {
-	prices := valRange(n, low, high)
+	prices := valRangeFlat(n, low, high)
 	orders := make([]*matcher.Order, n)
 	for i, price := range prices {
 		costData := matcher.CostData{Price: price, Amount: 1}

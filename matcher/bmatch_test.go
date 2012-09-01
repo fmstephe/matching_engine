@@ -7,6 +7,7 @@ import (
 
 const (
 	orderNum = 500 * 1000
+	buySellOffset = 0
 )
 
 var (
@@ -22,51 +23,64 @@ var (
 
 func prepare(b *testing.B) {
 	b.StopTimer()
+	// Wide range 
 	if buysWide == nil {
-		buysWide = mkBuys(orderNum, 1000, 100*1000)
-	}
-	if buysMedium == nil {
-		buysMedium = mkBuys(orderNum, 1000, 5000)
-	}
-	if buysNarrow == nil {
-		buysNarrow = mkBuys(orderNum, 1000, 1500)
+		buysWide = mkBuys(valRangePyramid(orderNum, 1000-buySellOffset, (100*1000)-buySellOffset))
 	}
 	if sellsWide == nil {
-		sellsWide = mkSells(orderNum, 1000, 100*1000)
+		sellsWide = mkSells(valRangePyramid(orderNum, 1000+buySellOffset, (100*1000)+buySellOffset))
+	}
+	// Medium Range
+	if buysMedium == nil {
+		buysMedium = mkBuys(valRangePyramid(orderNum, 1000-buySellOffset, 5000-buySellOffset))
 	}
 	if sellsMedium == nil {
-		sellsMedium = mkSells(orderNum, 1000, 5000)
+		sellsMedium = mkSells(valRangePyramid(orderNum, 1000+buySellOffset, 5000+buySellOffset))
+	}
+	// Narrow Range
+	if buysNarrow == nil {
+		buysNarrow = mkBuys(valRangePyramid(orderNum, 1000-buySellOffset, 1500-buySellOffset))
 	}
 	if sellsNarrow == nil {
-		sellsNarrow = mkSells(orderNum, 1000, 1500)
+		sellsNarrow = mkSells(valRangePyramid(orderNum, 1000+buySellOffset, 1500+buySellOffset))
 	}
+	// Output buffer
 	if output == nil {
-		output = NewResponseBuffer(orderNum * 4)
+		output = NewResponseBuffer(4)
 	} else {
 		output.clear()
 	}
 	b.StartTimer()
 }
 
-func valRange(n int, low, high int64) []int64 {
+func valRangePyramid(n int, low, high int64) []int64 {
+	seq := (high - low) / 4
 	vals := make([]int64, n)
 	for i := 0; i < n; i++ {
-		vals[i] = rand.Int63n(high-low) + low
+		val := benchRand.Int63n(seq) + benchRand.Int63n(seq) + benchRand.Int63n(seq) + benchRand.Int63n(seq)
+		vals[i] = int64(val) + low
 	}
 	return vals
 }
 
-func mkBuys(n int, low, high int64) []*Order {
-	return mkOrders(n, low, high, BUY)
+func valRangeFlat(n int, low, high int64) []int64 {
+	vals := make([]int64, n)
+	for i := 0; i < n; i++ {
+		vals[i] = benchRand.Int63n(high-low) + low
+	}
+	return vals
 }
 
-func mkSells(n int, low, high int64) []*Order {
-	return mkOrders(n, low, high, SELL)
+func mkBuys(prices []int64) []*Order {
+	return mkOrders(prices, BUY)
 }
 
-func mkOrders(n int, low, high int64, buySell TradeType) []*Order {
-	prices := valRange(n, low, high)
-	orders := make([]*Order, n)
+func mkSells(prices []int64) []*Order {
+	return mkOrders(prices, SELL)
+}
+
+func mkOrders(prices []int64, buySell TradeType) []*Order {
+	orders := make([]*Order, len(prices))
 	for i, price := range prices {
 		responseFunc := func(response *Response) {
 			// Do Nothing
@@ -133,20 +147,20 @@ func benchmarkAddSell(b *testing.B, sells []*Order) {
 
 func BenchmarkMatchWide(b *testing.B) {
 	prepare(b)
-	benchmarkMatch(b, buysWide, sellsWide)
+	benchmarkMatch(b, buysWide, sellsWide, 100)
 }
 
 func BenchmarkMatchMedium(b *testing.B) {
 	prepare(b)
-	benchmarkMatch(b, buysMedium, sellsMedium)
+	benchmarkMatch(b, buysMedium, sellsMedium, 100)
 }
 
 func BenchmarkMatchNarrow(b *testing.B) {
 	prepare(b)
-	benchmarkMatch(b, buysNarrow, sellsNarrow)
+	benchmarkMatch(b, buysNarrow, sellsNarrow, 100)
 }
 
-func benchmarkMatch(b *testing.B, buys, sells []*Order) {
+func benchmarkMatch(b *testing.B, buys, sells []*Order, expMatches int) {
 	for i := 0; i < b.N; i++ {
 		prepare(b)
 		m := NewMatcher(stockId, output)

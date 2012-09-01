@@ -213,14 +213,14 @@ func TestMidPriceBigBuy(t *testing.T) {
 }
 
 func addLowBuys(m *M, highestPrice int64) {
-	buys := mkBuys(10, 1, highestPrice)
+	buys := mkBuys(valRangeFlat(10, 1, highestPrice))
 	for _, buy := range buys {
 		m.AddBuy(buy)
 	}
 }
 
 func addHighSells(m *M, lowestPrice int64) {
-	sells := mkSells(10, lowestPrice, lowestPrice+10000)
+	sells := mkSells(valRangeFlat(10, lowestPrice, lowestPrice+10000))
 	for _, sell := range sells {
 		m.AddSell(sell)
 	}
