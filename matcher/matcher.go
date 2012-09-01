@@ -116,7 +116,7 @@ func (m *M) fillableSell(s *Order) bool {
 	panic("Unreachable")
 }
 
-func price(bPrice, sPrice int64) int64 {
+func price(bPrice, sPrice int32) int32 {
 	if sPrice == MarketPrice {
 		return bPrice
 	}
@@ -124,7 +124,7 @@ func price(bPrice, sPrice int64) int64 {
 	return sPrice + (d >> 1)
 }
 
-func (m *M) completeTrade(b, s *Order, price int64, amount uint32) {
+func (m *M) completeTrade(b, s *Order, price int32, amount uint32) {
 	// Write the buy response
 	rb := m.output.getForWrite()
 	rb.Price = -price

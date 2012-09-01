@@ -3,12 +3,12 @@ package matcher
 import ()
 
 type limit struct {
-	price int64
+	price int32
 	head  *Order
 	tail  *Order
 }
 
-func newLimit(price int64, o *Order) *limit {
+func newLimit(price int32, o *Order) *limit {
 	limit := &limit{price: price, head: o, tail: o}
 	return limit
 }
@@ -56,12 +56,12 @@ func better(l1, l2 *limit, buySell TradeType) bool {
 
 type heap struct {
 	buySell  TradeType
-	priceMap map[int64]*limit // Maps existing limit prices to limits in the heap
+	priceMap map[int32]*limit // Maps existing limit prices to limits in the heap
 	limits   []*limit
 }
 
 func newHeap(buySell TradeType) *heap {
-	return &heap{buySell: buySell, priceMap: make(map[int64]*limit), limits: make([]*limit, 0, 10)}
+	return &heap{buySell: buySell, priceMap: make(map[int32]*limit), limits: make([]*limit, 0, 10)}
 }
 
 func (h *heap) heapLen() int {
@@ -113,7 +113,7 @@ func (h *heap) clearHead() {
 	}
 }
 
-func (h *heap) remove(guid uint64, price int64) *Order {
+func (h *heap) remove(guid uint64, price int32) *Order {
 	l := h.priceMap[price]
 	o := l.removeOrder(guid)
 	return o

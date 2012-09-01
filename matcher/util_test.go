@@ -4,6 +4,10 @@ import (
 	"math/rand"
 )
 
+func rand32(lim int32) int32 {
+	return int32(rand.Int63n(int64(lim)))
+}
+
 type orderMaker struct {
 	traderId uint32
 	r *rand.Rand
@@ -14,52 +18,52 @@ func newOrderMaker() *orderMaker {
 	return &orderMaker{traderId: 0, r: r}
 }
 
-func myRand(lim int64, r *rand.Rand) int64 {
-	return r.Int63n(lim)
+func myRand(lim int32, r *rand.Rand) int32 {
+	return int32(r.Int63n(int64(lim)))
 }
 
-func (o *orderMaker) mkPricedBuy(price int64) *Order {
+func (o *orderMaker) mkPricedBuy(price int32) *Order {
 	return o.mkPricedOrder(price, BUY)
 }
 
-func (o *orderMaker) mkPricedSell(price int64) *Order {
+func (o *orderMaker) mkPricedSell(price int32) *Order {
 	return o.mkPricedOrder(price, SELL)
 }
 
-func (o *orderMaker) mkPricedOrder(price int64, buySell TradeType) *Order {
+func (o *orderMaker) mkPricedOrder(price int32, buySell TradeType) *Order {
 	costData := CostData{Price: price, Amount: 1}
 	tradeData := TradeData{TraderId: o.traderId, TradeId: 1, StockId: 1}
 	o.traderId++
 	return NewOrder(costData, tradeData, buySell)
 }
 
-func (o *orderMaker) valRangePyramid(n int, low, high int64) []int64 {
+func (o *orderMaker) valRangePyramid(n int, low, high int32) []int32 {
 	seq := (high - low) / 4
-	vals := make([]int64, n)
+	vals := make([]int32, n)
 	for i := 0; i < n; i++ {
 		val := myRand(seq, o.r) + myRand(seq, o.r) + myRand(seq, o.r) + myRand(seq, o.r)
-		vals[i] = int64(val) + low
+		vals[i] = int32(val) + low
 	}
 	return vals
 }
 
-func (o *orderMaker) valRangeFlat(n int, low, high int64) []int64 {
-	vals := make([]int64, n)
+func (o *orderMaker) valRangeFlat(n int, low, high int32) []int32 {
+	vals := make([]int32, n)
 	for i := 0; i < n; i++ {
 		vals[i] = myRand(high-low, o.r) + low
 	}
 	return vals
 }
 
-func (o *orderMaker) mkBuys(prices []int64) []*Order {
+func (o *orderMaker) mkBuys(prices []int32) []*Order {
 	return o.mkOrders(prices, BUY)
 }
 
-func (o *orderMaker) mkSells(prices []int64) []*Order {
+func (o *orderMaker) mkSells(prices []int32) []*Order {
 	return o.mkOrders(prices, SELL)
 }
 
-func (o *orderMaker) mkOrders(prices []int64, buySell TradeType) []*Order {
+func (o *orderMaker) mkOrders(prices []int32, buySell TradeType) []*Order {
 	orders := make([]*Order, len(prices))
 	for i, price := range prices {
 		costData := CostData{Price: price, Amount: 1}

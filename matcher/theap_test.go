@@ -1,7 +1,6 @@
 package matcher
 
 import (
-	"math/rand"
 	"testing"
 )
 
@@ -32,7 +31,7 @@ func verifyHeapRec(h *heap, t *testing.T, i int) {
 	}
 }
 
-func verifyLimit(lim *limit, price int64, t *testing.T) {
+func verifyLimit(lim *limit, price int32, t *testing.T) {
 	if lim.head == nil {
 		t.Errorf("Limit with no Orders found")
 	}
@@ -75,11 +74,11 @@ func TestAllSameSell(t *testing.T) {
 
 func TestDescendingBuy(t *testing.T) {
 	h := newHeap(BUY)
-	for i := int64(20); i > 0; i-- {
+	for i := int32(20); i > 0; i-- {
 		h.push(heapTestOrderMaker.mkPricedBuy(i))
 	}
 	verifyHeap(h, t)
-	for i := int64(20); h.heapLen() > 0; i-- {
+	for i := int32(20); h.heapLen() > 0; i-- {
 		x := h.pop()
 		verifyHeap(h, t)
 		if x.Price != i {
@@ -90,11 +89,11 @@ func TestDescendingBuy(t *testing.T) {
 
 func TestDescendingSell(t *testing.T) {
 	h := newHeap(SELL)
-	for i := int64(20); i > 0; i-- {
+	for i := int32(20); i > 0; i-- {
 		h.push(heapTestOrderMaker.mkPricedSell(i))
 	}
 	verifyHeap(h, t)
-	for i := int64(1); h.heapLen() > 0; i++ {
+	for i := int32(1); h.heapLen() > 0; i++ {
 		x := h.pop()
 		verifyHeap(h, t)
 		if x.Price != i {
@@ -105,11 +104,11 @@ func TestDescendingSell(t *testing.T) {
 
 func TestAscendingBuy(t *testing.T) {
 	h := newHeap(BUY)
-	for i := int64(1); i <= 20; i++ {
+	for i := int32(1); i <= 20; i++ {
 		h.push(heapTestOrderMaker.mkPricedBuy(i))
 	}
 	verifyHeap(h, t)
-	for i := int64(20); h.heapLen() > 0; i-- {
+	for i := int32(20); h.heapLen() > 0; i-- {
 		x := h.pop()
 		verifyHeap(h, t)
 		if x.Price != i {
@@ -120,11 +119,11 @@ func TestAscendingBuy(t *testing.T) {
 
 func TestAscendingSell(t *testing.T) {
 	h := newHeap(SELL)
-	for i := int64(1); i <= 20; i++ {
+	for i := int32(1); i <= 20; i++ {
 		h.push(heapTestOrderMaker.mkPricedSell(i))
 	}
 	verifyHeap(h, t)
-	for i := int64(1); h.heapLen() > 0; i++ {
+	for i := int32(1); h.heapLen() > 0; i++ {
 		x := h.pop()
 		verifyHeap(h, t)
 		if x.Price != i {
@@ -136,11 +135,11 @@ func TestAscendingSell(t *testing.T) {
 func TestBuyRandomPushPop(t *testing.T) {
 	h := newHeap(BUY)
 	size := 10000
-	priceRange := int64(500)
-	priceBase := int64(1000)
+	priceRange := int32(500)
+	priceBase := int32(1000)
 	buys := make([]*Order, 0, size)
 	for i := 0; i < size; i++ {
-		b := heapTestOrderMaker.mkPricedBuy(rand.Int63n(priceRange) + priceBase)
+		b := heapTestOrderMaker.mkPricedBuy(rand32(priceRange) + priceBase)
 		buys = append(buys, b)
 		h.push(b)
 		verifyHeap(h, t)
@@ -159,16 +158,16 @@ func TestBuyRandomPushPop(t *testing.T) {
 func TestSellRandomPushPop(t *testing.T) {
 	h := newHeap(SELL)
 	size := 10000
-	priceRange := int64(500)
-	priceBase := int64(1000)
+	priceRange := int32(500)
+	priceBase := int32(1000)
 	buys := make([]*Order, 0, size)
 	for i := 0; i < size; i++ {
-		b := heapTestOrderMaker.mkPricedSell(rand.Int63n(priceRange) + priceBase)
+		b := heapTestOrderMaker.mkPricedSell(rand32(priceRange) + priceBase)
 		buys = append(buys, b)
 		h.push(b)
 		verifyHeap(h, t)
 	}
-	greatestPrice := int64(0)
+	greatestPrice := int32(0)
 	for i := 0; i < size; i++ {
 		s := h.pop()
 		if s.Price < greatestPrice {
@@ -189,9 +188,9 @@ func TestRemoveSell(t *testing.T) {
 
 func testSimpleRemove(t *testing.T, buySell TradeType) {
 	h := newHeap(buySell)
-	size := int64(10)
+	size := int32(10)
 	orders := make([]*Order, 0, size)
-	for i := int64(1); i <= size; i++ {
+	for i := int32(1); i <= size; i++ {
 		order := heapTestOrderMaker.mkPricedOrder(i, buySell)
 		h.push(order)
 		orders = append(orders, order)
@@ -208,7 +207,7 @@ func testSimpleRemove(t *testing.T, buySell TradeType) {
 
 func TestRemovePopBuy(t *testing.T) {
 	h := newHeap(BUY)
-	size := int64(10)
+	size := int32(10)
 	buys := make([]*Order, 0, size)
 	for i := size; i > 0; i-- {
 		b := heapTestOrderMaker.mkPricedBuy(i)
@@ -232,9 +231,9 @@ func TestRemovePopBuy(t *testing.T) {
 
 func TestRemovePopSell(t *testing.T) {
 	h := newHeap(SELL)
-	size := int64(10)
+	size := int32(10)
 	sells := make([]*Order, 0, size)
-	for i := int64(1); i <= size; i++ {
+	for i := int32(1); i <= size; i++ {
 		s := heapTestOrderMaker.mkPricedSell(i)
 		h.push(s)
 		sells = append(sells, s)

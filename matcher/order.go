@@ -11,7 +11,7 @@ const (
 type TradeType bool
 
 type CostData struct {
-	Price  int64  // The highest/lowest acceptable price for a buy/sell
+	Price  int32  // The highest/lowest acceptable price for a buy/sell
 	Amount uint32 // The number of units desired to buy/sell
 }
 
@@ -24,7 +24,7 @@ type TradeData struct {
 type Order struct {
 	CostData
 	TradeData
-	Price int64
+	Price int32
 	Amount uint32
 	TraderId uint32
 	TradeId uint32
@@ -51,12 +51,12 @@ func NewOrder(costData CostData, tradeData TradeData, buySell TradeType) *Order 
 }
 
 type Response struct {
-	Price        int64  // The actual trade price, will be negative if a purchase was made
+	Price        int32  // The actual trade price, will be negative if a purchase was made
 	Amount       uint32 // The number of units actually bought or sold
 	TradeId      uint32 // Links this trade back to a previously submitted Order
 	CounterParty uint32 // The trader-id of the other half of this trade
 }
 
-func NewResponse(price int64, amount, tradeId, counterParty uint32) *Response {
+func NewResponse(price int32, amount, tradeId, counterParty uint32) *Response {
 	return &Response{Price: price, Amount: amount, TradeId: tradeId, CounterParty: counterParty}
 }

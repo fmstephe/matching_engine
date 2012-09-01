@@ -15,10 +15,8 @@ const (
 )
 
 var (
-	responseFunc = func(response *matcher.Response) {
-		// Do Nothing
-	}
 	profile = flag.String("profile", "", "Write out a profile of this application, 'cpu' and 'mem' supported")
+	perfRand = rand.New(rand.NewSource(1))
 )
 
 func main() {
@@ -62,33 +60,37 @@ func endProfile() {
 	}
 }
 
-func valRangeFlat(n int, low, high int64) []int64 {
-	vals := make([]int64, n)
+func myRand(lim int32, r *rand.Rand) int32 {
+	return int32(r.Int63n(int64(lim)))
+}
+
+func valRangeFlat(n int, low, high int32) []int32 {
+	vals := make([]int32, n)
 	for i := 0; i < n; i++ {
-		vals[i] = rand.Int63n(high-low) + low
+		vals[i] = myRand(high-low, perfRand) + low
 	}
 	return vals
 }
 
-func valRangePyramid(n int, low, high int64) []int64 {
+func valRangePyramid(n int, low, high int32) []int32 {
 	seq := (high - low) / 4
-	vals := make([]int64, n)
+	vals := make([]int32, n)
 	for i := 0; i < n; i++ {
-		val := rand.Int63n(seq) + rand.Int63n(seq) + rand.Int63n(seq) + rand.Int63n(seq)
+		val := myRand(seq, perfRand) + myRand(seq, perfRand) + myRand(seq, perfRand) + myRand(seq, perfRand)
 		vals[i] = val + low
 	}
 	return vals
 }
 
-func mkBuys(n int, low, high int64) []*matcher.Order {
+func mkBuys(n int, low, high int32) []*matcher.Order {
 	return mkOrders(n, low, high, matcher.BUY)
 }
 
-func mkSells(n int, low, high int64) []*matcher.Order {
+func mkSells(n int, low, high int32) []*matcher.Order {
 	return mkOrders(n, low, high, matcher.SELL)
 }
 
-func mkOrders(n int, low, high int64, buySell matcher.TradeType) []*matcher.Order {
+func mkOrders(n int, low, high int32, buySell matcher.TradeType) []*matcher.Order {
 	prices := valRangeFlat(n, low, high)
 	orders := make([]*matcher.Order, n)
 	for i, price := range prices {
