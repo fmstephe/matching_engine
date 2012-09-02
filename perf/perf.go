@@ -7,6 +7,7 @@ import (
 	"runtime/pprof"
 	"github.com/fmstephe/matching_engine/matcher"
 	"time"
+	"flag"
 )
 
 const (
@@ -17,19 +18,18 @@ var (
 	responseFunc = func(response *matcher.Response) {
 		// Do Nothing
 	}
+	profile = flag.String("profile", "", "Write out a profile of this application, 'cpu' and 'mem' supported")
 )
 
 func main() {
-	f, err := os.Create("cpu.prof")
-	if err != nil {
-		log.Fatal(err)
-	}
+	flag.Parse()
 	orderNum := 20 * 1000 * 1000
 	sells := mkSells(orderNum, 1000, 1500)
 	buys := mkBuys(orderNum, 1000, 1500)
 	buffer := matcher.NewResponseBuffer(2)
 	m := matcher.NewMatcher(stockId, buffer)
-	pprof.StartCPUProfile(f)
+	startProfile()
+	defer endProfile()
 	start := time.Now().UnixNano()
 	for i := 0; i < orderNum; i++ {
 		m.AddBuy(buys[i])
@@ -37,7 +37,29 @@ func main() {
 	}
 	total := time.Now().UnixNano() - start
 	println(total)
-	defer pprof.StopCPUProfile()
+}
+
+func startProfile() {
+	if *profile == "cpu" {
+		f, err := os.Create("cpu.prof")
+		if err != nil {
+			log.Fatal(err)
+		}
+		pprof.StartCPUProfile(f)
+	}
+}
+
+func endProfile() {
+	if *profile == "cpu" {
+		pprof.StopCPUProfile()
+	}
+	if *profile == "mem" {
+		f, err := os.Create("mem.prof")
+		if err != nil {
+			log.Fatal(err)
+		}
+		pprof.WriteHeapProfile(f)
+	}
 }
 
 func valRangeFlat(n int, low, high int64) []int64 {
