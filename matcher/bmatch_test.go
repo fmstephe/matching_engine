@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	orderNum = 500 * 1000
+	orderNum      = 500 * 1000
 	buySellOffset = 0
 )
 
