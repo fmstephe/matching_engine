@@ -147,17 +147,17 @@ func benchmarkAddSell(b *testing.B, sells []*Order) {
 
 func BenchmarkMatchWide(b *testing.B) {
 	prepare(b)
-	benchmarkMatch(b, buysWide, sellsWide, 100)
+	benchmarkMatch(b, buysWide, sellsWide, 499987)
 }
 
 func BenchmarkMatchMedium(b *testing.B) {
 	prepare(b)
-	benchmarkMatch(b, buysMedium, sellsMedium, 100)
+	benchmarkMatch(b, buysMedium, sellsMedium, 499994)
 }
 
 func BenchmarkMatchNarrow(b *testing.B) {
 	prepare(b)
-	benchmarkMatch(b, buysNarrow, sellsNarrow, 100)
+	benchmarkMatch(b, buysNarrow, sellsNarrow, 499990)
 }
 
 func benchmarkMatch(b *testing.B, buys, sells []*Order, expMatches int) {
@@ -167,6 +167,9 @@ func benchmarkMatch(b *testing.B, buys, sells []*Order, expMatches int) {
 		for j := 0; j < orderNum; j++ {
 			m.AddBuy(buys[j])
 			m.AddSell(sells[j])
+		}
+		if (output.write/2 != expMatches) {
+			println("Expecting", expMatches, "found", output.write/2, "instead")
 		}
 	}
 }
