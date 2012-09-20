@@ -1,27 +1,82 @@
 package matcher
 
 import (
+	"encoding/json"
+	"io/ioutil"
 	"testing"
 )
 
 const (
-	orderNum      = 500 * 1000
-	buySellOffset = 0
+	orderNum        = 500 * 1000
+	buySellOffset   = 0
+	dataDir         = "data/"
+	buysWideFile    = dataDir + "buyswide"
+	sellsWideFile   = dataDir + "sellswide"
+	buysMediumFile  = dataDir + "buymedium"
+	sellsMediumFile = dataDir + "sellsmedium"
+	buysNarrowFile  = dataDir + "buysnarrow"
+	sellsNarrowFile = dataDir + "sellsnarrow"
 )
 
 var (
+	isInitialised   = false
 	benchOrderMaker = newOrderMaker()
-	buysWide    []*Order
-	buysMedium  []*Order
-	buysNarrow  []*Order
-	sellsWide   []*Order
-	sellsMedium []*Order
-	sellsNarrow []*Order
-	output      *ResponseBuffer
+	buysWide        []*Order
+	buysMedium      []*Order
+	buysNarrow      []*Order
+	sellsWide       []*Order
+	sellsMedium     []*Order
+	sellsNarrow     []*Order
+	output          *ResponseBuffer
 )
 
-func prepare(b *testing.B) {
-	b.StopTimer()
+func writeOut() {
+	println("Beginning Test Data Write")
+	//
+	buysWideSlice, _ := json.Marshal(buysWide)
+	sellsWideSlice, _ := json.Marshal(sellsWide)
+	buysMediumSlice, _ := json.Marshal(buysMedium)
+	sellsMediumSlice, _ := json.Marshal(sellsMedium)
+	buysNarrowSlice, _ := json.Marshal(buysNarrow)
+	sellsNarrowSlice, _ := json.Marshal(sellsNarrow)
+	//
+	ioutil.WriteFile(buysWideFile, buysWideSlice, 0777)
+	ioutil.WriteFile(sellsWideFile, sellsWideSlice, 0777)
+	ioutil.WriteFile(buysMediumFile, buysMediumSlice, 0777)
+	ioutil.WriteFile(sellsMediumFile, sellsMediumSlice, 0777)
+	ioutil.WriteFile(buysNarrowFile, buysNarrowSlice, 0777)
+	ioutil.WriteFile(sellsNarrowFile, sellsNarrowSlice, 0777)
+	println("Test Data Write Complete")
+}
+
+func readIn() {
+	println("Beginning Test Data Read")
+	dataDir := "data/"
+	buysWideFile := dataDir + "buyswide"
+	sellsWideFile := dataDir + "sellswide"
+	buysMediumFile := dataDir + "buymedium"
+	sellsMediumFile := dataDir + "sellsmedium"
+	buysNarrowFile := dataDir + "buysnarrow"
+	sellsNarrowFile := dataDir + "sellsnarrow"
+	//
+	buysWideSlice, _ := ioutil.ReadFile(buysWideFile)
+	sellsWideSlice, _ := ioutil.ReadFile(sellsWideFile)
+	buysMediumSlice, _ := ioutil.ReadFile(buysMediumFile)
+	sellsMediumSlice, _ := ioutil.ReadFile(sellsMediumFile)
+	buysNarrowSlice, _ := ioutil.ReadFile(buysNarrowFile)
+	sellsNarrowSlice, _ := ioutil.ReadFile(sellsNarrowFile)
+	//
+	json.Unmarshal(buysWideSlice, &buysWide)
+	json.Unmarshal(sellsWideSlice, &sellsWide)
+	json.Unmarshal(buysMediumSlice, &buysMedium)
+	json.Unmarshal(sellsMediumSlice, &sellsMedium)
+	json.Unmarshal(buysNarrowSlice, &buysNarrow)
+	json.Unmarshal(sellsNarrowSlice, &sellsNarrow)
+	//
+	println("Test Data Read Complete")
+}
+
+func create() {
 	// Wide range 
 	if buysWide == nil {
 		buysWide = benchOrderMaker.mkBuys(benchOrderMaker.valRangePyramid(orderNum, 1000-buySellOffset, (100*1000)-buySellOffset))
@@ -43,12 +98,18 @@ func prepare(b *testing.B) {
 	if sellsNarrow == nil {
 		sellsNarrow = benchOrderMaker.mkSells(benchOrderMaker.valRangePyramid(orderNum, 1000+buySellOffset, 1500+buySellOffset))
 	}
-	// Output buffer
-	if output == nil {
+}
+
+func prepare(b *testing.B) {
+	b.StopTimer()
+	if !isInitialised {
+		create()
+	//	writeOut()
+	//	readIn()
 		output = NewResponseBuffer(4)
-	} else {
-		output.clear()
+		isInitialised = true
 	}
+	output.clear()
 	b.StartTimer()
 }
 
@@ -112,12 +173,12 @@ func BenchmarkMatchWide(b *testing.B) {
 
 func BenchmarkMatchMedium(b *testing.B) {
 	prepare(b)
-	benchmarkMatch(b, buysMedium, sellsMedium, 499481)
+	benchmarkMatch(b, buysMedium, sellsMedium, 989)
 }
 
 func BenchmarkMatchNarrow(b *testing.B) {
 	prepare(b)
-	benchmarkMatch(b, buysNarrow, sellsNarrow, 499653)
+	benchmarkMatch(b, buysNarrow, sellsNarrow, 994)
 }
 
 func benchmarkMatch(b *testing.B, buys, sells []*Order, expMatches int) {
@@ -128,7 +189,7 @@ func benchmarkMatch(b *testing.B, buys, sells []*Order, expMatches int) {
 			m.AddBuy(buys[j])
 			m.AddSell(sells[j])
 		}
-		if (output.write/2 != expMatches) {
+		if output.write/2 != expMatches {
 			println("Expecting", expMatches, "found", output.write/2, "instead")
 		}
 	}
