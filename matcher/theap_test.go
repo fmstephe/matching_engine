@@ -5,26 +5,7 @@ import (
 	"testing"
 )
 
-var orderMkr = orderMaker{}
-
-type orderMaker struct {
-	traderId uint32
-}
-
-func (o *orderMaker) mkPricedBuy(price int64) *Order {
-	return orderMkr.mkPricedOrder(price, BUY)
-}
-
-func (o *orderMaker) mkPricedSell(price int64) *Order {
-	return orderMkr.mkPricedOrder(price, SELL)
-}
-
-func (o *orderMaker) mkPricedOrder(price int64, buySell TradeType) *Order {
-	costData := CostData{Price: price, Amount: 1}
-	tradeData := TradeData{TraderId: o.traderId, TradeId: 1, StockId: 1}
-	o.traderId++
-	return NewOrder(costData, tradeData, nil, buySell)
-}
+var heapTestOrderMaker = newOrderMaker()
 
 func verifyHeap(h *heap, t *testing.T) {
 	verifyHeapRec(h, t, 0)
@@ -65,7 +46,7 @@ func verifyLimit(lim *limit, price int64, t *testing.T) {
 func TestAllSameBuy(t *testing.T) {
 	h := newHeap(BUY)
 	for i := 20; i > 0; i-- {
-		h.push(orderMkr.mkPricedBuy(1))
+		h.push(heapTestOrderMaker.mkPricedBuy(1))
 	}
 	verifyHeap(h, t)
 	for i := 1; h.heapLen() > 0; i++ {
@@ -80,7 +61,7 @@ func TestAllSameBuy(t *testing.T) {
 func TestAllSameSell(t *testing.T) {
 	h := newHeap(SELL)
 	for i := 20; i > 0; i-- {
-		h.push(orderMkr.mkPricedSell(1))
+		h.push(heapTestOrderMaker.mkPricedSell(1))
 	}
 	verifyHeap(h, t)
 	for i := 1; h.heapLen() > 0; i++ {
@@ -95,7 +76,7 @@ func TestAllSameSell(t *testing.T) {
 func TestDescendingBuy(t *testing.T) {
 	h := newHeap(BUY)
 	for i := int64(20); i > 0; i-- {
-		h.push(orderMkr.mkPricedBuy(i))
+		h.push(heapTestOrderMaker.mkPricedBuy(i))
 	}
 	verifyHeap(h, t)
 	for i := int64(20); h.heapLen() > 0; i-- {
@@ -110,7 +91,7 @@ func TestDescendingBuy(t *testing.T) {
 func TestDescendingSell(t *testing.T) {
 	h := newHeap(SELL)
 	for i := int64(20); i > 0; i-- {
-		h.push(orderMkr.mkPricedSell(i))
+		h.push(heapTestOrderMaker.mkPricedSell(i))
 	}
 	verifyHeap(h, t)
 	for i := int64(1); h.heapLen() > 0; i++ {
@@ -125,7 +106,7 @@ func TestDescendingSell(t *testing.T) {
 func TestAscendingBuy(t *testing.T) {
 	h := newHeap(BUY)
 	for i := int64(1); i <= 20; i++ {
-		h.push(orderMkr.mkPricedBuy(i))
+		h.push(heapTestOrderMaker.mkPricedBuy(i))
 	}
 	verifyHeap(h, t)
 	for i := int64(20); h.heapLen() > 0; i-- {
@@ -140,7 +121,7 @@ func TestAscendingBuy(t *testing.T) {
 func TestAscendingSell(t *testing.T) {
 	h := newHeap(SELL)
 	for i := int64(1); i <= 20; i++ {
-		h.push(orderMkr.mkPricedSell(i))
+		h.push(heapTestOrderMaker.mkPricedSell(i))
 	}
 	verifyHeap(h, t)
 	for i := int64(1); h.heapLen() > 0; i++ {
@@ -159,7 +140,7 @@ func TestBuyRandomPushPop(t *testing.T) {
 	priceBase := int64(1000)
 	buys := make([]*Order, 0, size)
 	for i := 0; i < size; i++ {
-		b := orderMkr.mkPricedBuy(rand.Int63n(priceRange) + priceBase)
+		b := heapTestOrderMaker.mkPricedBuy(rand.Int63n(priceRange) + priceBase)
 		buys = append(buys, b)
 		h.push(b)
 		verifyHeap(h, t)
@@ -182,7 +163,7 @@ func TestSellRandomPushPop(t *testing.T) {
 	priceBase := int64(1000)
 	buys := make([]*Order, 0, size)
 	for i := 0; i < size; i++ {
-		b := orderMkr.mkPricedSell(rand.Int63n(priceRange) + priceBase)
+		b := heapTestOrderMaker.mkPricedSell(rand.Int63n(priceRange) + priceBase)
 		buys = append(buys, b)
 		h.push(b)
 		verifyHeap(h, t)
@@ -211,7 +192,7 @@ func testSimpleRemove(t *testing.T, buySell TradeType) {
 	size := int64(10)
 	orders := make([]*Order, 0, size)
 	for i := int64(1); i <= size; i++ {
-		order := orderMkr.mkPricedOrder(i, buySell)
+		order := heapTestOrderMaker.mkPricedOrder(i, buySell)
 		h.push(order)
 		orders = append(orders, order)
 		verifyHeap(h, t)
@@ -230,7 +211,7 @@ func TestRemovePopBuy(t *testing.T) {
 	size := int64(10)
 	buys := make([]*Order, 0, size)
 	for i := size; i > 0; i-- {
-		b := orderMkr.mkPricedBuy(i)
+		b := heapTestOrderMaker.mkPricedBuy(i)
 		h.push(b)
 		buys = append(buys, b)
 		verifyHeap(h, t)
@@ -254,7 +235,7 @@ func TestRemovePopSell(t *testing.T) {
 	size := int64(10)
 	sells := make([]*Order, 0, size)
 	for i := int64(1); i <= size; i++ {
-		s := orderMkr.mkPricedSell(i)
+		s := heapTestOrderMaker.mkPricedSell(i)
 		h.push(s)
 		sells = append(sells, s)
 		verifyHeap(h, t)

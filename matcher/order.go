@@ -24,7 +24,6 @@ type TradeData struct {
 type Order struct {
 	CostData
 	TradeData
-	ResponseFunc func(*Response)
 	BuySell      TradeType // Indicates whether this trade is a buy or a sell
 	// Linked List fields
 	next *Order // The next order in this limit
@@ -34,16 +33,16 @@ func (o *Order) GUID() uint64 {
 	return (uint64(o.TraderId) << 32) | uint64(o.TradeId)
 }
 
-func NewBuy(costData CostData, tradeData TradeData, responseFunc func(*Response)) *Order {
-	return NewOrder(costData, tradeData, responseFunc, BUY)
+func NewBuy(costData CostData, tradeData TradeData) *Order {
+	return NewOrder(costData, tradeData, BUY)
 }
 
-func NewSell(costData CostData, tradeData TradeData, responseFunc func(*Response)) *Order {
-	return NewOrder(costData, tradeData, responseFunc, SELL)
+func NewSell(costData CostData, tradeData TradeData) *Order {
+	return NewOrder(costData, tradeData, SELL)
 }
 
-func NewOrder(costData CostData, tradeData TradeData, responseFunc func(*Response), buySell TradeType) *Order {
-	return &Order{CostData: costData, TradeData: tradeData, ResponseFunc: responseFunc, BuySell: buySell}
+func NewOrder(costData CostData, tradeData TradeData, buySell TradeType) *Order {
+	return &Order{CostData: costData, TradeData: tradeData, BuySell: buySell}
 }
 
 type Response struct {
