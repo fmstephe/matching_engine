@@ -1,4 +1,4 @@
-package matcher
+package trade
 
 import ()
 
@@ -24,14 +24,14 @@ type TradeData struct {
 type Order struct {
 	CostData
 	TradeData
-	Price int32
-	Amount uint32
+	Price    int32
+	Amount   uint32
 	TraderId uint32
-	TradeId uint32
-	StockId uint32
-	BuySell      TradeType // Indicates whether this trade is a buy or a sell
+	TradeId  uint32
+	StockId  uint32
+	BuySell  TradeType // Indicates whether this trade is a buy or a sell
 	// Linked List fields
-	next *Order // The next order in this limit
+	Next *Order // The next order in this limit
 }
 
 func (o *Order) GUID() uint64 {

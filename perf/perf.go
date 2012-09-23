@@ -1,13 +1,14 @@
 package main
 
 import (
-	"math/rand"
+	"flag"
+	"github.com/fmstephe/matching_engine/matcher"
+	"github.com/fmstephe/matching_engine/trade"
 	"log"
+	"math/rand"
 	"os"
 	"runtime/pprof"
-	"github.com/fmstephe/matching_engine/matcher"
 	"time"
-	"flag"
 )
 
 const (
@@ -15,7 +16,7 @@ const (
 )
 
 var (
-	profile = flag.String("profile", "", "Write out a profile of this application, 'cpu' and 'mem' supported")
+	profile  = flag.String("profile", "", "Write out a profile of this application, 'cpu' and 'mem' supported")
 	perfRand = rand.New(rand.NewSource(1))
 )
 
@@ -82,21 +83,21 @@ func valRangePyramid(n int, low, high int32) []int32 {
 	return vals
 }
 
-func mkBuys(n int, low, high int32) []*matcher.Order {
-	return mkOrders(n, low, high, matcher.BUY)
+func mkBuys(n int, low, high int32) []*trade.Order {
+	return mkOrders(n, low, high, trade.BUY)
 }
 
-func mkSells(n int, low, high int32) []*matcher.Order {
-	return mkOrders(n, low, high, matcher.SELL)
+func mkSells(n int, low, high int32) []*trade.Order {
+	return mkOrders(n, low, high, trade.SELL)
 }
 
-func mkOrders(n int, low, high int32, buySell matcher.TradeType) []*matcher.Order {
+func mkOrders(n int, low, high int32, buySell trade.TradeType) []*trade.Order {
 	prices := valRangeFlat(n, low, high)
-	orders := make([]*matcher.Order, n)
+	orders := make([]*trade.Order, n)
 	for i, price := range prices {
-		costData := matcher.CostData{Price: price, Amount: 1}
-		tradeData := matcher.TradeData{TraderId: uint32(i), TradeId: uint32(i), StockId: stockId}
-		orders[i] = matcher.NewOrder(costData, tradeData, buySell)
+		costData := trade.CostData{Price: price, Amount: 1}
+		tradeData := trade.TradeData{TraderId: uint32(i), TradeId: uint32(i), StockId: stockId}
+		orders[i] = trade.NewOrder(costData, tradeData, buySell)
 	}
 	return orders
 }

@@ -1,6 +1,7 @@
 package matcher
 
 import (
+	"github.com/fmstephe/matching_engine/trade"
 	"math/rand"
 )
 
@@ -10,7 +11,7 @@ func rand32(lim int32) int32 {
 
 type orderMaker struct {
 	traderId uint32
-	r *rand.Rand
+	r        *rand.Rand
 }
 
 func newOrderMaker() *orderMaker {
@@ -22,19 +23,19 @@ func myRand(lim int32, r *rand.Rand) int32 {
 	return int32(r.Int63n(int64(lim)))
 }
 
-func (o *orderMaker) mkPricedBuy(price int32) *Order {
-	return o.mkPricedOrder(price, BUY)
+func (o *orderMaker) mkPricedBuy(price int32) *trade.Order {
+	return o.mkPricedOrder(price, trade.BUY)
 }
 
-func (o *orderMaker) mkPricedSell(price int32) *Order {
-	return o.mkPricedOrder(price, SELL)
+func (o *orderMaker) mkPricedSell(price int32) *trade.Order {
+	return o.mkPricedOrder(price, trade.SELL)
 }
 
-func (o *orderMaker) mkPricedOrder(price int32, buySell TradeType) *Order {
-	costData := CostData{Price: price, Amount: 1}
-	tradeData := TradeData{TraderId: o.traderId, TradeId: 1, StockId: 1}
+func (o *orderMaker) mkPricedOrder(price int32, buySell trade.TradeType) *trade.Order {
+	costData := trade.CostData{Price: price, Amount: 1}
+	tradeData := trade.TradeData{TraderId: o.traderId, TradeId: 1, StockId: 1}
 	o.traderId++
-	return NewOrder(costData, tradeData, buySell)
+	return trade.NewOrder(costData, tradeData, buySell)
 }
 
 func (o *orderMaker) valRangePyramid(n int, low, high int32) []int32 {
@@ -55,20 +56,20 @@ func (o *orderMaker) valRangeFlat(n int, low, high int32) []int32 {
 	return vals
 }
 
-func (o *orderMaker) mkBuys(prices []int32) []*Order {
-	return o.mkOrders(prices, BUY)
+func (o *orderMaker) mkBuys(prices []int32) []*trade.Order {
+	return o.mkOrders(prices, trade.BUY)
 }
 
-func (o *orderMaker) mkSells(prices []int32) []*Order {
-	return o.mkOrders(prices, SELL)
+func (o *orderMaker) mkSells(prices []int32) []*trade.Order {
+	return o.mkOrders(prices, trade.SELL)
 }
 
-func (o *orderMaker) mkOrders(prices []int32, buySell TradeType) []*Order {
-	orders := make([]*Order, len(prices))
+func (o *orderMaker) mkOrders(prices []int32, buySell trade.TradeType) []*trade.Order {
+	orders := make([]*trade.Order, len(prices))
 	for i, price := range prices {
-		costData := CostData{Price: price, Amount: 1}
-		tradeData := TradeData{TraderId: uint32(i), TradeId: uint32(i), StockId: stockId}
-		orders[i] = NewOrder(costData, tradeData, buySell)
+		costData := trade.CostData{Price: price, Amount: 1}
+		tradeData := trade.TradeData{TraderId: uint32(i), TradeId: uint32(i), StockId: stockId}
+		orders[i] = trade.NewOrder(costData, tradeData, buySell)
 	}
 	return orders
 }

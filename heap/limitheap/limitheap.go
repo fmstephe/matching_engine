@@ -1,14 +1,16 @@
-package matcher
+package limitheap
 
-import ()
+import (
+	"github.com/fmstephe/matching_engine/trade"
+)
 
 type limit struct {
 	price int32
-	head  *Order
-	tail  *Order
+	head  *trade.Order
+	tail  *trade.Order
 }
 
-func newLimit(price int32, o *Order) *limit {
+func newLimit(price int32, o *trade.Order) *limit {
 	limit := &limit{price: price, head: o, tail: o}
 	return limit
 }
@@ -17,58 +19,58 @@ func (l *limit) isEmpty() bool {
 	return l.head == nil
 }
 
-func (l *limit) peek() *Order {
+func (l *limit) peek() *trade.Order {
 	return l.head
 }
 
-func (l *limit) pop() *Order {
+func (l *limit) pop() *trade.Order {
 	o := l.head
-	l.head = o.next
+	l.head = o.Next
 	return o
 }
 
-func (l *limit) push(o *Order) {
-	l.tail.next = o
+func (l *limit) push(o *trade.Order) {
+	l.tail.Next = o
 	l.tail = o
 }
 
-func (l *limit) removeOrder(guid uint64) *Order {
+func (l *limit) removeOrder(guid uint64) *trade.Order {
 	incoming := &l.head
-	for o := l.head; o != nil; o = o.next {
+	for o := l.head; o != nil; o = o.Next {
 		if o == nil {
 			return nil
 		}
 		if o.GUID() == guid {
-			*incoming = o.next
+			*incoming = o.Next
 			return o
 		}
-		incoming = &o.next
+		incoming = &o.Next
 	}
 	panic("Unreachable")
 }
 
-func better(l1, l2 *limit, buySell TradeType) bool {
-	if buySell == BUY {
+func better(l1, l2 *limit, buySell trade.TradeType) bool {
+	if buySell == trade.BUY {
 		return l2.price-l1.price < 0
 	}
 	return l1.price-l2.price < 0
 }
 
-type heap struct {
-	buySell  TradeType
-	priceMap map[int32]*limit // Maps existing limit prices to limits in the heap
+type H struct {
+	buySell  trade.TradeType
+	priceMap map[int32]*limit // Maps existing limit prices to limits in the H
 	limits   []*limit
 }
 
-func newHeap(buySell TradeType) *heap {
-	return &heap{buySell: buySell, priceMap: make(map[int32]*limit), limits: make([]*limit, 0, 10)}
+func NewHeap(buySell trade.TradeType) *H {
+	return &H{buySell: buySell, priceMap: make(map[int32]*limit), limits: make([]*limit, 0, 10)}
 }
 
-func (h *heap) heapLen() int {
+func (h *H) HLen() int {
 	return len(h.limits)
 }
 
-func (h *heap) push(o *Order) {
+func (h *H) Push(o *trade.Order) {
 	lim := h.priceMap[o.Price]
 	if lim == nil {
 		lim = newLimit(o.Price, o)
@@ -80,7 +82,7 @@ func (h *heap) push(o *Order) {
 	}
 }
 
-func (h *heap) pop() *Order {
+func (h *H) Pop() *trade.Order {
 	h.clearHead()
 	if len(h.limits) == 0 {
 		return nil
@@ -90,7 +92,7 @@ func (h *heap) pop() *Order {
 	return o
 }
 
-func (h *heap) peek() *Order {
+func (h *H) Peek() *trade.Order {
 	h.clearHead()
 	if len(h.limits) == 0 {
 		return nil
@@ -98,7 +100,7 @@ func (h *heap) peek() *Order {
 	return h.limits[0].peek()
 }
 
-func (h *heap) clearHead() {
+func (h *H) clearHead() {
 	for len(h.limits) > 0 {
 		lim := h.limits[0]
 		if !lim.isEmpty() {
@@ -113,13 +115,13 @@ func (h *heap) clearHead() {
 	}
 }
 
-func (h *heap) remove(guid uint64, price int32) *Order {
+func (h *H) remove(guid uint64, price int32) *trade.Order {
 	l := h.priceMap[price]
 	o := l.removeOrder(guid)
 	return o
 }
 
-func (h *heap) up(c int) {
+func (h *H) up(c int) {
 	limits := h.limits
 	for {
 		p := (c - 1) / 2
@@ -131,7 +133,7 @@ func (h *heap) up(c int) {
 	}
 }
 
-func (h *heap) down(p int) {
+func (h *H) down(p int) {
 	n := len(h.limits)
 	limits := h.limits
 	for {

@@ -1,4 +1,4 @@
-package matcher
+package limitheap
 
 import (
 	"testing"

@@ -2,50 +2,52 @@ package matcher
 
 import (
 	"fmt"
+	"github.com/fmstephe/matching_engine/heap/limitheap"
+	"github.com/fmstephe/matching_engine/trade"
 )
 
 type M struct {
-	buys, sells *heap
+	buys, sells *limitheap.H
 	stockId     uint32
 	output      *ResponseBuffer
 }
 
 func NewMatcher(stockId uint32, output *ResponseBuffer) *M {
-	buys := newHeap(BUY)
-	sells := newHeap(SELL)
+	buys := limitheap.NewHeap(trade.BUY)
+	sells := limitheap.NewHeap(trade.SELL)
 	return &M{buys: buys, sells: sells, stockId: stockId, output: output}
 }
 
-func (m *M) AddSell(s *Order) {
-	if s.BuySell != SELL {
+func (m *M) AddSell(s *trade.Order) {
+	if s.BuySell != trade.SELL {
 		panic("Added non-sell trade as a sell")
 	}
 	if s.StockId != m.stockId {
 		panic(fmt.Sprintf("Added sell trade with stock-id %s expecting %s", s.StockId, m.stockId))
 	}
 	if !m.fillableSell(s) {
-		m.sells.push(s)
+		m.sells.Push(s)
 	}
 }
 
-func (m *M) AddBuy(b *Order) {
-	if b.BuySell != BUY {
+func (m *M) AddBuy(b *trade.Order) {
+	if b.BuySell != trade.BUY {
 		panic("Added non-buy trade as a buy")
 	}
 	if b.StockId != m.stockId {
 		panic(fmt.Sprintf("Added buy trade with stock-id %s expecting %s", b.StockId, m.stockId))
 	}
-	if b.Price == MarketPrice {
+	if b.Price == trade.MarketPrice {
 		panic("It is illegal to submit a buy at market price")
 	}
 	if !m.fillableBuy(b) {
-		m.buys.push(b)
+		m.buys.Push(b)
 	}
 }
 
-func (m *M) fillableBuy(b *Order) bool {
+func (m *M) fillableBuy(b *trade.Order) bool {
 	for {
-		s := m.sells.peek()
+		s := m.sells.Peek()
 		if s == nil {
 			return false
 		}
@@ -53,7 +55,7 @@ func (m *M) fillableBuy(b *Order) bool {
 			if b.Amount > s.Amount {
 				amount := s.Amount
 				price := price(b.Price, s.Price)
-				m.sells.pop()
+				m.sells.Pop()
 				b.Amount -= amount
 				m.completeTrade(b, s, price, amount)
 				continue
@@ -69,7 +71,7 @@ func (m *M) fillableBuy(b *Order) bool {
 				amount := b.Amount
 				price := price(b.Price, s.Price)
 				m.completeTrade(b, s, price, amount)
-				m.sells.pop()
+				m.sells.Pop()
 				return true // The buy has been used up
 			}
 		} else {
@@ -79,9 +81,9 @@ func (m *M) fillableBuy(b *Order) bool {
 	panic("Unreachable")
 }
 
-func (m *M) fillableSell(s *Order) bool {
+func (m *M) fillableSell(s *trade.Order) bool {
 	for {
-		b := m.buys.peek()
+		b := m.buys.Peek()
 		if b == nil {
 			return false
 		}
@@ -89,7 +91,7 @@ func (m *M) fillableSell(s *Order) bool {
 			if b.Amount > s.Amount {
 				amount := s.Amount
 				price := price(b.Price, s.Price)
-				m.sells.pop()
+				m.sells.Pop()
 				b.Amount -= amount
 				m.completeTrade(b, s, price, amount)
 				return true // The sell has been used up
@@ -99,14 +101,14 @@ func (m *M) fillableSell(s *Order) bool {
 				price := price(b.Price, s.Price)
 				s.Amount -= amount
 				m.completeTrade(b, s, price, amount)
-				m.sells.pop()
+				m.sells.Pop()
 				continue
 			}
 			if s.Amount == b.Amount {
 				amount := b.Amount
 				price := price(b.Price, s.Price)
 				m.completeTrade(b, s, price, amount)
-				m.sells.pop()
+				m.sells.Pop()
 				return true // The sell has been used up
 			}
 		} else {
@@ -117,14 +119,14 @@ func (m *M) fillableSell(s *Order) bool {
 }
 
 func price(bPrice, sPrice int32) int32 {
-	if sPrice == MarketPrice {
+	if sPrice == trade.MarketPrice {
 		return bPrice
 	}
 	d := bPrice - sPrice
 	return sPrice + (d >> 1)
 }
 
-func (m *M) completeTrade(b, s *Order, price int32, amount uint32) {
+func (m *M) completeTrade(b, s *trade.Order, price int32, amount uint32) {
 	// Write the buy response
 	rb := m.output.getForWrite()
 	rb.Price = -price

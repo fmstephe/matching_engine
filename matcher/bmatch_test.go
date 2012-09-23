@@ -2,6 +2,7 @@ package matcher
 
 import (
 	"encoding/json"
+	"github.com/fmstephe/matching_engine/trade"
 	"io/ioutil"
 	"testing"
 )
@@ -21,12 +22,12 @@ const (
 var (
 	isInitialised   = false
 	benchOrderMaker = newOrderMaker()
-	buysWide        []*Order
-	buysMedium      []*Order
-	buysNarrow      []*Order
-	sellsWide       []*Order
-	sellsMedium     []*Order
-	sellsNarrow     []*Order
+	buysWide        []*trade.Order
+	buysMedium      []*trade.Order
+	buysNarrow      []*trade.Order
+	sellsWide       []*trade.Order
+	sellsMedium     []*trade.Order
+	sellsNarrow     []*trade.Order
 	output          *ResponseBuffer
 )
 
@@ -104,8 +105,8 @@ func prepare(b *testing.B) {
 	b.StopTimer()
 	if !isInitialised {
 		create()
-	//	writeOut()
-	//	readIn()
+		//	writeOut()
+		//	readIn()
 		output = NewResponseBuffer(4)
 		isInitialised = true
 	}
@@ -128,7 +129,7 @@ func BenchmarkAddBuyNarrow(b *testing.B) {
 	benchmarkAddBuy(b, buysNarrow)
 }
 
-func benchmarkAddBuy(b *testing.B, buys []*Order) {
+func benchmarkAddBuy(b *testing.B, buys []*trade.Order) {
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
 		m := NewMatcher(stockId, output)
@@ -154,7 +155,7 @@ func BenchmarkAddSellNarrow(b *testing.B) {
 	benchmarkAddSell(b, sellsNarrow)
 }
 
-func benchmarkAddSell(b *testing.B, sells []*Order) {
+func benchmarkAddSell(b *testing.B, sells []*trade.Order) {
 	for i := 0; i < b.N; i++ {
 		prepare(b)
 		b.StopTimer()
@@ -181,7 +182,7 @@ func BenchmarkMatchNarrow(b *testing.B) {
 	benchmarkMatch(b, buysNarrow, sellsNarrow, 994)
 }
 
-func benchmarkMatch(b *testing.B, buys, sells []*Order, expMatches int) {
+func benchmarkMatch(b *testing.B, buys, sells []*trade.Order, expMatches int) {
 	for i := 0; i < b.N; i++ {
 		prepare(b)
 		m := NewMatcher(stockId, output)
