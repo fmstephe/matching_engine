@@ -94,7 +94,7 @@ func mkOrders(n int, low, high int64, buySell matcher.TradeType) []*matcher.Orde
 	for i, price := range prices {
 		costData := matcher.CostData{Price: price, Amount: 1}
 		tradeData := matcher.TradeData{TraderId: uint32(i), TradeId: uint32(i), StockId: stockId}
-		orders[i] = matcher.NewOrder(costData, tradeData, responseFunc, buySell)
+		orders[i] = matcher.NewOrder(costData, tradeData, buySell)
 	}
 	return orders
 }
