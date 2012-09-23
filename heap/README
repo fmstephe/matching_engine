@@ -1,0 +1,1 @@
+We need a common set of tests and a heap interface here. That way we can implement a range of different heap implementations and not duplicate the testing effort.

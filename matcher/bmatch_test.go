@@ -21,7 +21,7 @@ const (
 
 var (
 	isInitialised   = false
-	benchOrderMaker = newOrderMaker()
+	benchOrderMaker = trade.NewOrderMaker()
 	buysWide        []*trade.Order
 	buysMedium      []*trade.Order
 	buysNarrow      []*trade.Order
@@ -80,24 +80,24 @@ func readIn() {
 func create() {
 	// Wide range 
 	if buysWide == nil {
-		buysWide = benchOrderMaker.mkBuys(benchOrderMaker.valRangePyramid(orderNum, 1000-buySellOffset, (100*1000)-buySellOffset))
+		buysWide = benchOrderMaker.MkBuys(benchOrderMaker.ValRangePyramid(orderNum, 1000-buySellOffset, (100*1000)-buySellOffset))
 	}
 	if sellsWide == nil {
-		sellsWide = benchOrderMaker.mkSells(benchOrderMaker.valRangePyramid(orderNum, 1000+buySellOffset, (100*1000)+buySellOffset))
+		sellsWide = benchOrderMaker.MkSells(benchOrderMaker.ValRangePyramid(orderNum, 1000+buySellOffset, (100*1000)+buySellOffset))
 	}
 	// Medium Range
 	if buysMedium == nil {
-		buysMedium = benchOrderMaker.mkBuys(benchOrderMaker.valRangePyramid(orderNum, 1000-buySellOffset, 5000-buySellOffset))
+		buysMedium = benchOrderMaker.MkBuys(benchOrderMaker.ValRangePyramid(orderNum, 1000-buySellOffset, 5000-buySellOffset))
 	}
 	if sellsMedium == nil {
-		sellsMedium = benchOrderMaker.mkSells(benchOrderMaker.valRangePyramid(orderNum, 1000+buySellOffset, 5000+buySellOffset))
+		sellsMedium = benchOrderMaker.MkSells(benchOrderMaker.ValRangePyramid(orderNum, 1000+buySellOffset, 5000+buySellOffset))
 	}
 	// Narrow Range
 	if buysNarrow == nil {
-		buysNarrow = benchOrderMaker.mkBuys(benchOrderMaker.valRangePyramid(orderNum, 1000-buySellOffset, 1500-buySellOffset))
+		buysNarrow = benchOrderMaker.MkBuys(benchOrderMaker.ValRangePyramid(orderNum, 1000-buySellOffset, 1500-buySellOffset))
 	}
 	if sellsNarrow == nil {
-		sellsNarrow = benchOrderMaker.mkSells(benchOrderMaker.valRangePyramid(orderNum, 1000+buySellOffset, 1500+buySellOffset))
+		sellsNarrow = benchOrderMaker.MkSells(benchOrderMaker.ValRangePyramid(orderNum, 1000+buySellOffset, 1500+buySellOffset))
 	}
 }
 

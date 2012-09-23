@@ -3,12 +3,12 @@ package trade
 import ()
 
 const (
-	SELL        = TradeType(true)
-	BUY         = TradeType(false)
+	SELL        = TradeType(-1)
+	BUY         = TradeType(1)
 	MarketPrice = 0
 )
 
-type TradeType bool
+type TradeType int32
 
 type CostData struct {
 	Price  int32  // The highest/lowest acceptable price for a buy/sell
@@ -22,15 +22,15 @@ type TradeData struct {
 }
 
 type Order struct {
-	CostData
-	TradeData
 	Price    int32
 	Amount   uint32
 	TraderId uint32
 	TradeId  uint32
 	StockId  uint32
 	BuySell  TradeType // Indicates whether this trade is a buy or a sell
-	// Linked List fields
+	// Binary heap comparison value
+	Compare int64
+	// Order list for limits
 	Next *Order // The next order in this limit
 }
 

@@ -12,7 +12,7 @@ const (
 	trader3 = 3
 )
 
-var matchTestOrderMaker = newOrderMaker()
+var matchTestOrderMaker = trade.NewOrderMaker()
 
 type responseVals struct {
 	price        int32
@@ -21,11 +21,11 @@ type responseVals struct {
 	counterParty uint32
 }
 
-func verifyResponse(t *testing.T, r *trade.Response, vals responseVals) {
-	price := vals.price
-	amount := vals.amount
-	tradeId := vals.tradeId
-	counterParty := vals.counterParty
+func verifyResponse(t *testing.T, r *trade.Response, Vals responseVals) {
+	price := Vals.price
+	amount := Vals.amount
+	tradeId := Vals.tradeId
+	counterParty := Vals.counterParty
 	if r.TradeId != tradeId {
 		t.Errorf("Expecting %d trade-id, got %d instead", tradeId, r.TradeId)
 	}
@@ -192,14 +192,14 @@ func TestMidPriceBigBuy(t *testing.T) {
 }
 
 func addLowBuys(m *M, highestPrice int32) {
-	buys := matchTestOrderMaker.mkBuys(matchTestOrderMaker.valRangeFlat(10, 1, highestPrice))
+	buys := matchTestOrderMaker.MkBuys(matchTestOrderMaker.ValRangeFlat(10, 1, highestPrice))
 	for _, buy := range buys {
 		m.AddBuy(buy)
 	}
 }
 
 func addHighSells(m *M, lowestPrice int32) {
-	sells := matchTestOrderMaker.mkSells(matchTestOrderMaker.valRangeFlat(10, lowestPrice, lowestPrice+10000))
+	sells := matchTestOrderMaker.MkSells(matchTestOrderMaker.ValRangeFlat(10, lowestPrice, lowestPrice+10000))
 	for _, sell := range sells {
 		m.AddSell(sell)
 	}
