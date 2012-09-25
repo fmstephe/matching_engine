@@ -5,18 +5,14 @@ import (
 	"math"
 )
 
-func better(o1, o2 *trade.Order) bool {
-	return o1.Compare > o2.Compare
-}
-
-type heap struct {
+type H struct {
 	buySell trade.TradeType
 	seq     int32
 	seqInc  int32
 	orders  []*trade.Order
 }
 
-func NewHeap(buySell trade.TradeType, initCapacity int) *heap {
+func New(buySell trade.TradeType, initCapacity int) *H {
 	var seq int32
 	var seqInc int32
 	if buySell == trade.BUY {
@@ -26,21 +22,21 @@ func NewHeap(buySell trade.TradeType, initCapacity int) *heap {
 		seq = 0
 		seqInc = 1
 	}
-	return &heap{buySell: buySell, seq: seq, seqInc: seqInc, orders: make([]*trade.Order, 0, initCapacity)}
+	return &H{buySell: buySell, seq: seq, seqInc: seqInc, orders: make([]*trade.Order, 0, initCapacity)}
 }
 
-func (h *heap) heapLen() int {
+func (h *H) Size() int {
 	return len(h.orders)
 }
 
-func (h *heap) push(o *trade.Order) {
+func (h *H) Push(o *trade.Order) {
 	o.Compare = int64(uint64(o.Price)<<32|uint64(h.seq)) * int64(o.BuySell)
 	h.seq += h.seqInc
 	h.orders = append(h.orders, o)
 	h.up(len(h.orders) - 1)
 }
 
-func (h *heap) pop() *trade.Order {
+func (h *H) Pop() *trade.Order {
 	if len(h.orders) == 0 {
 		return nil
 	}
@@ -52,14 +48,18 @@ func (h *heap) pop() *trade.Order {
 	return o
 }
 
-func (h *heap) peek() *trade.Order {
+func (h *H) Peek() *trade.Order {
 	if len(h.orders) == 0 {
 		return nil
 	}
 	return h.orders[0]
 }
 
-func (h *heap) up(c int) {
+func (h *H) BuySell() trade.TradeType {
+	return h.buySell
+}
+
+func (h *H) up(c int) {
 	orders := h.orders
 	for {
 		p := (c - 1) / 2
@@ -71,7 +71,7 @@ func (h *heap) up(c int) {
 	}
 }
 
-func (h *heap) down(p int) {
+func (h *H) down(p int) {
 	n := len(h.orders)
 	orders := h.orders
 	for {
@@ -89,4 +89,8 @@ func (h *heap) down(p int) {
 		orders[p], orders[c] = orders[c], orders[p]
 		p = c
 	}
+}
+
+func better(o1, o2 *trade.Order) bool {
+	return o1.Compare > o2.Compare
 }

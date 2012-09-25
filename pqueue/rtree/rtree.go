@@ -101,7 +101,7 @@ func getIdx(price int32, height uint) int {
 	return int(price>>(BLOCK_SHIFT*height)) & (BLOCK_SIZE - 1)
 }
 
-type heap struct {
+type R struct {
 	min, max int32
 	// If a heap contains only a single leafBlock then its height is 0
 	// add one to height for every intermediate nodeBlock
@@ -111,53 +111,57 @@ type heap struct {
 	block   blocker
 }
 
-func newHeap(buySell trade.TradeType) *heap {
-	return &heap{buySell: buySell}
+func New(buySell trade.TradeType) *R {
+	return &R{buySell: buySell}
 }
 
-func (q *heap) isEmpty() bool {
-	return q.size == 0
+func (r *R) isEmpty() bool {
+	return r.size == 0
 }
 
-func (q *heap) Peek() *trade.Order {
-	if q.block == nil {
+func (r *R) Size() int {
+	return r.size
+}
+
+func (r *R) Peek() *trade.Order {
+	if r.block == nil {
 		return nil
 	}
-	return q.block.Peek()
+	return r.block.Peek()
 }
 
-func (q *heap) Pop() *trade.Order {
-	if q.block == nil {
+func (r *R) Pop() *trade.Order {
+	if r.block == nil {
 		return nil
 	}
-	return q.block.Pop()
+	return r.block.Pop()
 }
 
-func (q *heap) Push(o *trade.Order) {
-	if q.block == nil {
-		q.min, q.max = minMaxPrice(o.Price, 0)
-		q.block = newBlock(q.min, 0, q.buySell)
-	} else if o.Price < q.min || o.Price > q.max {
-		for o.Price < q.min || o.Price > q.max {
-			newHeight := q.height + 1
-			newMin, newMax := minMaxPrice(q.min, newHeight)
-			block := newBlock(newMin, newHeight, q.buySell)
-			block.(*nodeBlock).PushBlock(q.block)
-			q.block = block
-			q.height = newHeight
-			q.min = newMin
-			q.max = newMax
+func (r *R) Push(o *trade.Order) {
+	if r.block == nil {
+		r.min, r.max = minMaxPrice(o.Price, 0)
+		r.block = newBlock(r.min, 0, r.buySell)
+	} else if o.Price < r.min || o.Price > r.max {
+		for o.Price < r.min || o.Price > r.max {
+			newHeight := r.height + 1
+			newMin, newMax := minMaxPrice(r.min, newHeight)
+			block := newBlock(newMin, newHeight, r.buySell)
+			block.(*nodeBlock).PushBlock(r.block)
+			r.block = block
+			r.height = newHeight
+			r.min = newMin
+			r.max = newMax
 		}
 	}
-	q.block.Push(o)
+	r.block.Push(o)
 }
 
-func (q *heap) minPrice() int32 {
-	return q.min
+func (r *R) minPrice() int32 {
+	return r.min
 }
 
-func (q *heap) heapLen() int {
-	return q.size
+func (r *R) BuySell() trade.TradeType {
+	return r.buySell
 }
 
 type nodeBlock struct {

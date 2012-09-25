@@ -23,7 +23,7 @@ type H struct {
 	elems  []elem
 }
 
-func newHeap(buySell trade.TradeType, initCapacity int) *H {
+func New(buySell trade.TradeType, initCapacity int) *H {
 	var seq int32
 	var seqInc int32
 	if buySell == trade.BUY {
@@ -36,7 +36,7 @@ func newHeap(buySell trade.TradeType, initCapacity int) *H {
 	return &H{buySell: buySell, seq: seq, seqInc: seqInc, idx: -1, elems: make([]elem, initCapacity)}
 }
 
-func (h *H) HLen() int {
+func (h *H) Size() int {
 	return h.idx+1
 }
 
@@ -58,6 +58,10 @@ func (h *H) Pop() *trade.Order {
 		return o
 	}
 	return nil
+}
+
+func (h *H) BuySell() trade.TradeType {
+	return h.buySell
 }
 
 func (h *H) Peek() *trade.Order {

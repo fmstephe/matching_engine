@@ -62,11 +62,11 @@ type H struct {
 	limits   []*limit
 }
 
-func NewHeap(buySell trade.TradeType) *H {
+func New(buySell trade.TradeType) *H {
 	return &H{buySell: buySell, priceMap: make(map[int32]*limit), limits: make([]*limit, 0, 10)}
 }
 
-func (h *H) HLen() int {
+func (h *H) Size() int {
 	return len(h.limits)
 }
 
@@ -113,6 +113,10 @@ func (h *H) clearHead() {
 		h.down(0)
 		delete(h.priceMap, lim.price)
 	}
+}
+
+func (h *H) BuySell() trade.TradeType {
+	return h.buySell
 }
 
 func (h *H) remove(guid uint64, price int32) *trade.Order {

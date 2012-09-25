@@ -1,29 +1,28 @@
 package matcher
 
 import (
-	"fmt"
-	"github.com/fmstephe/matching_engine/pqueue/limitheap"
+	"github.com/fmstephe/matching_engine/pqueue"
 	"github.com/fmstephe/matching_engine/trade"
 )
 
 type M struct {
-	buys, sells *limitheap.H
-	stockId     uint32
+	buys, sells pqueue.Q
 	output      *ResponseBuffer
 }
 
-func NewMatcher(stockId uint32, output *ResponseBuffer) *M {
-	buys := limitheap.NewHeap(trade.BUY)
-	sells := limitheap.NewHeap(trade.SELL)
-	return &M{buys: buys, sells: sells, stockId: stockId, output: output}
+func NewMatcher(buys, sells pqueue.Q, output *ResponseBuffer) *M {
+	if buys.BuySell() != trade.BUY {
+		panic("Provided a buy priority queue that was not accepting buys!")
+	}
+	if sells.BuySell() != trade.SELL {
+		panic("Provided a sell priority queue that was not accepting sells!")
+	}
+	return &M{buys: buys, sells: sells, output: output}
 }
 
 func (m *M) AddSell(s *trade.Order) {
 	if s.BuySell != trade.SELL {
 		panic("Added non-sell trade as a sell")
-	}
-	if s.StockId != m.stockId {
-		panic(fmt.Sprintf("Added sell trade with stock-id %s expecting %s", s.StockId, m.stockId))
 	}
 	if !m.fillableSell(s) {
 		m.sells.Push(s)
@@ -33,9 +32,6 @@ func (m *M) AddSell(s *trade.Order) {
 func (m *M) AddBuy(b *trade.Order) {
 	if b.BuySell != trade.BUY {
 		panic("Added non-buy trade as a buy")
-	}
-	if b.StockId != m.stockId {
-		panic(fmt.Sprintf("Added buy trade with stock-id %s expecting %s", b.StockId, m.stockId))
 	}
 	if b.Price == trade.MarketPrice {
 		panic("It is illegal to submit a buy at market price")

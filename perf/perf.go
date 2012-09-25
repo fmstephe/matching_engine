@@ -4,6 +4,7 @@ import (
 	"flag"
 	"github.com/fmstephe/matching_engine/matcher"
 	"github.com/fmstephe/matching_engine/trade"
+	"github.com/fmstephe/matching_engine/pqueue/rtree"
 	"log"
 	"math/rand"
 	"os"
@@ -25,8 +26,10 @@ func main() {
 	orderNum := 20 * 1000 * 1000
 	sells := mkSells(orderNum, 1000, 1500)
 	buys := mkBuys(orderNum, 1000, 1500)
+	buysQ := rtree.New(trade.BUY)
+	sellsQ := rtree.New(trade.SELL)
 	buffer := matcher.NewResponseBuffer(2)
-	m := matcher.NewMatcher(stockId, buffer)
+	m := matcher.NewMatcher(buysQ, sellsQ, buffer)
 	startProfile()
 	defer endProfile()
 	start := time.Now().UnixNano()
