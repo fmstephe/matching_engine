@@ -7,6 +7,17 @@ import (
 
 var orderMaker = trade.NewOrderMaker()
 
+func PushPopSuite(t *testing.T, create func(trade.TradeType) Q, verifyQ func(*testing.T, Q)) {
+	AllSameBuy(t, create(trade.BUY), verifyQ)
+	AllSameSell(t, create(trade.SELL), verifyQ)
+	DescendingBuy(t, create(trade.BUY), verifyQ)
+	DescendingSell(t, create(trade.SELL), verifyQ)
+	AscendingBuy(t, create(trade.BUY), verifyQ)
+	AscendingSell(t, create(trade.SELL), verifyQ)
+	RandomPushPopBuy(t, create(trade.BUY), verifyQ)
+	RandomPushPopSell(t, create(trade.SELL), verifyQ)
+}
+
 func AllSameBuy(t *testing.T, h Q, verifyQ func(*testing.T, Q)) {
 	if h.BuySell() != trade.BUY {
 		t.Errorf("Expecting BUY queue")
@@ -97,7 +108,7 @@ func AscendingSell(t *testing.T, h Q, verifyQ func(*testing.T, Q)) {
 	}
 }
 
-func BuyRandomPushPop(t *testing.T, h Q, verifyQ func(*testing.T, Q)) {
+func RandomPushPopBuy(t *testing.T, h Q, verifyQ func(*testing.T, Q)) {
 	size := 10000
 	priceRange := int32(500)
 	priceBase := int32(1000)
@@ -119,7 +130,7 @@ func BuyRandomPushPop(t *testing.T, h Q, verifyQ func(*testing.T, Q)) {
 	}
 }
 
-func SellRandomPushPop(t *testing.T, h Q, verifyQ func(*testing.T, Q)) {
+func RandomPushPopSell(t *testing.T, h Q, verifyQ func(*testing.T, Q)) {
 	size := 10000
 	priceRange := int32(500)
 	priceBase := int32(1000)

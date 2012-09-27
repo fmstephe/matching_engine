@@ -1,13 +1,13 @@
 package ilheap
 
 import (
-	"math"
 	"github.com/fmstephe/matching_engine/trade"
+	"math"
 )
 
 type elem struct {
 	order *trade.Order
-	val int64
+	val   int64
 }
 
 func (e *elem) zero() {
@@ -19,8 +19,8 @@ type H struct {
 	buySell trade.TradeType
 	seq     int32
 	seqInc  int32
-	idx	int
-	elems  []elem
+	idx     int
+	elems   []elem
 }
 
 func New(buySell trade.TradeType, initCapacity int) *H {
@@ -37,7 +37,7 @@ func New(buySell trade.TradeType, initCapacity int) *H {
 }
 
 func (h *H) Size() int {
-	return h.idx+1
+	return h.idx + 1
 }
 
 func (h *H) Push(o *trade.Order) {
