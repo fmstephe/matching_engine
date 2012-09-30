@@ -3,8 +3,8 @@ package main
 import (
 	"flag"
 	"github.com/fmstephe/matching_engine/matcher"
+	"github.com/fmstephe/matching_engine/pqueue/limitheap"
 	"github.com/fmstephe/matching_engine/trade"
-	"github.com/fmstephe/matching_engine/pqueue/rtree"
 	"log"
 	"math/rand"
 	"os"
@@ -26,8 +26,8 @@ func main() {
 	orderNum := 20 * 1000 * 1000
 	sells := mkSells(orderNum, 1000, 1500)
 	buys := mkBuys(orderNum, 1000, 1500)
-	buysQ := rtree.New(trade.BUY)
-	sellsQ := rtree.New(trade.SELL)
+	buysQ := limitheap.New(trade.BUY, 200 * 1000, orderNum)
+	sellsQ := limitheap.New(trade.SELL, 200 * 1000, orderNum)
 	buffer := matcher.NewResponseBuffer(2)
 	m := matcher.NewMatcher(buysQ, sellsQ, buffer)
 	startProfile()
@@ -38,7 +38,10 @@ func main() {
 		m.AddSell(sells[i])
 	}
 	total := time.Now().UnixNano() - start
-	println(total)
+	println("Nanos\t", total)
+	println("Mircos\t", total/1000)
+	println("Millis\t", total/(1000*1000))
+	println("Seconds\t", total/(1000*1000*1000))
 }
 
 func startProfile() {

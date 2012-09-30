@@ -42,18 +42,7 @@ func (l *limit) Push(o *trade.Order) {
 }
 
 func (l *limit) remove(guid uint64) *trade.Order {
-	incoming := &l.head
-	for o := l.head; o != nil; o = o.Next {
-		if o == nil {
-			return nil
-		}
-		if o.GUID() == guid {
-			*incoming = o.Next
-			return o
-		}
-		incoming = &o.Next
-	}
-	panic("Unreachable")
+	return nil
 }
 
 type blocker interface {

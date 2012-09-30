@@ -1,0 +1,54 @@
+package limitheap
+
+import (
+	"github.com/fmstephe/matching_engine/trade"
+	"testing"
+)
+
+func TestOnePut(t *testing.T) {
+	costData := trade.CostData{Price: 1, Amount: 1}
+	tradeData := trade.TradeData{TraderId: 1, TradeId: 1, StockId: 1}
+	o := trade.NewBuy(costData, tradeData)
+	intmap := newOrderSet(100)
+	intmap.Put(o.Guid, o)
+	oG := intmap.Get(o.Guid)
+	if o != oG {
+		t.Errorf("Did not retrieve single order Put into map")
+	}
+}
+
+func TestTwoPuts(t *testing.T) {
+	costData1 := trade.CostData{Price: 1, Amount: 1}
+	tradeData1 := trade.TradeData{TraderId: 1, TradeId: 1, StockId: 1}
+	o1 := trade.NewBuy(costData1, tradeData1)
+	costData2 := trade.CostData{Price: 1, Amount: 1}
+	tradeData2 := trade.TradeData{TraderId: 2, TradeId: 2, StockId: 1}
+	o2 := trade.NewBuy(costData2, tradeData2)
+	intmap := newOrderSet(100)
+	intmap.Put(o1.Guid, o1)
+	intmap.Put(o2.Guid, o2)
+	o1G := intmap.Get(o1.Guid)
+	o2G := intmap.Get(o2.Guid)
+	if o1 != o1G {
+		t.Errorf("Did not retrieve single order Put into map")
+	}
+	if o2 != o2G {
+		t.Errorf("Did not retrieve single order Put into map")
+	}
+}
+
+func TestPutRemove(t *testing.T) {
+	costData := trade.CostData{Price: 1, Amount: 1}
+	tradeData := trade.TradeData{TraderId: 1, TradeId: 1, StockId: 1}
+	o := trade.NewBuy(costData, tradeData)
+	intmap := newOrderSet(100)
+	intmap.Put(o.Guid, o)
+	oR := intmap.Remove(o.Guid)
+	oG := intmap.Get(o.Guid)
+	if o != oR {
+		t.Errorf("Did not retrieve single order Put into map")
+	}
+	if oG != nil {
+		t.Errorf("Get on removed element was not nil")
+	}
+}

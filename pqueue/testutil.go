@@ -117,11 +117,17 @@ func RandomPushPopBuy(t *testing.T, h Q, verifyQ func(*testing.T, Q)) {
 		b := orderMaker.MkPricedBuy(orderMaker.Rand32(priceRange) + priceBase)
 		buys = append(buys, b)
 		h.Push(b)
+		if h.Size() != (i+1) {
+			t.Errorf("Incorrect size found in RandomPushPopBuy push phase")
+		}
 		verifyQ(t, h)
 	}
 	leastPrice := priceRange + priceBase + 1
 	for i := 0; i < size; i++ {
 		b := h.Pop()
+		if h.Size() != size - (i+1) {
+			t.Errorf("Incorrect size found in RandomPushPopBuy pop phase")
+		}
 		if b.Price > leastPrice {
 			t.Errorf("Buy Pop reveals out of order buy order")
 		}
@@ -139,11 +145,17 @@ func RandomPushPopSell(t *testing.T, h Q, verifyQ func(*testing.T, Q)) {
 		b := orderMaker.MkPricedSell(orderMaker.Rand32(priceRange) + priceBase)
 		buys = append(buys, b)
 		h.Push(b)
+		if h.Size() != (i+1) {
+			t.Errorf("Incorrect size found in RandomPushPopSell")
+		}
 		verifyQ(t, h)
 	}
 	greatestPrice := int32(0)
 	for i := 0; i < size; i++ {
 		s := h.Pop()
+		if h.Size() != size - (i+1) {
+			t.Errorf("Incorrect size found in RandomPushPopSell pop phase")
+		}
 		if s.Price < greatestPrice {
 			t.Errorf("Sell Pop reveals out of order sell order")
 		}

@@ -22,20 +22,21 @@ type TradeData struct {
 }
 
 type Order struct {
+	Guid     int64
 	Price    int32
 	Amount   uint32
 	TraderId uint32
 	TradeId  uint32
 	StockId  uint32
-	BuySell  TradeType // Indicates whether this trade is a buy or a sell
+	BuySell  TradeType
 	// Binary heap comparison value
 	Compare int64
 	// Order list for limits
 	Next *Order // The next order in this limit
 }
 
-func (o *Order) GUID() uint64 {
-	return (uint64(o.TraderId) << 32) | uint64(o.TradeId)
+func (o *Order) setup() {
+	o.Guid = int64((uint64(o.TraderId) << 32) | uint64(o.TradeId))
 }
 
 func NewBuy(costData CostData, tradeData TradeData) *Order {
@@ -47,7 +48,9 @@ func NewSell(costData CostData, tradeData TradeData) *Order {
 }
 
 func NewOrder(costData CostData, tradeData TradeData, buySell TradeType) *Order {
-	return &Order{Price: costData.Price, Amount: costData.Amount, TraderId: tradeData.TraderId, TradeId: tradeData.TradeId, StockId: tradeData.StockId, BuySell: buySell}
+	o := &Order{Price: costData.Price, Amount: costData.Amount, TraderId: tradeData.TraderId, TradeId: tradeData.TradeId, StockId: tradeData.StockId, BuySell: buySell}
+	o.setup()
+	return o
 }
 
 type Response struct {

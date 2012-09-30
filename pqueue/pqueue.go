@@ -10,4 +10,5 @@ type Q interface {
 	Peek() *trade.Order
 	Size() int
 	BuySell() trade.TradeType
+	//Remove(guid int64) *trade.Order
 }
