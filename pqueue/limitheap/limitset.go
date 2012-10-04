@@ -5,7 +5,6 @@ import (
 )
 
 const (
-	loadingFactor = 0.75
 	tombstone     = -1
 )
 
@@ -75,24 +74,24 @@ func nextPrime(c int32) int32 {
 	return int32(primes[sort.Search(len(primes), func(i int) bool { return primes[i] >= v })])
 }
 
-func deadElems(size int32) []elem {
-	elems := make([]elem, size)
+func deadElems(size int32) []limitEntry {
+	entries := make([]limitEntry, size)
 	for i := int32(0); i < size; i++ {
-		elems[i].key = tombstone
+		entries[i].key = tombstone
 	}
-	return elems
+	return entries
 }
 
-type elem struct {
+type limitEntry struct {
 	key int32
 	val *limit
-	next *elem
-	prev *elem
-	last *elem
+	next *limitEntry
+	prev *limitEntry
+	last *limitEntry
 }
 
 type limitset struct {
-	elems  []elem
+	entries  []limitEntry
 	size   int32
 	mxSize int32
 	mask int32
@@ -100,10 +99,10 @@ type limitset struct {
 
 func newLimitSet(initCap int32) *limitset {
 	capacity := toPowerOfTwo(initCap)
-	elems := deadElems(capacity)
-	mxSize := int32(float64(capacity) * loadingFactor)
+	entries := deadElems(capacity)
+	mxSize := int32(float64(capacity) * 0.75)
 	mask := capacity-1
-	return &limitset{elems: elems, mxSize: mxSize, mask: mask}
+	return &limitset{entries: entries, mxSize: mxSize, mask: mask}
 }
 
 func (s *limitset) getIdx(key int32) int32 {
@@ -111,7 +110,7 @@ func (s *limitset) getIdx(key int32) int32 {
 }
 
 func (s *limitset) getPrimeIdx(key int32) int32 {
-	return key % int32(len(s.elems))
+	return key % int32(len(s.entries))
 }
 
 func (s *limitset) Size() int32 {
@@ -120,7 +119,7 @@ func (s *limitset) Size() int32 {
 
 func (s *limitset) Put(key int32, val *limit) {
 	idx := s.getIdx(key)
-	e := &s.elems[idx]
+	e := &s.entries[idx]
 	if e.key == tombstone {
 		e.key = key
 		e.val = val
@@ -128,7 +127,7 @@ func (s *limitset) Put(key int32, val *limit) {
 		return
 	} else {
 		println("Hash Collision", idx, key)
-		ne := &elem{key: key, val: val}
+		ne := &limitEntry{key: key, val: val}
 		e.last.next = ne
 		ne.prev = e.last
 		e.last = e
@@ -138,7 +137,7 @@ func (s *limitset) Put(key int32, val *limit) {
 
 func (s *limitset) Get(key int32) *limit {
 	idx := s.getIdx(key)
-	e := &s.elems[idx]
+	e := &s.entries[idx]
 	for e != nil {
 		if e.key == key {
 			return e.val
@@ -150,7 +149,7 @@ func (s *limitset) Get(key int32) *limit {
 
 func (s *limitset) Remove(key int32) *limit {
 	idx := s.getIdx(key)
-	e := &s.elems[idx]
+	e := &s.entries[idx]
 	if e.next == nil && e.key == key {
 		val := e.val
 		e.val = nil

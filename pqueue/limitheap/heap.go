@@ -45,12 +45,13 @@ func better(l1, l2 *limit, buySell trade.TradeType) bool {
 type H struct {
 	buySell  trade.TradeType
 	limits *limitset
+	orders *orderset
 	heap   []*limit
 	size     int
 }
 
-func New(buySell trade.TradeType, mapSize int32, heapSize int) *H {
-	return &H{buySell: buySell, limits: newLimitSet(mapSize), heap: make([]*limit, 0, heapSize)}
+func New(buySell trade.TradeType, limitSetSize, ordersSize int32, heapSize int) *H {
+	return &H{buySell: buySell, limits: newLimitSet(limitSetSize), orders: newOrderSet(ordersSize), heap: make([]*limit, 0, heapSize)}
 }
 
 func (h *H) Size() int {
@@ -58,8 +59,8 @@ func (h *H) Size() int {
 }
 
 func (h *H) Push(o *trade.Order) {
-	//	h.orderSet.Put(o.Guid, o)
-	lim := h.limits.Get(o.Price) // Shit this is a very slow operation
+	h.orders.Put(o.Guid, o)
+	lim := h.limits.Get(o.Price)
 	if lim == nil {
 		lim = newLimit(o.Price, o)
 		h.limits.Put(o.Price, lim)
@@ -78,7 +79,7 @@ func (h *H) Pop() *trade.Order {
 	}
 	o := h.heap[0].pop()
 	h.clearHead()
-	//h.orderSet.Remove(o.Guid)
+	h.orders.Remove(o.Guid)
 	h.size--
 	return o
 }
@@ -107,8 +108,7 @@ func (h *H) clearHead() {
 }
 
 func (h *H) Remove(guid int64) *trade.Order {
-	//return h.orderSet.Remove(guid)
-	return nil
+	return h.orders.Remove(guid)
 }
 
 func (h *H) BuySell() trade.TradeType {
