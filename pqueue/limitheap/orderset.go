@@ -27,16 +27,14 @@ type orderEntry struct {
 type orderset struct {
 	entries  []orderEntry
 	size   int32
-	mxSize int32
 	mask uint32
 }
 
 func newOrderSet(initCap int32) *orderset {
 	capacity := toPowerOfTwo(initCap)
 	entries := deadOrderElems(capacity)
-	mxSize := int32(float64(capacity) * 0.75)
 	mask := uint32(capacity-1)
-	return &orderset{entries: entries, mxSize: mxSize, mask: mask}
+	return &orderset{entries: entries, mask: mask}
 }
 
 func (s *orderset) getIdx(key int64) uint32 {
@@ -64,7 +62,7 @@ func (s *orderset) Put(key int64, val *trade.Order) {
 		e.last = e
 		return
 	} else {
-		println("Hash Collision", idx, key)
+	//	println("Hash Collision", idx, key)
 		ne := &orderEntry{key: key, val: val, prev: e.last}
 		e.last.next = ne
 		ne.prev = e.last

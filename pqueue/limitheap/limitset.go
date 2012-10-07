@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	tombstone     = -1
+	tombstone32     = -1
 )
 
 var (
@@ -77,7 +77,7 @@ func nextPrime(c int32) int32 {
 func deadElems(size int32) []limitEntry {
 	entries := make([]limitEntry, size)
 	for i := int32(0); i < size; i++ {
-		entries[i].key = tombstone
+		entries[i].key = tombstone32
 	}
 	return entries
 }
@@ -93,16 +93,14 @@ type limitEntry struct {
 type limitset struct {
 	entries  []limitEntry
 	size   int32
-	mxSize int32
 	mask int32
 }
 
 func newLimitSet(initCap int32) *limitset {
 	capacity := toPowerOfTwo(initCap)
 	entries := deadElems(capacity)
-	mxSize := int32(float64(capacity) * 0.75)
 	mask := capacity-1
-	return &limitset{entries: entries, mxSize: mxSize, mask: mask}
+	return &limitset{entries: entries, mask: mask}
 }
 
 func (s *limitset) getIdx(key int32) int32 {
@@ -120,7 +118,7 @@ func (s *limitset) Size() int32 {
 func (s *limitset) Put(key int32, val *limit) {
 	idx := s.getIdx(key)
 	e := &s.entries[idx]
-	if e.key == tombstone {
+	if e.key == tombstone32 {
 		e.key = key
 		e.val = val
 		e.last = e
@@ -153,7 +151,7 @@ func (s *limitset) Remove(key int32) *limit {
 	if e.next == nil && e.key == key {
 		val := e.val
 		e.val = nil
-		e.key = tombstone
+		e.key = tombstone32
 		return val
 	}
 	if e.key == key {
