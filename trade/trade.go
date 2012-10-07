@@ -5,16 +5,19 @@ import ()
 const (
 	SELL        = TradeType(-1)
 	BUY         = TradeType(1)
+	DELETE     = TradeType(2)
 	MarketPrice = 0
 )
 
 type TradeType int32
 
+// For readable constructors
 type CostData struct {
 	Price  int32  // The highest/lowest acceptable price for a buy/sell
 	Amount uint32 // The number of units desired to buy/sell
 }
 
+// For readable constructors
 type TradeData struct {
 	TraderId uint32 // Identifies the submitting trader
 	TradeId  uint32 // Identifies this trade to the submitting trader
@@ -45,6 +48,10 @@ func NewBuy(costData CostData, tradeData TradeData) *Order {
 
 func NewSell(costData CostData, tradeData TradeData) *Order {
 	return NewOrder(costData, tradeData, SELL)
+}
+
+func NewDelete(tradeData TradeData) *Order {
+	return NewOrder(CostData{}, tradeData, DELETE)
 }
 
 func NewOrder(costData CostData, tradeData TradeData, buySell TradeType) *Order {
