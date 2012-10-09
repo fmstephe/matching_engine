@@ -30,11 +30,11 @@ func (o *orderMaker) MkPricedSell(price int32) *Order {
 	return o.MkPricedOrder(price, SELL)
 }
 
-func (o *orderMaker) MkPricedOrder(price int32, buySell TradeType) *Order {
+func (o *orderMaker) MkPricedOrder(price int32, kind OrderKind) *Order {
 	costData := CostData{Price: price, Amount: 1}
 	tradeData := TradeData{TraderId: o.traderId, TradeId: 1, StockId: 1}
 	o.traderId++
-	return NewOrder(costData, tradeData, buySell)
+	return NewOrder(costData, tradeData, kind)
 }
 
 func (o *orderMaker) ValRangePyramid(n int, low, high int32) []int32 {
@@ -63,12 +63,12 @@ func (o *orderMaker) MkSells(prices []int32) []*Order {
 	return o.MkOrders(prices, SELL)
 }
 
-func (o *orderMaker) MkOrders(prices []int32, buySell TradeType) []*Order {
+func (o *orderMaker) MkOrders(prices []int32, kind OrderKind) []*Order {
 	orders := make([]*Order, len(prices))
 	for i, price := range prices {
 		costData := CostData{Price: price, Amount: 1}
 		tradeData := TradeData{TraderId: uint32(i), TradeId: uint32(i), StockId: stockId}
-		orders[i] = NewOrder(costData, tradeData, buySell)
+		orders[i] = NewOrder(costData, tradeData, kind)
 	}
 	return orders
 }

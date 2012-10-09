@@ -3,11 +3,11 @@ package itchutil
 import (
 	"bufio"
 	"fmt"
-	"os"
-	"io"
 	"github.com/fmstephe/matching_engine/trade"
-	"strings"
+	"io"
+	"os"
 	"strconv"
+	"strings"
 )
 
 func PrintLineCount(fName string) {
@@ -26,7 +26,7 @@ func PrintLineCount(fName string) {
 	println(i)
 }
 
-func ReadOrders(fName string) []*trade.Order{
+func ReadOrders(fName string) []*trade.Order {
 	f, _ := os.Open(fName)
 	r := bufio.NewReader(f)
 	orders := make([]*trade.Order, 10)
@@ -60,10 +60,14 @@ func mkOrder(line string) *trade.Order {
 	}
 	cd, td := mkData(useful)
 	switch useful[3] {
-		case "B" : return trade.NewBuy(cd, td)
-		case "S" : return trade.NewSell(cd, td)
-		case "D" : return trade.NewDelete(td)
-		default : panic(fmt.Sprintf("Unrecognised Trade Type %s", useful[3]))
+	case "B":
+		return trade.NewBuy(cd, td)
+	case "S":
+		return trade.NewSell(cd, td)
+	case "D":
+		return trade.NewDelete(td)
+	default:
+		panic(fmt.Sprintf("Unrecognised Trade Type %s", useful[3]))
 	}
 	panic("Unreachable")
 }
@@ -90,4 +94,3 @@ func mkData(useful []string) (cd trade.CostData, td trade.TradeData) {
 	td = trade.TradeData{TraderId: uint32(traderId), TradeId: uint32(tradeId), StockId: uint32(stockId)}
 	return
 }
-

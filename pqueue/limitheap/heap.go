@@ -35,23 +35,23 @@ func (l *limit) push(o *trade.Order) {
 	l.tail = o
 }
 
-func better(l1, l2 *limit, buySell trade.TradeType) bool {
-	if buySell == trade.BUY {
+func better(l1, l2 *limit, kind trade.OrderKind) bool {
+	if kind == trade.BUY {
 		return l2.price-l1.price < 0
 	}
 	return l1.price-l2.price < 0
 }
 
 type H struct {
-	buySell  trade.TradeType
+	kind   trade.OrderKind
 	limits *limitset
 	orders *orderset
 	heap   []*limit
-	size     int
+	size   int
 }
 
-func New(buySell trade.TradeType, limitSetSize, ordersSize int32, heapSize int) *H {
-	return &H{buySell: buySell, limits: newLimitSet(limitSetSize), orders: newOrderSet(ordersSize), heap: make([]*limit, 0, heapSize)}
+func New(kind trade.OrderKind, limitSetSize, ordersSize int32, heapSize int) *H {
+	return &H{kind: kind, limits: newLimitSet(limitSetSize), orders: newOrderSet(ordersSize), heap: make([]*limit, 0, heapSize)}
 }
 
 func (h *H) Size() int {
@@ -111,15 +111,15 @@ func (h *H) Remove(guid int64) *trade.Order {
 	return h.orders.Remove(guid)
 }
 
-func (h *H) BuySell() trade.TradeType {
-	return h.buySell
+func (h *H) Kind() trade.OrderKind {
+	return h.kind
 }
 
 func (h *H) up(c int) {
 	heap := h.heap
 	for {
 		p := (c - 1) / 2
-		if p == c || better(heap[p], heap[c], h.buySell) {
+		if p == c || better(heap[p], heap[c], h.kind) {
 			break
 		}
 		heap[p], heap[c] = heap[c], heap[p]
@@ -136,10 +136,10 @@ func (h *H) down(p int) {
 			break
 		}
 		lc := c
-		if rc := lc + 1; rc < n && !better(heap[lc], heap[rc], h.buySell) {
+		if rc := lc + 1; rc < n && !better(heap[lc], heap[rc], h.kind) {
 			c = rc
 		}
-		if better(heap[p], heap[c], h.buySell) {
+		if better(heap[p], heap[c], h.kind) {
 			break
 		}
 		heap[p], heap[c] = heap[c], heap[p]

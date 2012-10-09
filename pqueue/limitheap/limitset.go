@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	tombstone32     = -1
+	tombstone32 = -1
 )
 
 var (
@@ -83,23 +83,23 @@ func deadElems(size int32) []limitEntry {
 }
 
 type limitEntry struct {
-	key int32
-	val *limit
+	key  int32
+	val  *limit
 	next *limitEntry
 	prev *limitEntry
 	last *limitEntry
 }
 
 type limitset struct {
-	entries  []limitEntry
-	size   int32
-	mask int32
+	entries []limitEntry
+	size    int32
+	mask    int32
 }
 
 func newLimitSet(initCap int32) *limitset {
 	capacity := toPowerOfTwo(initCap)
 	entries := deadElems(capacity)
-	mask := capacity-1
+	mask := capacity - 1
 	return &limitset{entries: entries, mask: mask}
 }
 

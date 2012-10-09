@@ -34,8 +34,8 @@ func verifyHeapRec(h *H, t *testing.T, i int) {
 }
 
 // NB: This func is covering up the fact that ilheap does not currently resize its internal slice
-func createHeap(buySell trade.TradeType) pqueue.Q {
-	return New(buySell, 10*1000)
+func createHeap(kind trade.OrderKind) pqueue.Q {
+	return New(kind, 10*1000)
 }
 
 func TestPushPop(t *testing.T) {

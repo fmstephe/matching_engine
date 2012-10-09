@@ -53,11 +53,11 @@ type blocker interface {
 	minPrice() int32
 }
 
-func newBlock(min int32, height uint, buySell trade.TradeType) blocker {
+func newBlock(min int32, height uint, kind trade.OrderKind) blocker {
 	if height == 0 {
-		return newLeafBlock(min, buySell)
+		return newLeafBlock(min, kind)
 	}
-	return newNodeBlock(min, height, buySell)
+	return newNodeBlock(min, height, kind)
 }
 
 func pow(n int32, e uint) int32 {
@@ -94,14 +94,14 @@ type R struct {
 	min, max int32
 	// If a heap contains only a single leafBlock then its height is 0
 	// add one to height for every intermediate nodeBlock
-	height  uint
-	size    int
-	buySell trade.TradeType
-	block   blocker
+	height uint
+	size   int
+	kind   trade.OrderKind
+	block  blocker
 }
 
-func New(buySell trade.TradeType) *R {
-	return &R{buySell: buySell}
+func New(kind trade.OrderKind) *R {
+	return &R{kind: kind}
 }
 
 func (r *R) isEmpty() bool {
@@ -129,12 +129,12 @@ func (r *R) Pop() *trade.Order {
 func (r *R) Push(o *trade.Order) {
 	if r.block == nil {
 		r.min, r.max = minMaxPrice(o.Price, 0)
-		r.block = newBlock(r.min, 0, r.buySell)
+		r.block = newBlock(r.min, 0, r.kind)
 	} else if o.Price < r.min || o.Price > r.max {
 		for o.Price < r.min || o.Price > r.max {
 			newHeight := r.height + 1
 			newMin, newMax := minMaxPrice(r.min, newHeight)
-			block := newBlock(newMin, newHeight, r.buySell)
+			block := newBlock(newMin, newHeight, r.kind)
 			block.(*nodeBlock).PushBlock(r.block)
 			r.block = block
 			r.height = newHeight
@@ -149,20 +149,20 @@ func (r *R) minPrice() int32 {
 	return r.min
 }
 
-func (r *R) BuySell() trade.TradeType {
-	return r.buySell
+func (r *R) Kind() trade.OrderKind {
+	return r.kind
 }
 
 type nodeBlock struct {
 	min     int32
 	height  uint
 	bestIdx int
-	buySell trade.TradeType
+	kind    trade.OrderKind
 	blocks  [BLOCK_SIZE]blocker
 }
 
-func newNodeBlock(min int32, height uint, buySell trade.TradeType) *nodeBlock {
-	return &nodeBlock{min: min, height: height, bestIdx: EMPTY_IDX, buySell: buySell}
+func newNodeBlock(min int32, height uint, kind trade.OrderKind) *nodeBlock {
+	return &nodeBlock{min: min, height: height, bestIdx: EMPTY_IDX, kind: kind}
 }
 
 func (node *nodeBlock) isEmpty() bool {
@@ -189,7 +189,7 @@ func (node *nodeBlock) Pop() *trade.Order {
 }
 
 func (node *nodeBlock) findIdx() {
-	if node.buySell == trade.BUY {
+	if node.kind == trade.BUY {
 		for i := node.bestIdx; i >= 0; i-- {
 			block := node.blocks[i]
 			if block != nil && !block.isEmpty() {
@@ -222,14 +222,14 @@ func (node *nodeBlock) Push(o *trade.Order) {
 	if block == nil {
 		newHeight := node.height - 1
 		newMin := minPrice(o.Price, newHeight)
-		block = newBlock(newMin, newHeight, node.buySell)
+		block = newBlock(newMin, newHeight, node.kind)
 		node.blocks[idx] = block
 	}
 	block.Push(o)
-	if (idx < node.bestIdx || node.bestIdx == EMPTY_IDX) && node.buySell == trade.SELL {
+	if (idx < node.bestIdx || node.bestIdx == EMPTY_IDX) && node.kind == trade.SELL {
 		node.bestIdx = idx
 	}
-	if idx > node.bestIdx && node.buySell == trade.BUY {
+	if idx > node.bestIdx && node.kind == trade.BUY {
 		node.bestIdx = idx
 	}
 }
@@ -252,12 +252,12 @@ func (node *nodeBlock) PushBlock(block blocker) {
 type leafBlock struct {
 	min     int32
 	bestIdx int
-	buySell trade.TradeType
+	kind    trade.OrderKind
 	limits  [BLOCK_SIZE]limit
 }
 
-func newLeafBlock(min int32, buySell trade.TradeType) *leafBlock {
-	return &leafBlock{min: min, bestIdx: EMPTY_IDX, buySell: buySell}
+func newLeafBlock(min int32, kind trade.OrderKind) *leafBlock {
+	return &leafBlock{min: min, bestIdx: EMPTY_IDX, kind: kind}
 }
 
 func (leaf *leafBlock) isEmpty() bool {
@@ -283,7 +283,7 @@ func (leaf *leafBlock) Pop() *trade.Order {
 }
 
 func (leaf *leafBlock) findIdx() {
-	if leaf.buySell == trade.BUY {
+	if leaf.kind == trade.BUY {
 		for i := leaf.bestIdx; i >= 0; i-- {
 			lim := &leaf.limits[i]
 			if !lim.isEmpty() {
@@ -313,10 +313,10 @@ func (leaf *leafBlock) Push(o *trade.Order) {
 		panic(fmt.Sprintf("This crazy bit operation produced an index: %v from price: %v", idx, o.Price))
 	}
 	leaf.limits[idx].Push(o)
-	if (idx < leaf.bestIdx || leaf.bestIdx == EMPTY_IDX) && leaf.buySell == trade.SELL {
+	if (idx < leaf.bestIdx || leaf.bestIdx == EMPTY_IDX) && leaf.kind == trade.SELL {
 		leaf.bestIdx = idx
 	}
-	if idx > leaf.bestIdx && leaf.buySell == trade.BUY {
+	if idx > leaf.bestIdx && leaf.kind == trade.BUY {
 		leaf.bestIdx = idx
 	}
 }

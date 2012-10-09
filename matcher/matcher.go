@@ -11,17 +11,17 @@ type M struct {
 }
 
 func NewMatcher(buys, sells pqueue.Q, output *ResponseBuffer) *M {
-	if buys.BuySell() != trade.BUY {
+	if buys.Kind() != trade.BUY {
 		panic("Provided a buy priority queue that was not accepting buys!")
 	}
-	if sells.BuySell() != trade.SELL {
+	if sells.Kind() != trade.SELL {
 		panic("Provided a sell priority queue that was not accepting sells!")
 	}
 	return &M{buys: buys, sells: sells, output: output}
 }
 
 func (m *M) AddSell(s *trade.Order) {
-	if s.BuySell != trade.SELL {
+	if s.Kind != trade.SELL {
 		panic("Added non-sell trade as a sell")
 	}
 	if !m.fillableSell(s) {
@@ -30,10 +30,10 @@ func (m *M) AddSell(s *trade.Order) {
 }
 
 func (m *M) AddBuy(b *trade.Order) {
-	if b.BuySell != trade.BUY {
+	if b.Kind != trade.BUY {
 		panic("Added non-buy trade as a buy")
 	}
-	if b.Price == trade.MarketPrice {
+	if b.Price == trade.MARKET {
 		panic("It is illegal to submit a buy at market price")
 	}
 	if !m.fillableBuy(b) {
@@ -115,7 +115,7 @@ func (m *M) fillableSell(s *trade.Order) bool {
 }
 
 func price(bPrice, sPrice int32) int32 {
-	if sPrice == trade.MarketPrice {
+	if sPrice == trade.MARKET {
 		return bPrice
 	}
 	d := bPrice - sPrice
@@ -123,6 +123,7 @@ func price(bPrice, sPrice int32) int32 {
 }
 
 func (m *M) completeTrade(b, s *trade.Order, price int32, amount uint32) {
+	// TODO write the response type into these responses
 	// Write the buy response
 	rb := m.output.getForWrite()
 	rb.Price = -price

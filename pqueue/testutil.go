@@ -7,7 +7,7 @@ import (
 
 var orderMaker = trade.NewOrderMaker()
 
-func PushPopSuite(t *testing.T, create func(trade.TradeType) Q, verifyQ func(*testing.T, Q)) {
+func PushPopSuite(t *testing.T, create func(trade.OrderKind) Q, verifyQ func(*testing.T, Q)) {
 	AllSameBuy(t, create(trade.BUY), verifyQ)
 	AllSameSell(t, create(trade.SELL), verifyQ)
 	DescendingBuy(t, create(trade.BUY), verifyQ)
@@ -19,7 +19,7 @@ func PushPopSuite(t *testing.T, create func(trade.TradeType) Q, verifyQ func(*te
 }
 
 func AllSameBuy(t *testing.T, h Q, verifyQ func(*testing.T, Q)) {
-	if h.BuySell() != trade.BUY {
+	if h.Kind() != trade.BUY {
 		t.Errorf("Expecting BUY queue")
 	}
 	for i := 20; i > 0; i-- {
@@ -36,7 +36,7 @@ func AllSameBuy(t *testing.T, h Q, verifyQ func(*testing.T, Q)) {
 }
 
 func AllSameSell(t *testing.T, h Q, verifyQ func(*testing.T, Q)) {
-	if h.BuySell() != trade.SELL {
+	if h.Kind() != trade.SELL {
 		t.Errorf("Expecting SELL queue")
 	}
 	for i := 20; i > 0; i-- {
@@ -117,7 +117,7 @@ func RandomPushPopBuy(t *testing.T, h Q, verifyQ func(*testing.T, Q)) {
 		b := orderMaker.MkPricedBuy(orderMaker.Rand32(priceRange) + priceBase)
 		buys = append(buys, b)
 		h.Push(b)
-		if h.Size() != (i+1) {
+		if h.Size() != (i + 1) {
 			t.Errorf("Incorrect size found in RandomPushPopBuy push phase")
 		}
 		verifyQ(t, h)
@@ -125,7 +125,7 @@ func RandomPushPopBuy(t *testing.T, h Q, verifyQ func(*testing.T, Q)) {
 	leastPrice := priceRange + priceBase + 1
 	for i := 0; i < size; i++ {
 		b := h.Pop()
-		if h.Size() != size - (i+1) {
+		if h.Size() != size-(i+1) {
 			t.Errorf("Incorrect size found in RandomPushPopBuy pop phase")
 		}
 		if b.Price > leastPrice {
@@ -145,7 +145,7 @@ func RandomPushPopSell(t *testing.T, h Q, verifyQ func(*testing.T, Q)) {
 		b := orderMaker.MkPricedSell(orderMaker.Rand32(priceRange) + priceBase)
 		buys = append(buys, b)
 		h.Push(b)
-		if h.Size() != (i+1) {
+		if h.Size() != (i + 1) {
 			t.Errorf("Incorrect size found in RandomPushPopSell")
 		}
 		verifyQ(t, h)
@@ -153,7 +153,7 @@ func RandomPushPopSell(t *testing.T, h Q, verifyQ func(*testing.T, Q)) {
 	greatestPrice := int32(0)
 	for i := 0; i < size; i++ {
 		s := h.Pop()
-		if h.Size() != size - (i+1) {
+		if h.Size() != size-(i+1) {
 			t.Errorf("Incorrect size found in RandomPushPopSell pop phase")
 		}
 		if s.Price < greatestPrice {

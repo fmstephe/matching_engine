@@ -31,8 +31,8 @@ func verifyHeapRec(t *testing.T, h *H, i int) {
 	}
 }
 
-func createHeap(buySell trade.TradeType) pqueue.Q {
-	return New(buySell, 100)
+func createHeap(kind trade.OrderKind) pqueue.Q {
+	return New(kind, 100)
 }
 
 func TestPushPop(t *testing.T) {

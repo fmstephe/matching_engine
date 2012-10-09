@@ -3,13 +3,20 @@ package trade
 import ()
 
 const (
-	SELL        = TradeType(-1)
-	BUY         = TradeType(1)
-	DELETE     = TradeType(2)
-	MarketPrice = 0
+	SELL        = OrderKind(-1)
+	BUY         = OrderKind(1)
+	DELETE      = OrderKind(2)
+	EXECUTE     = ResponseKind(1)
+	CANCEL      = ResponseKind(2)
+	FULL        = ResponseKind(3)
+	X           = ResponseKind(4)
+	TRANSPARENT = ResponseKind(5)
+	MARKET      = 0
 )
 
-type TradeType int32
+type OrderKind int32
+
+type ResponseKind int32
 
 // For readable constructors
 type CostData struct {
@@ -31,11 +38,9 @@ type Order struct {
 	TraderId uint32
 	TradeId  uint32
 	StockId  uint32
-	BuySell  TradeType
-	// Binary heap comparison value
-	Compare int64
-	// Order list for limits
-	Next *Order // The next order in this limit
+	Kind     OrderKind
+	Compare  int64  // Binary heap comparison value
+	Next     *Order // The next order in this limit
 }
 
 func (o *Order) setup() {
@@ -54,19 +59,16 @@ func NewDelete(tradeData TradeData) *Order {
 	return NewOrder(CostData{}, tradeData, DELETE)
 }
 
-func NewOrder(costData CostData, tradeData TradeData, buySell TradeType) *Order {
-	o := &Order{Price: costData.Price, Amount: costData.Amount, TraderId: tradeData.TraderId, TradeId: tradeData.TradeId, StockId: tradeData.StockId, BuySell: buySell}
+func NewOrder(costData CostData, tradeData TradeData, orderKind OrderKind) *Order {
+	o := &Order{Price: costData.Price, Amount: costData.Amount, TraderId: tradeData.TraderId, TradeId: tradeData.TradeId, StockId: tradeData.StockId, Kind: orderKind}
 	o.setup()
 	return o
 }
 
 type Response struct {
+	Kind         ResponseKind
 	Price        int32  // The actual trade price, will be negative if a purchase was made
 	Amount       uint32 // The number of units actually bought or sold
 	TradeId      uint32 // Links this trade back to a previously submitted Order
 	CounterParty uint32 // The trader-id of the other half of this trade
-}
-
-func NewResponse(price int32, amount, tradeId, counterParty uint32) *Response {
-	return &Response{Price: price, Amount: amount, TradeId: tradeId, CounterParty: counterParty}
 }

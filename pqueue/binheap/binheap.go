@@ -6,23 +6,23 @@ import (
 )
 
 type H struct {
-	buySell trade.TradeType
-	seq     int32
-	seqInc  int32
-	orders  []*trade.Order
+	kind   trade.OrderKind
+	seq    int32
+	seqInc int32
+	orders []*trade.Order
 }
 
-func New(buySell trade.TradeType, initCapacity int) *H {
+func New(kind trade.OrderKind, initCapacity int) *H {
 	var seq int32
 	var seqInc int32
-	if buySell == trade.BUY {
+	if kind == trade.BUY {
 		seq = math.MaxInt32
 		seqInc = -1
 	} else {
 		seq = 0
 		seqInc = 1
 	}
-	return &H{buySell: buySell, seq: seq, seqInc: seqInc, orders: make([]*trade.Order, 0, initCapacity)}
+	return &H{kind: kind, seq: seq, seqInc: seqInc, orders: make([]*trade.Order, 0, initCapacity)}
 }
 
 func (h *H) Size() int {
@@ -30,7 +30,7 @@ func (h *H) Size() int {
 }
 
 func (h *H) Push(o *trade.Order) {
-	o.Compare = int64(uint64(o.Price)<<32|uint64(h.seq)) * int64(o.BuySell)
+	o.Compare = int64(uint64(o.Price)<<32|uint64(h.seq)) * int64(o.Kind)
 	h.seq += h.seqInc
 	h.orders = append(h.orders, o)
 	h.up(len(h.orders) - 1)
@@ -55,8 +55,8 @@ func (h *H) Peek() *trade.Order {
 	return h.orders[0]
 }
 
-func (h *H) BuySell() trade.TradeType {
-	return h.buySell
+func (h *H) Kind() trade.OrderKind {
+	return h.kind
 }
 
 func (h *H) up(c int) {

@@ -17,35 +17,35 @@ func deadOrderElems(size int32) []orderEntry {
 }
 
 type orderEntry struct {
-	key int64
-	val *trade.Order
+	key  int64
+	val  *trade.Order
 	next *orderEntry
 	prev *orderEntry
 	last *orderEntry
 }
 
 type orderset struct {
-	entries  []orderEntry
-	size   int32
-	mask uint32
+	entries []orderEntry
+	size    int32
+	mask    uint32
 }
 
 func newOrderSet(initCap int32) *orderset {
 	capacity := toPowerOfTwo(initCap)
 	entries := deadOrderElems(capacity)
-	mask := uint32(capacity-1)
+	mask := uint32(capacity - 1)
 	return &orderset{entries: entries, mask: mask}
 }
 
 func (s *orderset) getIdx(key int64) uint32 {
-	half := (uint32(key) ^ uint32(key >> 16)) ^ uint32(key >> 32)
+	half := (uint32(key) ^ uint32(key>>16)) ^ uint32(key>>32)
 	// This hash function selected at random from http://burtleburtle.net/bob/hash/integer.html
-	half = (half+0x7ed55d16) + (half<<12)
-	half = (half^0xc761c23c) ^ (half>>19)
-	half = (half+0x165667b1) + (half<<5)
-	half = (half+0xd3a2646c) ^ (half<<9)
-	half = (half+0xfd7046c5) + (half<<3)
-	half = (half^0xb55a4f09) ^ (half>>16)
+	half = (half + 0x7ed55d16) + (half << 12)
+	half = (half ^ 0xc761c23c) ^ (half >> 19)
+	half = (half + 0x165667b1) + (half << 5)
+	half = (half + 0xd3a2646c) ^ (half << 9)
+	half = (half + 0xfd7046c5) + (half << 3)
+	half = (half ^ 0xb55a4f09) ^ (half >> 16)
 	return half & s.mask
 }
 
@@ -62,7 +62,7 @@ func (s *orderset) Put(key int64, val *trade.Order) {
 		e.last = e
 		return
 	} else {
-	//	println("Hash Collision", idx, key)
+		//	println("Hash Collision", idx, key)
 		ne := &orderEntry{key: key, val: val, prev: e.last}
 		e.last.next = ne
 		ne.prev = e.last
