@@ -118,7 +118,7 @@ func RandomPushPopBuy(t *testing.T, h Q, verifyQ func(*testing.T, Q)) {
 		buys = append(buys, b)
 		h.Push(b)
 		if h.Size() != (i + 1) {
-			t.Errorf("Incorrect size found in RandomPushPopBuy push phase")
+			t.Errorf("Incorrect size found in RandomPushPopBuy push phase. Expecting %d, got %d instead", i+1, h.Size())
 		}
 		verifyQ(t, h)
 	}
@@ -126,7 +126,7 @@ func RandomPushPopBuy(t *testing.T, h Q, verifyQ func(*testing.T, Q)) {
 	for i := 0; i < size; i++ {
 		b := h.Pop()
 		if h.Size() != size-(i+1) {
-			t.Errorf("Incorrect size found in RandomPushPopBuy pop phase")
+			t.Errorf("Incorrect size found in RandomPushPopBuy pop phase. Expecting %d, got %d instead", size-(i+1), h.Size())
 		}
 		if b.Price > leastPrice {
 			t.Errorf("Buy Pop reveals out of order buy order")
@@ -146,7 +146,7 @@ func RandomPushPopSell(t *testing.T, h Q, verifyQ func(*testing.T, Q)) {
 		buys = append(buys, b)
 		h.Push(b)
 		if h.Size() != (i + 1) {
-			t.Errorf("Incorrect size found in RandomPushPopSell")
+			t.Errorf("Incorrect size found in RandomPushPopSell. Expecting %d, got %d instead", i+1, h.Size())
 		}
 		verifyQ(t, h)
 	}
@@ -154,7 +154,7 @@ func RandomPushPopSell(t *testing.T, h Q, verifyQ func(*testing.T, Q)) {
 	for i := 0; i < size; i++ {
 		s := h.Pop()
 		if h.Size() != size-(i+1) {
-			t.Errorf("Incorrect size found in RandomPushPopSell pop phase")
+			t.Errorf("Incorrect size found in RandomPushPopSell pop phase Expecting %d, got %d instead", size-(i+1), h.Size())
 		}
 		if s.Price < greatestPrice {
 			t.Errorf("Sell Pop reveals out of order sell order")

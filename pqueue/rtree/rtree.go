@@ -123,6 +123,7 @@ func (r *R) Pop() *trade.Order {
 	if r.block == nil {
 		return nil
 	}
+	r.size--
 	return r.block.Pop()
 }
 
@@ -143,6 +144,7 @@ func (r *R) Push(o *trade.Order) {
 		}
 	}
 	r.block.Push(o)
+	r.size++
 }
 
 func (r *R) minPrice() int32 {

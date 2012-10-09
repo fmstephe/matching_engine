@@ -62,11 +62,10 @@ func (s *orderset) Put(key int64, val *trade.Order) {
 		e.last = e
 		return
 	} else {
-		//	println("Hash Collision", idx, key)
+		//println("Hash Collision", idx, key)
 		ne := &orderEntry{key: key, val: val, prev: e.last}
 		e.last.next = ne
-		ne.prev = e.last
-		e.last = e
+		e.last = ne
 	}
 	s.size++
 }
@@ -101,14 +100,14 @@ func (s *orderset) Remove(key int64) *trade.Order {
 		e.val = lval
 		return val
 	}
-	e = e.next
-	for e != nil {
+	for e = e.next; e != nil; e = e.next {
 		if e.key == key {
 			e.prev.next = e.next
-			e.next.prev = e.prev
+			if e.next != nil {
+				e.next.prev = e.prev
+			}
 			return e.val
 		}
-		e = e.next
 	}
 	return nil
 }
