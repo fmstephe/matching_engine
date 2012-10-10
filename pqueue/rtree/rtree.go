@@ -27,7 +27,7 @@ func (l *limit) Peek() *trade.Order {
 
 func (l *limit) Pop() *trade.Order {
 	o := l.head
-	l.head = o.Next
+	l.head = o.Outward
 	return o
 }
 
@@ -36,7 +36,7 @@ func (l *limit) Push(o *trade.Order) {
 		l.head = o
 		l.tail = o
 	} else {
-		l.tail.Next = o
+		l.tail.Outward = o
 		l.tail = o
 	}
 }

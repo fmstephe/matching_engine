@@ -16,23 +16,36 @@ func newLimit(price int32, o *trade.Order) *limit {
 	return limit
 }
 
-func (l *limit) isEmpty() bool {
-	return l.head == nil
+func (l *limit) push(o *trade.Order) {
+	if l.head == nil {
+		l.head = o
+		o.Inward = &l.head
+		l.tail = o
+	} else {
+		l.tail.Outward = o
+		o.Inward = &l.tail.Outward
+		l.tail = o
+	}
+}
+
+func (l *limit) pop() *trade.Order {
+	if l.head == nil {
+		return nil
+	}
+	if l.head == l.tail {
+		l.tail = nil
+	}
+	o := l.head
+	l.head = o.Outward
+	return o
 }
 
 func (l *limit) peek() *trade.Order {
 	return l.head
 }
 
-func (l *limit) pop() *trade.Order {
-	o := l.head
-	l.head = o.Next
-	return o
-}
-
-func (l *limit) push(o *trade.Order) {
-	l.tail.Next = o
-	l.tail = o
+func (l *limit) isEmpty() bool {
+	return l.head == nil
 }
 
 func better(l1, l2 *limit, kind trade.OrderKind) bool {
