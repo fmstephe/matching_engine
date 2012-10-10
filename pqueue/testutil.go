@@ -109,7 +109,7 @@ func AscendingSell(t *testing.T, h Q, verifyQ func(*testing.T, Q)) {
 }
 
 func RandomPushPopBuy(t *testing.T, h Q, verifyQ func(*testing.T, Q)) {
-	size := 10000
+	size := 1000
 	priceRange := int32(500)
 	priceBase := int32(1000)
 	buys := make([]*trade.Order, 0, size)
@@ -137,7 +137,7 @@ func RandomPushPopBuy(t *testing.T, h Q, verifyQ func(*testing.T, Q)) {
 }
 
 func RandomPushPopSell(t *testing.T, h Q, verifyQ func(*testing.T, Q)) {
-	size := 10000
+	size := 1000
 	priceRange := int32(500)
 	priceBase := int32(1000)
 	buys := make([]*trade.Order, 0, size)

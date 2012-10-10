@@ -9,33 +9,32 @@ import (
 var orderMaker = trade.NewOrderMaker()
 
 func verifyHeap(t *testing.T, h pqueue.Q) {
-	//verifyHeapRec(h.(*H), t, 0)
+	verifyHeapRec(h.(*H), t, 0)
 }
 
-/*
 func verifyHeapRec(h *H, t *testing.T, i int) {
-	limits := h.limits
-	n := len(h.limits)
+	heap := h.heap
+	n := len(h.heap)
 	j1 := 2*i + 1
 	j2 := 2*i + 2
 	if j1 < n {
-		if better(limits[j1], limits[i], h.kind) {
-			t.Errorf("H invariant invalidated [%d] = %d > [%d] = %d", i, limits[i], j1, limits[j1])
+		if better(heap[j1], heap[i], h.kind) {
+			t.Errorf("H invariant invalidated [%d] = %d > [%d] = %d", i, heap[i], j1, heap[j1])
 			return
 		}
 		verifyHeapRec(h, t, j1)
 	}
 	if j2 < n {
-		if better(limits[j2], limits[i], h.kind) {
-			t.Errorf("H invariant invalidated [%d] = %d > [%d] = %d", i, limits[i], j1, limits[j2])
+		if better(heap[j2], heap[i], h.kind) {
+			t.Errorf("H invariant invalidated [%d] = %d > [%d] = %d", i, heap[i], j1, heap[j2])
 			return
 		}
 		verifyHeapRec(h, t, j2)
 	}
 }
-*/
+
 func createHeap(kind trade.OrderKind) pqueue.Q {
-	return New(kind, 100*1000, 100*1000, 100*1000)
+	return New(kind, 10, 10, 10)
 }
 
 func TestPushPop(t *testing.T) {

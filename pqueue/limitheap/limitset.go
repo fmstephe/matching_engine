@@ -124,11 +124,10 @@ func (s *limitset) Put(key int32, val *limit) {
 		e.last = e
 		return
 	} else {
-		println("Hash Collision", idx, key)
 		ne := &limitEntry{key: key, val: val}
 		e.last.next = ne
 		ne.prev = e.last
-		e.last = e
+		e.last = ne
 	}
 	s.size++
 }
@@ -167,7 +166,9 @@ func (s *limitset) Remove(key int32) *limit {
 	for e != nil {
 		if e.key == key {
 			e.prev.next = e.next
-			e.next.prev = e.prev
+			if e.next != nil {
+				e.next.prev = e.prev
+			}
 			return e.val
 		}
 		e = e.next
