@@ -37,3 +37,11 @@ func (rb *ResponseBuffer) clear() {
 	rb.read = 0
 	rb.write = 0
 }
+
+func (rv *ResponseBuffer) Reads() int {
+	return rv.read
+}
+
+func (rv *ResponseBuffer) Writes() int {
+	return rv.write
+}
