@@ -138,7 +138,7 @@ func benchmarkAddBuy(b *testing.B, buys []*trade.Order) {
 		m := NewMatcher(buyQ, sellQ, output)
 		b.StartTimer()
 		for _, buy := range buys {
-			m.AddBuy(buy)
+			m.Submit(buy)
 		}
 	}
 }
@@ -167,7 +167,7 @@ func benchmarkAddSell(b *testing.B, sells []*trade.Order) {
 		m := NewMatcher(buyQ, sellQ, output)
 		b.StartTimer()
 		for _, sell := range sells {
-			m.AddSell(sell)
+			m.Submit(sell)
 		}
 	}
 }
@@ -194,8 +194,8 @@ func benchmarkMatch(b *testing.B, buys, sells []*trade.Order, expMatches int) {
 		sellQ := limitheap.New(trade.SELL, 2000, 10*1000*1000, orderNum)
 		m := NewMatcher(buyQ, sellQ, output)
 		for j := 0; j < orderNum; j++ {
-			m.AddBuy(buys[j])
-			m.AddSell(sells[j])
+			m.Submit(buys[j])
+			m.Submit(sells[j])
 		}
 		if output.write/2 != expMatches {
 			println("Expecting", expMatches, "found", output.write/2, "instead")

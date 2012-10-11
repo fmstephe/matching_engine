@@ -3,15 +3,17 @@ package trade
 import ()
 
 const (
-	SELL        = OrderKind(-1)
-	BUY         = OrderKind(1)
-	DELETE      = OrderKind(2)
-	EXECUTE     = ResponseKind(1)
-	CANCEL      = ResponseKind(2)
-	FULL        = ResponseKind(3)
-	X           = ResponseKind(4)
-	TRANSPARENT = ResponseKind(5)
-	MARKET      = 0
+	BUY              = OrderKind(1)
+	SELL             = OrderKind(-1)
+	DELETE_BUY       = OrderKind(2)
+	DELETE_SELL      = OrderKind(-2)
+	EXECUTE          = ResponseKind(1)
+	CANCEL           = ResponseKind(2)
+	FULL             = ResponseKind(3)
+	X                = ResponseKind(4)
+	TRANSPARENT      = ResponseKind(5)
+	MARKET_PRICE     = 0
+	NO_COUNTER_PARTY = 0
 )
 
 type OrderKind int32
@@ -56,8 +58,12 @@ func NewSell(costData CostData, tradeData TradeData) *Order {
 	return NewOrder(costData, tradeData, SELL)
 }
 
-func NewDelete(tradeData TradeData) *Order {
-	return NewOrder(CostData{}, tradeData, DELETE)
+func NewDeleteBuy(tradeData TradeData) *Order {
+	return NewOrder(CostData{}, tradeData, DELETE_BUY)
+}
+
+func NewDeleteSell(tradeData TradeData) *Order {
+	return NewOrder(CostData{}, tradeData, DELETE_SELL)
 }
 
 func NewOrder(costData CostData, tradeData TradeData, orderKind OrderKind) *Order {

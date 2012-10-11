@@ -23,20 +23,21 @@ var (
 
 func main() {
 	flag.Parse()
-	orderNum := 20 * 1000 * 1000
+	orderNum := 5 * 1000 * 1000
 	sells := mkSells(orderNum, 1000, 1500)
-	buys := mkBuys(orderNum, 1000, 1500)
-	buysQ := limitheap.New(trade.BUY, 2000, 10*1000*1000, orderNum)
-	sellsQ := limitheap.New(trade.SELL, 2000, 10*1000*1000, orderNum)
+	buys := mkBuys(orderNum, 2000, 2500)
+	buysQ := limitheap.New(trade.BUY, 2000, int32(4*orderNum), orderNum)
+	sellsQ := limitheap.New(trade.SELL, 2000, int32(4*orderNum), orderNum)
 	buffer := matcher.NewResponseBuffer(2)
 	m := matcher.NewMatcher(buysQ, sellsQ, buffer)
 	startProfile()
 	defer endProfile()
 	start := time.Now().UnixNano()
 	for i := 0; i < orderNum; i++ {
-		m.AddBuy(buys[i])
-		m.AddSell(sells[i])
+		m.Submit(buys[i])
+		m.Submit(sells[i])
 	}
+	println(buffer.Writes())
 	total := time.Now().UnixNano() - start
 	println("Nanos\t", total)
 	println("Mircos\t", total/1000)

@@ -65,7 +65,8 @@ func mkOrder(line string) *trade.Order {
 	case "S":
 		return trade.NewSell(cd, td)
 	case "D":
-		return trade.NewDelete(td)
+		// TODO we must check to see if this is a buy or sell delete here
+		return trade.NewDeleteBuy(td)
 	default:
 		panic(fmt.Sprintf("Unrecognised Trade Type %s", useful[3]))
 	}

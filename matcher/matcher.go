@@ -1,6 +1,7 @@
 package matcher
 
 import (
+	"fmt"
 	"github.com/fmstephe/matching_engine/pqueue"
 	"github.com/fmstephe/matching_engine/trade"
 )
@@ -20,7 +21,34 @@ func NewMatcher(buys, sells pqueue.Q, output *ResponseBuffer) *M {
 	return &M{buys: buys, sells: sells, output: output}
 }
 
-func (m *M) AddSell(s *trade.Order) {
+func (m *M) Submit(o *trade.Order) {
+	switch o.Kind {
+	case trade.BUY:
+		m.addBuy(o)
+	case trade.SELL:
+		m.addSell(o)
+	case trade.DELETE_BUY:
+		m.deleteBuy(o)
+	case trade.DELETE_SELL:
+		m.deleteSell(o)
+	default:
+		panic(fmt.Sprintf("OrderKind %#v not currently supported", o.Kind))
+	}
+}
+
+func (m *M) addBuy(b *trade.Order) {
+	if b.Kind != trade.BUY {
+		panic("Added non-buy trade as a buy")
+	}
+	if b.Price == trade.MARKET_PRICE {
+		panic("It is illegal to submit a buy at market price")
+	}
+	if !m.fillableBuy(b) {
+		m.buys.Push(b)
+	}
+}
+
+func (m *M) addSell(s *trade.Order) {
 	if s.Kind != trade.SELL {
 		panic("Added non-sell trade as a sell")
 	}
@@ -29,16 +57,12 @@ func (m *M) AddSell(s *trade.Order) {
 	}
 }
 
-func (m *M) AddBuy(b *trade.Order) {
-	if b.Kind != trade.BUY {
-		panic("Added non-buy trade as a buy")
-	}
-	if b.Price == trade.MARKET {
-		panic("It is illegal to submit a buy at market price")
-	}
-	if !m.fillableBuy(b) {
-		m.buys.Push(b)
-	}
+func (m *M) deleteBuy(o *trade.Order) {
+	panic("deleteBuy not supported")
+}
+
+func (m *M) deleteSell(o *trade.Order) {
+	panic("deleteSell not supported")
 }
 
 func (m *M) fillableBuy(b *trade.Order) bool {
@@ -115,7 +139,7 @@ func (m *M) fillableSell(s *trade.Order) bool {
 }
 
 func price(bPrice, sPrice int32) int32 {
-	if sPrice == trade.MARKET {
+	if sPrice == trade.MARKET_PRICE {
 		return bPrice
 	}
 	d := bPrice - sPrice
