@@ -7,8 +7,9 @@ import (
 )
 
 type M struct {
-	buys, sells pqueue.Q
-	output      *ResponseBuffer
+	buys   pqueue.Q
+	sells  pqueue.Q
+	output *ResponseBuffer
 }
 
 func NewMatcher(buys, sells pqueue.Q, output *ResponseBuffer) *M {
@@ -37,9 +38,6 @@ func (m *M) Submit(o *trade.Order) {
 }
 
 func (m *M) addBuy(b *trade.Order) {
-	if b.Kind != trade.BUY {
-		panic("Added non-buy trade as a buy")
-	}
 	if b.Price == trade.MARKET_PRICE {
 		panic("It is illegal to submit a buy at market price")
 	}
@@ -49,16 +47,13 @@ func (m *M) addBuy(b *trade.Order) {
 }
 
 func (m *M) addSell(s *trade.Order) {
-	if s.Kind != trade.SELL {
-		panic("Added non-sell trade as a sell")
-	}
 	if !m.fillableSell(s) {
 		m.sells.Push(s)
 	}
 }
 
 func (m *M) deleteBuy(o *trade.Order) {
-	panic("deleteBuy not supported")
+	m.buys.Remove(o.Guid)
 }
 
 func (m *M) deleteSell(o *trade.Order) {
@@ -111,7 +106,7 @@ func (m *M) fillableSell(s *trade.Order) bool {
 			if b.Amount > s.Amount {
 				amount := s.Amount
 				price := price(b.Price, s.Price)
-				m.sells.Pop()
+				m.buys.Pop()
 				b.Amount -= amount
 				m.completeTrade(b, s, price, amount)
 				return true // The sell has been used up
@@ -121,14 +116,14 @@ func (m *M) fillableSell(s *trade.Order) bool {
 				price := price(b.Price, s.Price)
 				s.Amount -= amount
 				m.completeTrade(b, s, price, amount)
-				m.sells.Pop()
+				m.buys.Pop()
 				continue
 			}
 			if s.Amount == b.Amount {
 				amount := b.Amount
 				price := price(b.Price, s.Price)
 				m.completeTrade(b, s, price, amount)
-				m.sells.Pop()
+				m.buys.Pop()
 				return true // The sell has been used up
 			}
 		} else {

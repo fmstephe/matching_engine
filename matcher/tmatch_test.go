@@ -204,6 +204,30 @@ func TestMidPriceBigBuy(t *testing.T) {
 	verifyResponse(t, output.getForRead(), responseVals{price: 7, amount: 1, tradeId: 1, counterParty: trader1})
 }
 
+func TestAddRemoveBuy(t *testing.T) {
+	output := NewResponseBuffer(20)
+	buyQ := limitheap.New(trade.BUY, 2000, 1000, orderNum)
+	sellQ := limitheap.New(trade.SELL, 2000, 1000, orderNum)
+	m := NewMatcher(buyQ, sellQ, output)
+	addLowBuys(m, 5)
+	addHighSells(m, 10)
+	// Add Buy
+	costData := trade.CostData{Price: 9, Amount: 10}
+	tradeData := trade.TradeData{TraderId: trader1, TradeId: 1, StockId: stockId}
+	b := trade.NewBuy(costData, tradeData)
+	m.Submit(b)
+	// Delete Buy
+	del := trade.NewDeleteBuy(tradeData)
+	m.Submit(del)
+	// Add Sell
+	costData = trade.CostData{Price: 6, Amount: 1}
+	tradeData = trade.TradeData{TraderId: trader2, TradeId: 1, StockId: stockId}
+	m.Submit(trade.NewSell(costData, tradeData))
+	if output.Writes() != 0 {
+		t.Errorf("Deleted buy was executed as a trade")
+	}
+}
+
 func addLowBuys(m *M, highestPrice int32) {
 	buys := matchTestOrderMaker.MkBuys(matchTestOrderMaker.ValRangeFlat(10, 1, highestPrice))
 	for _, buy := range buys {
