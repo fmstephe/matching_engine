@@ -12,8 +12,9 @@ type limit struct {
 }
 
 func newLimit(price int32, o *trade.Order) *limit {
-	limit := &limit{price: price, head: o, tail: o}
-	return limit
+	l := &limit{price: price, head: o, tail: o}
+	o.Inward = &l.head
+	return l
 }
 
 func (l *limit) push(o *trade.Order) {
@@ -37,6 +38,8 @@ func (l *limit) pop() *trade.Order {
 	}
 	o := l.head
 	l.head = o.Outward
+	o.Inward = nil
+	o.Outward = nil
 	return o
 }
 
@@ -121,7 +124,11 @@ func (h *H) clearHead() {
 }
 
 func (h *H) Remove(guid int64) *trade.Order {
-	return h.orders.Remove(guid)
+	o := h.orders.Remove(guid)
+	*o.Inward = o.Outward
+	o.Inward = nil
+	o.Outward = nil
+	return o
 }
 
 func (h *H) Kind() trade.OrderKind {
