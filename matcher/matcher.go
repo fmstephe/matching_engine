@@ -53,11 +53,11 @@ func (m *M) addSell(s *trade.Order) {
 }
 
 func (m *M) deleteBuy(o *trade.Order) {
-	m.buys.Remove(o.Guid)
+	panic("Not supported")
 }
 
 func (m *M) deleteSell(o *trade.Order) {
-	panic("deleteSell not supported")
+	panic("Not supported")
 }
 
 func (m *M) fillableBuy(b *trade.Order) bool {
@@ -106,7 +106,6 @@ func (m *M) fillableSell(s *trade.Order) bool {
 			if b.Amount > s.Amount {
 				amount := s.Amount
 				price := price(b.Price, s.Price)
-				m.buys.Pop()
 				b.Amount -= amount
 				m.completeTrade(b, s, price, amount)
 				return true // The sell has been used up

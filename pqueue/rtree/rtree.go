@@ -27,7 +27,7 @@ func (l *limit) Peek() *trade.Order {
 
 func (l *limit) Pop() *trade.Order {
 	o := l.head
-	l.head = o.Outward
+	l.head = o.Lower
 	return o
 }
 
@@ -36,7 +36,7 @@ func (l *limit) Push(o *trade.Order) {
 		l.head = o
 		l.tail = o
 	} else {
-		l.tail.Outward = o
+		l.tail.Lower = o
 		l.tail = o
 	}
 }
@@ -153,6 +153,10 @@ func (r *R) minPrice() int32 {
 
 func (r *R) Kind() trade.OrderKind {
 	return r.kind
+}
+
+func (r *R) Remove(o *trade.Order) {
+	panic("Unsupported")
 }
 
 type nodeBlock struct {

@@ -133,8 +133,8 @@ func BenchmarkAddBuyNarrow(b *testing.B) {
 func benchmarkAddBuy(b *testing.B, buys []*trade.Order) {
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
-		buyQ := limitheap.New(trade.BUY, 2000, 10*1000*1000, orderNum)
-		sellQ := limitheap.New(trade.SELL, 2000, 10*1000*1000, orderNum)
+		buyQ := limitheap.New(trade.BUY, 2000, orderNum)
+		sellQ := limitheap.New(trade.SELL, 2000, orderNum)
 		m := NewMatcher(buyQ, sellQ, output)
 		b.StartTimer()
 		for _, buy := range buys {
@@ -162,8 +162,8 @@ func benchmarkAddSell(b *testing.B, sells []*trade.Order) {
 	for i := 0; i < b.N; i++ {
 		prepare(b)
 		b.StopTimer()
-		buyQ := limitheap.New(trade.BUY, 2000, 10*1000*1000, orderNum)
-		sellQ := limitheap.New(trade.SELL, 2000, 10*1000*1000, orderNum)
+		buyQ := limitheap.New(trade.BUY, 2000, orderNum)
+		sellQ := limitheap.New(trade.SELL, 2000, orderNum)
 		m := NewMatcher(buyQ, sellQ, output)
 		b.StartTimer()
 		for _, sell := range sells {
@@ -190,8 +190,8 @@ func BenchmarkMatchNarrow(b *testing.B) {
 func benchmarkMatch(b *testing.B, buys, sells []*trade.Order, expMatches int) {
 	for i := 0; i < b.N; i++ {
 		prepare(b)
-		buyQ := limitheap.New(trade.BUY, 2000, 10*1000*1000, orderNum)
-		sellQ := limitheap.New(trade.SELL, 2000, 10*1000*1000, orderNum)
+		buyQ := limitheap.New(trade.BUY, 2000, orderNum)
+		sellQ := limitheap.New(trade.SELL, 2000, orderNum)
 		m := NewMatcher(buyQ, sellQ, output)
 		for j := 0; j < orderNum; j++ {
 			m.Submit(buys[j])

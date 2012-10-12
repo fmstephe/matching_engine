@@ -26,8 +26,8 @@ func main() {
 	orderNum := 5 * 1000 * 1000
 	sells := mkSells(orderNum, 1000, 1500)
 	buys := mkBuys(orderNum, 2000, 2500)
-	buysQ := limitheap.New(trade.BUY, 2000, int32(4*orderNum), orderNum)
-	sellsQ := limitheap.New(trade.SELL, 2000, int32(4*orderNum), orderNum)
+	buysQ := limitheap.New(trade.BUY, 2000, orderNum)
+	sellsQ := limitheap.New(trade.SELL, 2000, orderNum)
 	buffer := matcher.NewResponseBuffer(2)
 	m := matcher.NewMatcher(buysQ, sellsQ, buffer)
 	startProfile()

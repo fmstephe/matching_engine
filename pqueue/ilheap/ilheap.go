@@ -71,6 +71,10 @@ func (h *H) Peek() *trade.Order {
 	return nil
 }
 
+func (h *H) Remove(o *trade.Order) {
+	panic("Unsupported")
+}
+
 func (h *H) up(c int) {
 	elems := h.elems
 	for {

@@ -59,6 +59,10 @@ func (h *H) Kind() trade.OrderKind {
 	return h.kind
 }
 
+func (h *H) Remove(o *trade.Order) {
+	panic("Unsupported")
+}
+
 func (h *H) up(c int) {
 	orders := h.orders
 	for {

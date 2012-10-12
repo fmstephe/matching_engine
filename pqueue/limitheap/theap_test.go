@@ -34,7 +34,7 @@ func verifyHeapRec(h *H, t *testing.T, i int) {
 }
 
 func createHeap(kind trade.OrderKind) pqueue.Q {
-	return New(kind, 10, 10, 10)
+	return New(kind, 10, 10)
 }
 
 func TestPushPop(t *testing.T) {

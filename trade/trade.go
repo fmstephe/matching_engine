@@ -41,9 +41,9 @@ type Order struct {
 	TradeId  uint32
 	StockId  uint32
 	Kind     OrderKind
-	Compare  int64   // Binary heap comparison value
-	Inward   **Order // A pointer into this order in this limit
-	Outward  *Order  // The next order in this limit
+	Compare  int64  // Binary heap comparison value
+	Higher   *Order // Next higher priority order in this limit
+	Lower    *Order // Next lower priority order in this limit
 }
 
 func (o *Order) setup() {

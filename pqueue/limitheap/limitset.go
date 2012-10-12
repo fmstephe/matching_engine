@@ -1,6 +1,7 @@
 package limitheap
 
 import (
+	"github.com/fmstephe/matching_engine/pqueue/limit"
 	"sort"
 )
 
@@ -84,7 +85,7 @@ func deadElems(size int32) []limitEntry {
 
 type limitEntry struct {
 	key  int32
-	val  *limit
+	val  *limit.L
 	next *limitEntry
 	prev *limitEntry
 	last *limitEntry
@@ -115,7 +116,7 @@ func (s *limitset) Size() int32 {
 	return s.size
 }
 
-func (s *limitset) Put(key int32, val *limit) {
+func (s *limitset) Put(key int32, val *limit.L) {
 	idx := s.getIdx(key)
 	e := &s.entries[idx]
 	if e.key == tombstone32 {
@@ -132,7 +133,7 @@ func (s *limitset) Put(key int32, val *limit) {
 	s.size++
 }
 
-func (s *limitset) Get(key int32) *limit {
+func (s *limitset) Get(key int32) *limit.L {
 	idx := s.getIdx(key)
 	e := &s.entries[idx]
 	for e != nil {
@@ -144,7 +145,7 @@ func (s *limitset) Get(key int32) *limit {
 	return nil
 }
 
-func (s *limitset) Remove(key int32) *limit {
+func (s *limitset) Remove(key int32) *limit.L {
 	idx := s.getIdx(key)
 	e := &s.entries[idx]
 	if e.next == nil && e.key == key {
