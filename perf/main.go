@@ -23,9 +23,9 @@ var (
 
 func main() {
 	flag.Parse()
-	orderNum := 5 * 1000 * 1000
+	orderNum := 20 * 1000 * 1000
 	sells := mkSells(orderNum, 1000, 1500)
-	buys := mkBuys(orderNum, 2000, 2500)
+	buys := mkBuys(orderNum, 1000, 1500)
 	buysQ := limitheap.New(trade.BUY, 2000, orderNum)
 	sellsQ := limitheap.New(trade.SELL, 2000, orderNum)
 	buffer := matcher.NewResponseBuffer(2)
@@ -37,10 +37,10 @@ func main() {
 		m.Submit(buys[i])
 		m.Submit(sells[i])
 	}
-	println(buffer.Writes())
+	println("Buffer Writes: ", buffer.Writes())
 	total := time.Now().UnixNano() - start
 	println("Nanos\t", total)
-	println("Mircos\t", total/1000)
+	println("Micros\t", total/1000)
 	println("Millis\t", total/(1000*1000))
 	println("Seconds\t", total/(1000*1000*1000))
 }
