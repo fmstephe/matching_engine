@@ -23,7 +23,7 @@ var (
 
 func main() {
 	flag.Parse()
-	orderNum := 20 * 1000 * 1000
+	orderNum := 5 * 1000 * 1000
 	sells := mkSells(orderNum, 1000, 1500)
 	buys := mkBuys(orderNum, 1000, 1500)
 	buysQ := limitheap.New(trade.BUY, 2000, orderNum)

@@ -1,4 +1,4 @@
-package limitheap
+package matcher
 
 import (
 	"github.com/fmstephe/matching_engine/trade"
@@ -7,6 +7,18 @@ import (
 const (
 	tombstone64 = int64(-1)
 )
+
+// Thanks to http://graphics.stanford.edu/~seander/bithacks.html :)
+func toPowerOfTwo(c int32) int32 {
+	c--
+	c |= c >> 1
+	c |= c >> 2
+	c |= c >> 4
+	c |= c >> 8
+	c |= c >> 16
+	c++
+	return c
+}
 
 func deadOrderElems(size int32) []orderEntry {
 	entries := make([]orderEntry, size)
@@ -53,7 +65,8 @@ func (s *orderset) Size() int32 {
 	return s.size
 }
 
-func (s *orderset) Put(key int64, val *trade.Order) {
+func (s *orderset) put(val *trade.Order) {
+	key := val.Guid
 	idx := s.getIdx(key)
 	e := &s.entries[idx]
 	if e.key == tombstone64 {
@@ -70,7 +83,7 @@ func (s *orderset) Put(key int64, val *trade.Order) {
 	s.size++
 }
 
-func (s *orderset) Get(key int64) *trade.Order {
+func (s *orderset) get(key int64) *trade.Order {
 	idx := s.getIdx(key)
 	e := &s.entries[idx]
 	for e != nil {
@@ -82,7 +95,7 @@ func (s *orderset) Get(key int64) *trade.Order {
 	return nil
 }
 
-func (s *orderset) Remove(key int64) *trade.Order {
+func (s *orderset) remove(key int64) *trade.Order {
 	idx := s.getIdx(key)
 	e := &s.entries[idx]
 	if e.next == nil && e.key == key {

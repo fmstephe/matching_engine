@@ -9,6 +9,7 @@ import (
 type M struct {
 	buys   pqueue.Q
 	sells  pqueue.Q
+	orders *orderset
 	output *ResponseBuffer
 }
 
@@ -19,7 +20,8 @@ func NewMatcher(buys, sells pqueue.Q, output *ResponseBuffer) *M {
 	if sells.Kind() != trade.SELL {
 		panic("Provided a sell priority queue that was not accepting sells!")
 	}
-	return &M{buys: buys, sells: sells, output: output}
+	orders := newOrderSet(1000) // Need a data structure that doesn't require an initialisation constant
+	return &M{buys: buys, sells: sells, orders: orders, output: output}
 }
 
 func (m *M) Submit(o *trade.Order) {
@@ -42,12 +44,14 @@ func (m *M) addBuy(b *trade.Order) {
 		panic("It is illegal to submit a buy at market price")
 	}
 	if !m.fillableBuy(b) {
+		m.orders.put(b)
 		m.buys.Push(b)
 	}
 }
 
 func (m *M) addSell(s *trade.Order) {
 	if !m.fillableSell(s) {
+		m.orders.put(s)
 		m.sells.Push(s)
 	}
 }
@@ -70,7 +74,7 @@ func (m *M) fillableBuy(b *trade.Order) bool {
 			if b.Amount > s.Amount {
 				amount := s.Amount
 				price := price(b.Price, s.Price)
-				m.sells.Pop()
+				m.clearHead(m.sells)
 				b.Amount -= amount
 				m.completeTrade(b, s, price, amount)
 				continue
@@ -86,7 +90,7 @@ func (m *M) fillableBuy(b *trade.Order) bool {
 				amount := b.Amount
 				price := price(b.Price, s.Price)
 				m.completeTrade(b, s, price, amount)
-				m.sells.Pop()
+				m.clearHead(m.sells)
 				return true // The buy has been used up
 			}
 		} else {
@@ -115,14 +119,14 @@ func (m *M) fillableSell(s *trade.Order) bool {
 				price := price(b.Price, s.Price)
 				s.Amount -= amount
 				m.completeTrade(b, s, price, amount)
-				m.buys.Pop()
+				m.clearHead(m.buys)
 				continue
 			}
 			if s.Amount == b.Amount {
 				amount := b.Amount
 				price := price(b.Price, s.Price)
 				m.completeTrade(b, s, price, amount)
-				m.buys.Pop()
+				m.clearHead(m.buys)
 				return true // The sell has been used up
 			}
 		} else {
@@ -130,6 +134,11 @@ func (m *M) fillableSell(s *trade.Order) bool {
 		}
 	}
 	panic("Unreachable")
+}
+
+func (m *M) clearHead(q pqueue.Q) {
+	o := q.Pop()
+	m.orders.remove(o.Guid)
 }
 
 func price(bPrice, sPrice int32) int32 {
