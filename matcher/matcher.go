@@ -2,18 +2,18 @@ package matcher
 
 import (
 	"fmt"
-	"github.com/fmstephe/matching_engine/pqueue"
+	"github.com/fmstephe/matching_engine/pqueue/limitheap"
 	"github.com/fmstephe/matching_engine/trade"
 )
 
 type M struct {
-	buys   pqueue.Q
-	sells  pqueue.Q
+	buys   *limitheap.H
+	sells  *limitheap.H
 	orders *orderset
 	output *ResponseBuffer
 }
 
-func NewMatcher(buys, sells pqueue.Q, output *ResponseBuffer) *M {
+func NewMatcher(buys, sells *limitheap.H, output *ResponseBuffer) *M {
 	if buys.Kind() != trade.BUY {
 		panic("Provided a buy priority queue that was not accepting buys!")
 	}
@@ -30,10 +30,8 @@ func (m *M) Submit(o *trade.Order) {
 		m.addBuy(o)
 	case trade.SELL:
 		m.addSell(o)
-	case trade.DELETE_BUY:
-		m.deleteBuy(o)
-	case trade.DELETE_SELL:
-		m.deleteSell(o)
+	case trade.DELETE:
+		m.remove(o)
 	default:
 		panic(fmt.Sprintf("OrderKind %#v not currently supported", o.Kind))
 	}
@@ -56,12 +54,9 @@ func (m *M) addSell(s *trade.Order) {
 	}
 }
 
-func (m *M) deleteBuy(o *trade.Order) {
-	panic("Not supported")
-}
-
-func (m *M) deleteSell(o *trade.Order) {
-	panic("Not supported")
+func (m *M) remove(o *trade.Order) {
+	ro := m.orders.remove(o.Guid)
+	ro.RemoveFromLimit()
 }
 
 func (m *M) fillableBuy(b *trade.Order) bool {
@@ -136,7 +131,7 @@ func (m *M) fillableSell(s *trade.Order) bool {
 	panic("Unreachable")
 }
 
-func (m *M) clearHead(q pqueue.Q) {
+func (m *M) clearHead(q *limitheap.H) {
 	o := q.Pop()
 	m.orders.remove(o.Guid)
 }

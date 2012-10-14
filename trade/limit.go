@@ -1,22 +1,20 @@
-package limit
+package trade
 
-import (
-	"github.com/fmstephe/matching_engine/trade"
-)
+import ()
 
-type L struct {
+type Limit struct {
 	Price int32
-	dummy trade.Order
+	dummy Order
 }
 
-func New(price int32) *L {
-	l := &L{Price: price}
+func NewLimit(price int32) *Limit {
+	l := &Limit{Price: price}
 	l.dummy.Higher = &l.dummy
 	l.dummy.Lower = &l.dummy
 	return l
 }
 
-func (l *L) Push(newTail *trade.Order) {
+func (l *Limit) Push(newTail *Order) {
 	dummy := &l.dummy
 	tail := dummy.Higher
 	// newTail is lower than tail
@@ -28,7 +26,7 @@ func (l *L) Push(newTail *trade.Order) {
 }
 
 // This function cannot be called safely on an empty limit
-func (l *L) Pop() *trade.Order {
+func (l *Limit) Pop() *Order {
 	dummy := &l.dummy
 	head := dummy.Lower
 	newHead := head.Lower
@@ -41,18 +39,13 @@ func (l *L) Pop() *trade.Order {
 	return head
 }
 
-func (l *L) Peek() *trade.Order {
+func (l *Limit) Peek() *Order {
 	if l.IsEmpty() {
 		return nil
 	}
 	return l.dummy.Lower
 }
 
-func (l *L) IsEmpty() bool {
+func (l *Limit) IsEmpty() bool {
 	return l.dummy.Higher == &l.dummy
-}
-
-func Remove(o *trade.Order) {
-	o.Higher.Lower = o.Lower
-	o.Lower.Higher = o.Higher
 }

@@ -1,7 +1,6 @@
-package limitheap
+package trade
 
 import (
-	"github.com/fmstephe/matching_engine/pqueue/limit"
 	"sort"
 )
 
@@ -85,38 +84,38 @@ func deadElems(size int32) []limitEntry {
 
 type limitEntry struct {
 	key  int32
-	val  *limit.L
+	val  *Limit
 	next *limitEntry
 	prev *limitEntry
 	last *limitEntry
 }
 
-type limitset struct {
+type LimitSet struct {
 	entries []limitEntry
 	size    int32
 	mask    int32
 }
 
-func newLimitSet(initCap int32) *limitset {
+func NewLimitSet(initCap int32) *LimitSet {
 	capacity := toPowerOfTwo(initCap)
 	entries := deadElems(capacity)
 	mask := capacity - 1
-	return &limitset{entries: entries, mask: mask}
+	return &LimitSet{entries: entries, mask: mask}
 }
 
-func (s *limitset) getIdx(key int32) int32 {
+func (s *LimitSet) getIdx(key int32) int32 {
 	return key & s.mask
 }
 
-func (s *limitset) getPrimeIdx(key int32) int32 {
+func (s *LimitSet) getPrimeIdx(key int32) int32 {
 	return key % int32(len(s.entries))
 }
 
-func (s *limitset) Size() int32 {
+func (s *LimitSet) Size() int32 {
 	return s.size
 }
 
-func (s *limitset) Put(key int32, val *limit.L) {
+func (s *LimitSet) Put(key int32, val *Limit) {
 	idx := s.getIdx(key)
 	e := &s.entries[idx]
 	if e.key == tombstone32 {
@@ -133,7 +132,7 @@ func (s *limitset) Put(key int32, val *limit.L) {
 	s.size++
 }
 
-func (s *limitset) Get(key int32) *limit.L {
+func (s *LimitSet) Get(key int32) *Limit {
 	idx := s.getIdx(key)
 	e := &s.entries[idx]
 	for e != nil {
@@ -145,7 +144,7 @@ func (s *limitset) Get(key int32) *limit.L {
 	return nil
 }
 
-func (s *limitset) Remove(key int32) *limit.L {
+func (s *LimitSet) Remove(key int32) *Limit {
 	idx := s.getIdx(key)
 	e := &s.entries[idx]
 	if e.next == nil && e.key == key {

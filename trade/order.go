@@ -5,8 +5,7 @@ import ()
 const (
 	BUY              = OrderKind(1)
 	SELL             = OrderKind(-1)
-	DELETE_BUY       = OrderKind(2)
-	DELETE_SELL      = OrderKind(-2)
+	DELETE           = OrderKind(2)
 	EXECUTE          = ResponseKind(1)
 	CANCEL           = ResponseKind(2)
 	FULL             = ResponseKind(3)
@@ -50,6 +49,11 @@ func (o *Order) setup() {
 	o.Guid = int64((uint64(o.TraderId) << 32) | uint64(o.TradeId))
 }
 
+func (o *Order) RemoveFromLimit() {
+	o.Higher.Lower = o.Lower
+	o.Lower.Higher = o.Higher
+}
+
 func NewBuy(costData CostData, tradeData TradeData) *Order {
 	return NewOrder(costData, tradeData, BUY)
 }
@@ -58,12 +62,8 @@ func NewSell(costData CostData, tradeData TradeData) *Order {
 	return NewOrder(costData, tradeData, SELL)
 }
 
-func NewDeleteBuy(tradeData TradeData) *Order {
-	return NewOrder(CostData{}, tradeData, DELETE_BUY)
-}
-
-func NewDeleteSell(tradeData TradeData) *Order {
-	return NewOrder(CostData{}, tradeData, DELETE_SELL)
+func NewDelete(tradeData TradeData) *Order {
+	return NewOrder(CostData{}, tradeData, DELETE)
 }
 
 func NewOrder(costData CostData, tradeData TradeData, orderKind OrderKind) *Order {

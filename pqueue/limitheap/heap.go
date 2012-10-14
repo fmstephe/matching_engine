@@ -1,11 +1,10 @@
 package limitheap
 
 import (
-	"github.com/fmstephe/matching_engine/pqueue/limit"
 	"github.com/fmstephe/matching_engine/trade"
 )
 
-func better(l1, l2 *limit.L, kind trade.OrderKind) bool {
+func better(l1, l2 *trade.Limit, kind trade.OrderKind) bool {
 	if kind == trade.BUY {
 		return l2.Price-l1.Price < 0
 	}
@@ -14,13 +13,13 @@ func better(l1, l2 *limit.L, kind trade.OrderKind) bool {
 
 type H struct {
 	kind   trade.OrderKind
-	limits *limitset
-	heap   []*limit.L
+	limits *trade.LimitSet
+	heap   []*trade.Limit
 	size   int
 }
 
 func New(kind trade.OrderKind, limitSetSize int32, heapSize int) *H {
-	return &H{kind: kind, limits: newLimitSet(limitSetSize), heap: make([]*limit.L, 0, heapSize)}
+	return &H{kind: kind, limits: trade.NewLimitSet(limitSetSize), heap: make([]*trade.Limit, 0, heapSize)}
 }
 
 func (h *H) Size() int {
@@ -30,7 +29,7 @@ func (h *H) Size() int {
 func (h *H) Push(o *trade.Order) {
 	lim := h.limits.Get(o.Price)
 	if lim == nil {
-		lim = limit.New(o.Price)
+		lim = trade.NewLimit(o.Price)
 		lim.Push(o)
 		h.limits.Put(o.Price, lim)
 		h.heap = append(h.heap, lim)
@@ -76,7 +75,7 @@ func (h *H) clearHead() {
 }
 
 func (h *H) Remove(o *trade.Order) {
-	limit.Remove(o)
+	// No op
 }
 
 func (h *H) Kind() trade.OrderKind {
