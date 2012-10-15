@@ -1,24 +1,11 @@
-package matcher
+package trade
 
 import (
-	"github.com/fmstephe/matching_engine/trade"
 )
 
 const (
 	tombstone64 = int64(-1)
 )
-
-// Thanks to http://graphics.stanford.edu/~seander/bithacks.html :)
-func toPowerOfTwo(c int32) int32 {
-	c--
-	c |= c >> 1
-	c |= c >> 2
-	c |= c >> 4
-	c |= c >> 8
-	c |= c >> 16
-	c++
-	return c
-}
 
 func deadOrderElems(size int32) []orderEntry {
 	entries := make([]orderEntry, size)
@@ -30,26 +17,26 @@ func deadOrderElems(size int32) []orderEntry {
 
 type orderEntry struct {
 	key  int64
-	val  *trade.Order
+	val  *Order
 	next *orderEntry
 	prev *orderEntry
 	last *orderEntry
 }
 
-type orderset struct {
+type OrderSet struct {
 	entries []orderEntry
 	size    int32
 	mask    uint32
 }
 
-func newOrderSet(initCap int32) *orderset {
+func NewOrderSet(initCap int32) *OrderSet {
 	capacity := toPowerOfTwo(initCap)
 	entries := deadOrderElems(capacity)
 	mask := uint32(capacity - 1)
-	return &orderset{entries: entries, mask: mask}
+	return &OrderSet{entries: entries, mask: mask}
 }
 
-func (s *orderset) getIdx(key int64) uint32 {
+func (s *OrderSet) getIdx(key int64) uint32 {
 	half := (uint32(key) ^ uint32(key>>16)) ^ uint32(key>>32)
 	// This hash function selected at random from http://burtleburtle.net/bob/hash/integer.html
 	half = (half + 0x7ed55d16) + (half << 12)
@@ -61,11 +48,11 @@ func (s *orderset) getIdx(key int64) uint32 {
 	return half & s.mask
 }
 
-func (s *orderset) Size() int32 {
+func (s *OrderSet) Size() int32 {
 	return s.size
 }
 
-func (s *orderset) put(val *trade.Order) {
+func (s *OrderSet) Put(val *Order) {
 	key := val.Guid
 	idx := s.getIdx(key)
 	e := &s.entries[idx]
@@ -83,7 +70,7 @@ func (s *orderset) put(val *trade.Order) {
 	s.size++
 }
 
-func (s *orderset) get(key int64) *trade.Order {
+func (s *OrderSet) Get(key int64) *Order {
 	idx := s.getIdx(key)
 	e := &s.entries[idx]
 	for e != nil {
@@ -95,7 +82,7 @@ func (s *orderset) get(key int64) *trade.Order {
 	return nil
 }
 
-func (s *orderset) remove(key int64) *trade.Order {
+func (s *OrderSet) Remove(key int64) *Order {
 	idx := s.getIdx(key)
 	e := &s.entries[idx]
 	if e.next == nil && e.key == key {

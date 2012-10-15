@@ -9,7 +9,7 @@ import (
 type M struct {
 	buys   *limitheap.H
 	sells  *limitheap.H
-	orders *orderset
+	orders *trade.OrderSet
 	output *ResponseBuffer
 }
 
@@ -20,7 +20,7 @@ func NewMatcher(buys, sells *limitheap.H, output *ResponseBuffer) *M {
 	if sells.Kind() != trade.SELL {
 		panic("Provided a sell priority queue that was not accepting sells!")
 	}
-	orders := newOrderSet(1000) // Need a data structure that doesn't require an initialisation constant
+	orders := trade.NewOrderSet(1000) // Need a data structure that doesn't require an initialisation constant
 	return &M{buys: buys, sells: sells, orders: orders, output: output}
 }
 
@@ -42,20 +42,20 @@ func (m *M) addBuy(b *trade.Order) {
 		panic("It is illegal to submit a buy at market price")
 	}
 	if !m.fillableBuy(b) {
-		m.orders.put(b)
+		m.orders.Put(b)
 		m.buys.Push(b)
 	}
 }
 
 func (m *M) addSell(s *trade.Order) {
 	if !m.fillableSell(s) {
-		m.orders.put(s)
+		m.orders.Put(s)
 		m.sells.Push(s)
 	}
 }
 
 func (m *M) remove(o *trade.Order) {
-	ro := m.orders.remove(o.Guid)
+	ro := m.orders.Remove(o.Guid)
 	ro.RemoveFromLimit()
 }
 
@@ -133,7 +133,7 @@ func (m *M) fillableSell(s *trade.Order) bool {
 
 func (m *M) clearHead(q *limitheap.H) {
 	o := q.Pop()
-	m.orders.remove(o.Guid)
+	m.orders.Remove(o.Guid)
 }
 
 func price(bPrice, sPrice int32) int32 {
