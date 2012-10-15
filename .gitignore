@@ -1,4 +1,5 @@
 perf/perf
+itchutil/itchutil
 *.swp
 *.prof
 *.odat

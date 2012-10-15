@@ -1,7 +1,8 @@
-package itchutil
+package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"github.com/fmstephe/matching_engine/trade"
 	"io"
@@ -10,47 +11,39 @@ import (
 	"strings"
 )
 
-func PrintLineCount(fName string) {
-	f, _ := os.Open(fName)
-	r := bufio.NewReader(f)
-	i := 0
-	for {
-		if _, err := r.ReadString('\n'); err != nil {
-			if err == io.EOF {
-				break
-			}
-			panic(err.Error())
-		}
-		i++
-	}
-	println(i)
+type ItchReader struct {
+	lineCount int
+	r *bufio.Reader
 }
 
-func ReadOrders(fName string) []*trade.Order {
-	f, _ := os.Open(fName)
+func NewItchReader(fName string) *ItchReader {
+	f, err := os.Open(fName)
+	if err != nil {
+		panic(err.Error())
+	}
 	r := bufio.NewReader(f)
-	orders := make([]*trade.Order, 10)
-	i := 0
-	// Read column headers
+	// Clear column headers
 	if _, err := r.ReadString('\n'); err != nil {
 		panic(err.Error())
 	}
-	for {
-		var line string
-		var err error
-		if line, err = r.ReadString('\n'); err != nil {
-			panic(err.Error())
-		}
-		orders = append(orders, mkOrder(line))
-		i++
-		if i > 1000 {
-			break
-		}
-	}
-	return orders
+	return &ItchReader{r: r}
 }
 
-func mkOrder(line string) *trade.Order {
+func (i *ItchReader) ReadOrder() (o *trade.Order, line string, err error) {
+	i.lineCount++
+	line, err = i.r.ReadString('\n')
+	if err != nil {
+		return
+	}
+	o, err = mkOrder(line)
+	return
+}
+
+func (i *ItchReader) LineCount() int {
+	return i.lineCount
+}
+
+func mkOrder(line string) (o *trade.Order, err error) {
 	ss := strings.Split(line, " ")
 	var useful []string
 	for _, w := range ss {
@@ -61,13 +54,17 @@ func mkOrder(line string) *trade.Order {
 	cd, td := mkData(useful)
 	switch useful[3] {
 	case "B":
-		return trade.NewBuy(cd, td)
+		o = trade.NewBuy(cd, td)
+		return
 	case "S":
-		return trade.NewSell(cd, td)
+		o = trade.NewSell(cd, td)
+		return
 	case "D":
-		return trade.NewDelete(td)
+		o = trade.NewDelete(td)
+		return
 	default:
-		panic(fmt.Sprintf("Unrecognised Trade Type %s", useful[3]))
+		err = errors.New(fmt.Sprintf("Unsupported Line Type %s", useful[3]))
+		return
 	}
 	panic("Unreachable")
 }
@@ -94,3 +91,20 @@ func mkData(useful []string) (cd trade.CostData, td trade.TradeData) {
 	td = trade.TradeData{TraderId: uint32(traderId), TradeId: uint32(tradeId), StockId: uint32(stockId)}
 	return
 }
+
+func PrintLineCount(fName string) {
+	f, _ := os.Open(fName)
+	r := bufio.NewReader(f)
+	i := 0
+	for {
+		if _, err := r.ReadString('\n'); err != nil {
+			if err == io.EOF {
+				break
+			}
+			panic(err.Error())
+		}
+		i++
+	}
+	println(i)
+}
+
