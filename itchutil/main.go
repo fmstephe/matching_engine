@@ -3,9 +3,8 @@ package main
 import (
 	"bufio"
 	"flag"
-	"fmt"
-	"os"
 	"github.com/fmstephe/matching_engine/trade"
+	"os"
 )
 
 var (
@@ -29,7 +28,7 @@ func loop() {
 			println(err.Error())
 			return
 		}
-		println(fmt.Sprintf("%#v", o))
+		println(o.String())
 		print(l)
 		awaitNextLine(in)
 	}

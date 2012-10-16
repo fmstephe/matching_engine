@@ -1,6 +1,8 @@
 package trade
 
-import ()
+import (
+	"fmt"
+)
 
 const (
 	BUY              = OrderKind(1)
@@ -14,6 +16,20 @@ const (
 	MARKET_PRICE     = 0
 	NO_COUNTER_PARTY = 0
 )
+
+func KindString(k OrderKind) string {
+	switch k {
+	case BUY:
+		return "buy"
+	case SELL:
+		return "sell"
+	case DELETE:
+		return "delete"
+	default:
+		return "Unkown OrderKind"
+	}
+	panic("Unreachable")
+}
 
 type OrderKind int32
 
@@ -40,7 +56,8 @@ type Order struct {
 	TradeId  uint32
 	StockId  uint32
 	Kind     OrderKind
-	Compare  int64  // Binary heap comparison value
+	Compare  int64 // Binary heap comparison value
+	Limit    *Limit
 	Higher   *Order // Next higher priority order in this limit
 	Lower    *Order // Next lower priority order in this limit
 }
@@ -50,8 +67,22 @@ func (o *Order) setup() {
 }
 
 func (o *Order) RemoveFromLimit() {
+	o.Limit.Size--
+	o.Limit = nil
 	o.Higher.Lower = o.Lower
 	o.Lower.Higher = o.Higher
+}
+
+func (o *Order) String() string {
+	var state string
+	if o.Limit == nil && o.Higher == nil && o.Lower == nil {
+		state = "unlinked"
+	} else if o.Limit != nil && o.Higher != nil && o.Lower != nil {
+		state = "linked"
+	} else {
+		state = "broken"
+	}
+	return fmt.Sprintf("Order: price %d, amount %d, trader %d, trade %d, stock %d, %s, %s", o.Price, o.Amount, o.TraderId, o.TradeId, o.StockId, KindString(o.Kind), state)
 }
 
 func NewBuy(costData CostData, tradeData TradeData) *Order {

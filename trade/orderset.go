@@ -1,7 +1,6 @@
 package trade
 
-import (
-)
+import ()
 
 const (
 	tombstone64 = int64(-1)

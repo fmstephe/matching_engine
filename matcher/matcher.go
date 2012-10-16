@@ -24,6 +24,12 @@ func NewMatcher(buys, sells *limitheap.H, output *ResponseBuffer) *M {
 	return &M{buys: buys, sells: sells, orders: orders, output: output}
 }
 
+func (m *M) Survey() (buys []*trade.SurveyLimit, sells []*trade.SurveyLimit) {
+	buys = m.buys.Survey()
+	sells = m.sells.Survey()
+	return
+}
+
 func (m *M) Submit(o *trade.Order) {
 	switch o.Kind {
 	case trade.BUY:

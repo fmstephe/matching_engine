@@ -13,7 +13,7 @@ import (
 
 type ItchReader struct {
 	lineCount int
-	r *bufio.Reader
+	r         *bufio.Reader
 }
 
 func NewItchReader(fName string) *ItchReader {
@@ -107,4 +107,3 @@ func PrintLineCount(fName string) {
 	}
 	println(i)
 }
-

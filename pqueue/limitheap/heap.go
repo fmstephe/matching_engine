@@ -22,6 +22,15 @@ func New(kind trade.OrderKind, limitSetSize int32, heapSize int) *H {
 	return &H{kind: kind, limits: trade.NewLimitSet(limitSetSize), heap: make([]*trade.Limit, 0, heapSize)}
 }
 
+func (h *H) Survey() []*trade.SurveyLimit {
+	survey := make([]*trade.SurveyLimit, len(h.heap))
+	heap := h.heap
+	for i := range heap {
+		survey[i] = heap[i].Survey()
+	}
+	return survey
+}
+
 func (h *H) Size() int {
 	return h.size
 }
