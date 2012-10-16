@@ -52,6 +52,7 @@ func (s *OrderSet) Size() int32 {
 }
 
 func (s *OrderSet) Put(val *Order) {
+	s.size++
 	key := val.Guid
 	idx := s.getIdx(key)
 	e := &s.entries[idx]
@@ -66,7 +67,6 @@ func (s *OrderSet) Put(val *Order) {
 		e.last.next = ne
 		e.last = ne
 	}
-	s.size++
 }
 
 func (s *OrderSet) Get(key int64) *Order {
@@ -82,6 +82,7 @@ func (s *OrderSet) Get(key int64) *Order {
 }
 
 func (s *OrderSet) Remove(key int64) *Order {
+	s.size--
 	idx := s.getIdx(key)
 	e := &s.entries[idx]
 	if e.next == nil && e.key == key {

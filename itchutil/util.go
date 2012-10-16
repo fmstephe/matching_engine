@@ -17,6 +17,7 @@ type ItchReader struct {
 }
 
 func NewItchReader(fName string) *ItchReader {
+	println(fName)
 	f, err := os.Open(fName)
 	if err != nil {
 		panic(err.Error())
@@ -74,10 +75,10 @@ func mkData(useful []string) (cd trade.CostData, td trade.TradeData) {
 	//      println()
 	var price, amount, traderId, tradeId, stockId int
 	var err error
-	if price, err = strconv.Atoi(useful[4]); err != nil {
+	if amount, err = strconv.Atoi(useful[4]); err != nil {
 		panic(err.Error())
 	}
-	if amount, err = strconv.Atoi(useful[5]); err != nil {
+	if price, err = strconv.Atoi(useful[5]); err != nil {
 		panic(err.Error())
 	}
 	if traderId, err = strconv.Atoi(useful[2]); err != nil {

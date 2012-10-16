@@ -23,10 +23,12 @@ func New(kind trade.OrderKind, limitSetSize int32, heapSize int) *H {
 }
 
 func (h *H) Survey() []*trade.SurveyLimit {
-	survey := make([]*trade.SurveyLimit, len(h.heap))
+	survey := make([]*trade.SurveyLimit, 0, len(h.heap))
 	heap := h.heap
 	for i := range heap {
-		survey[i] = heap[i].Survey()
+		if !heap[i].IsEmpty() {
+			survey = append(survey, heap[i].Survey())
+		}
 	}
 	return survey
 }
