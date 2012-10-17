@@ -1,4 +1,4 @@
-package pqueue
+package prioq
 
 import (
 	"github.com/fmstephe/matching_engine/trade"

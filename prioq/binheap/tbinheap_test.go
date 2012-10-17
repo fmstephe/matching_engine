@@ -1,12 +1,12 @@
 package binheap
 
 import (
-	"github.com/fmstephe/matching_engine/pqueue"
+	"github.com/fmstephe/matching_engine/prioq"
 	"github.com/fmstephe/matching_engine/trade"
 	"testing"
 )
 
-func verifyHeap(t *testing.T, h pqueue.Q) {
+func verifyHeap(t *testing.T, h prioq.Q) {
 	verifyHeapRec(t, h.(*H), 0)
 }
 
@@ -31,10 +31,10 @@ func verifyHeapRec(t *testing.T, h *H, i int) {
 	}
 }
 
-func createHeap(kind trade.OrderKind) pqueue.Q {
+func createHeap(kind trade.OrderKind) prioq.Q {
 	return New(kind, 100)
 }
 
 func TestPushPop(t *testing.T) {
-	pqueue.PushPopSuite(t, createHeap, verifyHeap)
+	prioq.PushPopSuite(t, createHeap, verifyHeap)
 }

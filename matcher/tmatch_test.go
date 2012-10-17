@@ -1,7 +1,7 @@
 package matcher
 
 import (
-	"github.com/fmstephe/matching_engine/pqueue/limitheap"
+	"github.com/fmstephe/matching_engine/prioq/limitheap"
 	"github.com/fmstephe/matching_engine/trade"
 	"testing"
 )

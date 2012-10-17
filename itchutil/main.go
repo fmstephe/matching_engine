@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"flag"
 	"github.com/fmstephe/matching_engine/matcher"
-	"github.com/fmstephe/matching_engine/pqueue/limitheap"
+	"github.com/fmstephe/matching_engine/prioq/limitheap"
 	"github.com/fmstephe/matching_engine/trade"
 	"os"
 )

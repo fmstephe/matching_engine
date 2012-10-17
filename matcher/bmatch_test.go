@@ -2,7 +2,7 @@ package matcher
 
 import (
 	"encoding/json"
-	"github.com/fmstephe/matching_engine/pqueue/limitheap"
+	"github.com/fmstephe/matching_engine/prioq/limitheap"
 	"github.com/fmstephe/matching_engine/trade"
 	"io/ioutil"
 	"testing"

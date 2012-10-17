@@ -1,14 +1,14 @@
 package ilheap
 
 import (
-	"github.com/fmstephe/matching_engine/pqueue"
+	"github.com/fmstephe/matching_engine/prioq"
 	"github.com/fmstephe/matching_engine/trade"
 	"testing"
 )
 
 var orderMaker = trade.NewOrderMaker()
 
-func verifyHeap(t *testing.T, h pqueue.Q) {
+func verifyHeap(t *testing.T, h prioq.Q) {
 	verifyHeapRec(h.(*H), t, 0)
 }
 
@@ -34,10 +34,10 @@ func verifyHeapRec(h *H, t *testing.T, i int) {
 }
 
 // NB: This func is covering up the fact that ilheap does not currently resize its internal slice
-func createHeap(kind trade.OrderKind) pqueue.Q {
+func createHeap(kind trade.OrderKind) prioq.Q {
 	return New(kind, 10*1000)
 }
 
 func TestPushPop(t *testing.T) {
-	pqueue.PushPopSuite(t, createHeap, verifyHeap)
+	prioq.PushPopSuite(t, createHeap, verifyHeap)
 }
