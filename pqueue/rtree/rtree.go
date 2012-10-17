@@ -222,7 +222,7 @@ func (node *nodeBlock) Push(o *trade.Order) {
 	}
 	idx := getIdx(o.Price, node.height)
 	if idx < 0 || idx >= BLOCK_SIZE {
-		panic(fmt.Sprintf("This crazy bit operation produced an index: %v from price: ", idx, o.Price))
+		panic(fmt.Sprintf("This crazy bit operation produced an index: %v from price: %d", idx, o.Price))
 	}
 	block := node.blocks[idx]
 	if block == nil {
@@ -250,7 +250,7 @@ func (node *nodeBlock) PushBlock(block blocker) {
 	}
 	idx := getIdx(block.minPrice(), node.height)
 	if idx < 0 || idx >= BLOCK_SIZE {
-		panic(fmt.Sprintf("This crazy bit operation produced an index: %v from min-price: ", idx, block.minPrice()))
+		panic(fmt.Sprintf("This crazy bit operation produced an index: %v from min-price: %d", idx, block.minPrice()))
 	}
 	node.blocks[idx] = block
 }
