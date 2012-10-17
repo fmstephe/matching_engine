@@ -8,7 +8,7 @@ const (
 	BUY              = OrderKind(1)
 	SELL             = OrderKind(-1)
 	DELETE           = OrderKind(2)
-	EXECUTE          = ResponseKind(1)
+	EXECUTE          = ResponseKind(3)
 	CANCEL           = ResponseKind(2)
 	FULL             = ResponseKind(3)
 	X                = ResponseKind(4)
@@ -20,11 +20,11 @@ const (
 func KindString(k OrderKind) string {
 	switch k {
 	case BUY:
-		return "buy"
+		return "BUY"
 	case SELL:
-		return "sell"
+		return "SELL"
 	case DELETE:
-		return "delete"
+		return "DELETE"
 	default:
 		return "Unkown OrderKind"
 	}
@@ -74,6 +74,9 @@ func (o *Order) RemoveFromLimit() {
 }
 
 func (o *Order) String() string {
+	if o == nil {
+		return "<nil>"
+	}
 	var state string
 	if o.Limit == nil && o.Higher == nil && o.Lower == nil {
 		state = "unlinked"
@@ -82,7 +85,7 @@ func (o *Order) String() string {
 	} else {
 		state = "broken"
 	}
-	return fmt.Sprintf("Order: price %d, amount %d, trader %d, trade %d, stock %d, %s, %s", o.Price, o.Amount, o.TraderId, o.TradeId, o.StockId, KindString(o.Kind), state)
+	return fmt.Sprintf("%s, price %d, amount %d, trader %d, trade %d, stock %d, %s", KindString(o.Kind), o.Price, o.Amount, o.TraderId, o.TradeId, o.StockId, state)
 }
 
 func NewBuy(costData CostData, tradeData TradeData) *Order {

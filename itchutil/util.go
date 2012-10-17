@@ -2,8 +2,6 @@ package main
 
 import (
 	"bufio"
-	"errors"
-	"fmt"
 	"github.com/fmstephe/matching_engine/trade"
 	"io"
 	"os"
@@ -12,7 +10,7 @@ import (
 )
 
 type ItchReader struct {
-	lineCount int
+	lineCount uint
 	r         *bufio.Reader
 }
 
@@ -27,7 +25,7 @@ func NewItchReader(fName string) *ItchReader {
 	if _, err := r.ReadString('\n'); err != nil {
 		panic(err.Error())
 	}
-	return &ItchReader{r: r}
+	return &ItchReader{lineCount: 1, r: r}
 }
 
 func (i *ItchReader) ReadOrder() (o *trade.Order, line string, err error) {
@@ -40,7 +38,7 @@ func (i *ItchReader) ReadOrder() (o *trade.Order, line string, err error) {
 	return
 }
 
-func (i *ItchReader) LineCount() int {
+func (i *ItchReader) LineCount() uint {
 	return i.lineCount
 }
 
@@ -64,7 +62,6 @@ func mkOrder(line string) (o *trade.Order, err error) {
 		o = trade.NewDelete(td)
 		return
 	default:
-		err = errors.New(fmt.Sprintf("Unsupported Line Type %s", useful[3]))
 		return
 	}
 	panic("Unreachable")
