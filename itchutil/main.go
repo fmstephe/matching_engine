@@ -13,8 +13,8 @@ import (
 
 var (
 	filePath = flag.String("f", "", "Relative path to an ITCH file to read")
-	mode = flag.String("m", "step", "Running mode. Currently supporting 'step' (steps through each message), 'exec' (run messages silently until an execute message found)")
-	line = flag.Uint("l", 0, "First line to break on. Mode is ignored until line l is reached, then normal excution continues")
+	mode     = flag.String("m", "step", "Running mode. Currently supporting 'step', 'exec' and 'list'")
+	line     = flag.Uint("l", 0, "First line to break on. Mode is ignored until line l is reached, then normal excution continues")
 )
 
 func main() {
@@ -81,6 +81,8 @@ func printInfo(ir *ItchReader, o *trade.Order, m *matcher.M) {
 	buys, sells, orders, executions := m.Survey()
 	println("Order       ", o.String())
 	println("Line        ", ir.LineCount())
+	println("Max Buy     ", ir.MaxBuy())
+	println("Min Sell    ", ir.MinSell())
 	println("Executions  ", executions)
 	println("...")
 	println("Total       ", orders.Size())

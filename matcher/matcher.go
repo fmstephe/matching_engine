@@ -153,6 +153,7 @@ func price(bPrice, sPrice int32) int32 {
 }
 
 func (m *M) completeTrade(b, s *trade.Order, price int32, amount uint32) {
+	println("Execution!!!!!!!!")
 	// TODO write the response type into these responses
 	// Write the buy response
 	rb := m.output.getForWrite()

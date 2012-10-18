@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"github.com/fmstephe/matching_engine/trade"
 	"io"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -11,6 +12,8 @@ import (
 
 type ItchReader struct {
 	lineCount uint
+	maxBuy    int32
+	minSell   int32
 	r         *bufio.Reader
 }
 
@@ -25,7 +28,7 @@ func NewItchReader(fName string) *ItchReader {
 	if _, err := r.ReadString('\n'); err != nil {
 		panic(err.Error())
 	}
-	return &ItchReader{lineCount: 1, r: r}
+	return &ItchReader{lineCount: 1, minSell: math.MaxInt32, r: r}
 }
 
 func (i *ItchReader) ReadOrder() (o *trade.Order, line string, err error) {
@@ -35,11 +38,25 @@ func (i *ItchReader) ReadOrder() (o *trade.Order, line string, err error) {
 		return
 	}
 	o, err = mkOrder(line)
+	if o != nil && o.Kind == trade.BUY && o.Price > i.maxBuy {
+		i.maxBuy = o.Price
+	}
+	if o != nil && o.Kind == trade.SELL && o.Price < i.minSell {
+		i.minSell = o.Price
+	}
 	return
 }
 
 func (i *ItchReader) LineCount() uint {
 	return i.lineCount
+}
+
+func (i *ItchReader) MaxBuy() int32 {
+	return i.maxBuy
+}
+
+func (i *ItchReader) MinSell() int32 {
+	return i.minSell
 }
 
 func mkOrder(line string) (o *trade.Order, err error) {
