@@ -2,6 +2,7 @@ package trade
 
 import (
 	"fmt"
+	"github.com/fmstephe/ffmt"
 )
 
 const (
@@ -85,7 +86,12 @@ func (o *Order) String() string {
 	} else {
 		state = "broken"
 	}
-	return fmt.Sprintf("%s, price %d, amount %d, trader %d, trade %d, stock %d, %s", KindString(o.Kind), o.Price, o.Amount, o.TraderId, o.TradeId, o.StockId, state)
+	price := ffmt.Itoa64Delim(int64(o.Price), ',')
+	amount := ffmt.Itoa64Delim(int64(o.Amount), ',')
+	traderId := ffmt.Itoa64Delim(int64(o.TraderId), '-')
+	tradeId := ffmt.Itoa64Delim(int64(o.TradeId), '-')
+	stockId := ffmt.Itoa64Delim(int64(o.StockId), '-')
+	return fmt.Sprintf("%s, price %s, amount %s, trader %s, trade %s, stock %s, %s", KindString(o.Kind), price, amount, traderId, tradeId, stockId, state)
 }
 
 func NewBuy(costData CostData, tradeData TradeData) *Order {
