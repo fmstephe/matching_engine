@@ -19,54 +19,64 @@ var (
 
 func main() {
 	flag.Parse()
-	in := bufio.NewReader(os.Stdin)
-	ir := NewItchReader(*filePath)
-	buysQ := limitheap.New(trade.BUY, 2000, 10000)
-	sellsQ := limitheap.New(trade.SELL, 2000, 10000)
-	buffer := matcher.NewResponseBuffer(2)
-	m := matcher.NewMatcher(buysQ, sellsQ, buffer)
-	loop(in, ir, m, buffer)
+	loop()
 }
 
-func loop(in *bufio.Reader, ir *ItchReader, m *matcher.M, b *matcher.ResponseBuffer) {
-	var o *trade.Order
-	var err error
+func loop() {
+	l := *line
 	for {
-		o, _, err = ir.ReadOrder()
-		if err != nil {
-			println(err.Error())
-			return
+		in := bufio.NewReader(os.Stdin)
+		ir := NewItchReader(*filePath)
+		buysQ := limitheap.New(trade.BUY, 2000, 10000)
+		sellsQ := limitheap.New(trade.SELL, 2000, 10000)
+		buffer := matcher.NewResponseBuffer(2)
+		m := matcher.NewMatcher(buysQ, sellsQ, buffer)
+		//
+		var o *trade.Order
+		var err error
+		for {
+			o, _, err = ir.ReadOrder()
+			if err != nil {
+				println(err.Error())
+				return
+			}
+			if o != nil && (o.Kind == trade.BUY || o.Kind == trade.SELL || o.Kind == trade.DELETE) {
+				m.Submit(o)
+			}
+			checkPrint(ir, o, m, l)
+			c := checkPause(in, ir, o, l)
+			if c == 'k' {
+				l = ir.LineCount() - 1
+				break
+			}
 		}
-		if o != nil && (o.Kind == trade.BUY || o.Kind == trade.SELL || o.Kind == trade.DELETE) {
-			m.Submit(o)
-		}
-		checkPrint(ir, o, m)
-		checkPause(in, ir, o)
 	}
 }
 
-func checkPause(in *bufio.Reader, ir *ItchReader, o *trade.Order) {
-	if *line > ir.LineCount() {
-		return
+func checkPause(in *bufio.Reader, ir *ItchReader, o *trade.Order, bLine uint) byte {
+	if bLine > ir.LineCount() {
+		return 'z'
 	}
 	if *mode == "step" {
-		pause(in)
+		return pause(in)
 	}
 	if *mode == "exec" && o == nil {
-		pause(in)
+		return pause(in)
 	}
+	return 'z'
 }
 
-func pause(in *bufio.Reader) {
-	_, err := in.ReadString('\n')
+func pause(in *bufio.Reader) byte {
+	c, err := in.ReadByte()
 	if err != nil {
 		println(err.Error())
 		os.Exit(1)
 	}
+	return c
 }
 
-func checkPrint(ir *ItchReader, o *trade.Order, m *matcher.M) {
-	if *line > ir.LineCount() {
+func checkPrint(ir *ItchReader, o *trade.Order, m *matcher.M, bLine uint) {
+	if bLine > ir.LineCount() {
 		return
 	}
 	if *mode == "step" {
