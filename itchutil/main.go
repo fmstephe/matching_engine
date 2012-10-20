@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"github.com/fmstephe/ffmt"
+	"github.com/fmstephe/fstrconv"
 	"github.com/fmstephe/matching_engine/matcher"
 	"github.com/fmstephe/matching_engine/prioq/limitheap"
 	"github.com/fmstephe/matching_engine/trade"
@@ -99,8 +99,8 @@ func printInfo(ir *ItchReader, o *trade.Order, m *matcher.M) {
 	buys, sells, orders, executions := m.Survey()
 	println("Order       ", o.String())
 	println("Line        ", ir.LineCount())
-	println("Max Buy     ", ffmt.Itoa64Delim(int64(ir.MaxBuy()), ','))
-	println("Min Sell    ", ffmt.Itoa64Delim(int64(ir.MinSell()), ','))
+	println("Max Buy     ", fstrconv.Itoa64Delim(int64(ir.MaxBuy()), ','))
+	println("Min Sell    ", fstrconv.Itoa64Delim(int64(ir.MinSell()), ','))
 	println("Executions  ", executions)
 	println("...")
 	println("Total       ", orders.Size())
@@ -112,7 +112,7 @@ func printInfo(ir *ItchReader, o *trade.Order, m *matcher.M) {
 func formatLimits(limits []*trade.SurveyLimit) string {
 	var b bytes.Buffer
 	for _, l := range limits {
-		b.WriteString(fmt.Sprintf("(%s, %s)", ffmt.Itoa64Delim(int64(l.Price), ','), ffmt.Itoa64Delim(int64(l.Size), ',')))
+		b.WriteString(fmt.Sprintf("(%s, %s)", fstrconv.Itoa64Delim(int64(l.Price), ','), fstrconv.Itoa64Delim(int64(l.Size), ',')))
 		b.WriteString(", ")
 	}
 	return b.String()

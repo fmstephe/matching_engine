@@ -2,7 +2,7 @@ package trade
 
 import (
 	"fmt"
-	"github.com/fmstephe/ffmt"
+	"github.com/fmstephe/fstrconv"
 )
 
 const (
@@ -86,11 +86,11 @@ func (o *Order) String() string {
 	} else {
 		state = "broken"
 	}
-	price := ffmt.Itoa64Delim(int64(o.Price), ',')
-	amount := ffmt.Itoa64Delim(int64(o.Amount), ',')
-	traderId := ffmt.Itoa64Delim(int64(o.TraderId), '-')
-	tradeId := ffmt.Itoa64Delim(int64(o.TradeId), '-')
-	stockId := ffmt.Itoa64Delim(int64(o.StockId), '-')
+	price := fstrconv.Itoa64Delim(int64(o.Price), ',')
+	amount := fstrconv.Itoa64Delim(int64(o.Amount), ',')
+	traderId := fstrconv.Itoa64Delim(int64(o.TraderId), '-')
+	tradeId := fstrconv.Itoa64Delim(int64(o.TradeId), '-')
+	stockId := fstrconv.Itoa64Delim(int64(o.StockId), '-')
 	return fmt.Sprintf("%s, price %s, amount %s, trader %s, trade %s, stock %s, %s", KindString(o.Kind), price, amount, traderId, tradeId, stockId, state)
 }
 
