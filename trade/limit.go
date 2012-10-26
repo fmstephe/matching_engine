@@ -1,6 +1,8 @@
 package trade
 
-import ()
+import (
+	"fmt"
+)
 
 type SurveyLimit struct {
 	Price int32
@@ -25,6 +27,9 @@ func (l *Limit) Survey() *SurveyLimit {
 }
 
 func (l *Limit) Push(newTail *Order) {
+	if l.Price != newTail.Price {
+		panic(fmt.Sprintf("Mispriced Order pushed into limit. Expected %d, found %d", l.Price, newTail.Price))
+	}
 	dummy := &l.dummy
 	tail := dummy.Higher
 	// newTail is lower than tail
@@ -39,6 +44,9 @@ func (l *Limit) Push(newTail *Order) {
 
 // This function cannot be called safely on an empty limit
 func (l *Limit) Pop() *Order {
+	if l.IsEmpty() {
+		panic("Attempted call to Pop on empty limit")
+	}
 	dummy := &l.dummy
 	head := dummy.Lower
 	newHead := head.Lower
