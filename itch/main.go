@@ -61,7 +61,7 @@ func loop() {
 	}
 }
 
-func checkPause(in *bufio.Reader, ir *ItchReader, o *trade.Order, bLine uint) byte {
+func checkPause(in *bufio.Reader, ir *Reader, o *trade.Order, bLine uint) byte {
 	if bLine > ir.LineCount() {
 		return 'z'
 	}
@@ -83,7 +83,7 @@ func pause(in *bufio.Reader) byte {
 	return c
 }
 
-func checkPrint(ir *ItchReader, o *trade.Order, m *matcher.M, bLine uint) {
+func checkPrint(ir *Reader, o *trade.Order, m *matcher.M, bLine uint) {
 	if bLine > ir.LineCount() {
 		return
 	}
@@ -95,7 +95,7 @@ func checkPrint(ir *ItchReader, o *trade.Order, m *matcher.M, bLine uint) {
 	}
 }
 
-func printInfo(ir *ItchReader, o *trade.Order, m *matcher.M) {
+func printInfo(ir *Reader, o *trade.Order, m *matcher.M) {
 	buys, sells, orders, executions := m.Survey()
 	println("Order       ", o.String())
 	println("Line        ", ir.LineCount())

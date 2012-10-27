@@ -10,14 +10,14 @@ import (
 	"strings"
 )
 
-type ItchReader struct {
+type Reader struct {
 	lineCount uint
 	maxBuy    int32
 	minSell   int32
 	r         *bufio.Reader
 }
 
-func NewItchReader(fName string) *ItchReader {
+func NewItchReader(fName string) *Reader {
 	println(fName)
 	f, err := os.Open(fName)
 	if err != nil {
@@ -28,10 +28,10 @@ func NewItchReader(fName string) *ItchReader {
 	if _, err := r.ReadString('\n'); err != nil {
 		panic(err.Error())
 	}
-	return &ItchReader{lineCount: 1, minSell: math.MaxInt32, r: r}
+	return &Reader{lineCount: 1, minSell: math.MaxInt32, r: r}
 }
 
-func (i *ItchReader) ReadOrder() (o *trade.Order, line string, err error) {
+func (i *Reader) ReadOrder() (o *trade.Order, line string, err error) {
 	i.lineCount++
 	line, err = i.r.ReadString('\n')
 	if err != nil {
@@ -47,15 +47,15 @@ func (i *ItchReader) ReadOrder() (o *trade.Order, line string, err error) {
 	return
 }
 
-func (i *ItchReader) LineCount() uint {
+func (i *Reader) LineCount() uint {
 	return i.lineCount
 }
 
-func (i *ItchReader) MaxBuy() int32 {
+func (i *Reader) MaxBuy() int32 {
 	return i.maxBuy
 }
 
-func (i *ItchReader) MinSell() int32 {
+func (i *Reader) MinSell() int32 {
 	return i.minSell
 }
 

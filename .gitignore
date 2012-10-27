@@ -1,5 +1,5 @@
 perf/perf
-itchutil/itchutil
+itch/itch
 *.swp
 *.prof
 *.odat

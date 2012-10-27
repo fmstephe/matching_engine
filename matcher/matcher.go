@@ -64,7 +64,9 @@ func (m *M) addSell(s *trade.Order) {
 
 func (m *M) remove(o *trade.Order) {
 	ro := m.orders.Remove(o.Guid)
-	ro.RemoveFromLimit()
+	if ro != nil {
+		ro.RemoveFromLimit()
+	}
 }
 
 func (m *M) fillableBuy(b *trade.Order) bool {
