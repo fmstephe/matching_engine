@@ -2,6 +2,8 @@ package main
 
 import (
 	"flag"
+	"github.com/fmstephe/fstrconv"
+	"github.com/fmstephe/matching_engine/itch"
 	"github.com/fmstephe/matching_engine/matcher"
 	"github.com/fmstephe/matching_engine/prioq/limitheap"
 	"github.com/fmstephe/matching_engine/trade"
@@ -17,32 +19,32 @@ const (
 )
 
 var (
+	filePath = flag.String("f", "", "Relative path to an ITCH file providing test data")
 	profile  = flag.String("profile", "", "Write out a profile of this application, 'cpu' and 'mem' supported")
 	perfRand = rand.New(rand.NewSource(1))
 )
 
 func main() {
 	flag.Parse()
-	orderNum := 5 * 1000 * 1000
-	sells := mkSells(orderNum, 1000, 1500)
-	buys := mkBuys(orderNum, 1000, 1500)
-	buysQ := limitheap.New(trade.BUY, 2000, orderNum)
-	sellsQ := limitheap.New(trade.SELL, 2000, orderNum)
+	orders := getData()
+	orderCount := fstrconv.Itoa64Comma(int64(len(orders)))
+	println(orderCount, "Orders Built")
+	buysQ := limitheap.New(trade.BUY, 2000, 1000)
+	sellsQ := limitheap.New(trade.SELL, 2000, 1000)
 	buffer := matcher.NewResponseBuffer(2)
 	m := matcher.NewMatcher(buysQ, sellsQ, buffer)
 	startProfile()
 	defer endProfile()
 	start := time.Now().UnixNano()
-	for i := 0; i < orderNum; i++ {
-		m.Submit(buys[i])
-		m.Submit(sells[i])
+	for i := range orders {
+		m.Submit(orders[i])
 	}
 	println("Buffer Writes: ", buffer.Writes())
 	total := time.Now().UnixNano() - start
-	println("Nanos\t", total)
-	println("Micros\t", total/1000)
-	println("Millis\t", total/(1000*1000))
-	println("Seconds\t", total/(1000*1000*1000))
+	println("Nanos\t", fstrconv.Itoa64Comma(total))
+	println("Micros\t", fstrconv.Itoa64Comma(total/1000))
+	println("Millis\t", fstrconv.Itoa64Comma(total/(1000*1000)))
+	println("Seconds\t", fstrconv.Itoa64Comma(total/(1000*1000*1000)))
 }
 
 func startProfile() {
@@ -66,6 +68,34 @@ func endProfile() {
 		}
 		pprof.WriteHeapProfile(f)
 	}
+}
+
+func getData() []*trade.Order {
+	if *filePath == "" {
+		return mkRandomData()
+	}
+	return getItchData()
+}
+
+func getItchData() []*trade.Order {
+	ir := itch.NewItchReader(*filePath)
+	orders, err := ir.ReadAll()
+	if err != nil {
+		panic(err.Error())
+	}
+	return orders
+}
+
+func mkRandomData() []*trade.Order {
+	orderNum := 5 * 1000 * 1000
+	sells := mkSells(orderNum, 1000, 1500)
+	buys := mkBuys(orderNum, 1000, 1500)
+	orders := make([]*trade.Order, orderNum*2, 0)
+	for i := 0; i < orderNum; i++ {
+		orders = append(orders, sells[i])
+		orders = append(orders, buys[i])
+	}
+	return orders
 }
 
 func myRand(lim int32, r *rand.Rand) int32 {
