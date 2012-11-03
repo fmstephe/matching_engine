@@ -38,7 +38,7 @@ type ResponseKind int32
 
 // For readable constructors
 type CostData struct {
-	Price  int32  // The highest/lowest acceptable price for a buy/sell
+	Price  int64  // The highest/lowest acceptable price for a buy/sell
 	Amount uint32 // The number of units desired to buy/sell
 }
 
@@ -50,18 +50,19 @@ type TradeData struct {
 }
 
 type Order struct {
-	Guid     int64
-	Price    int32
-	Amount   uint32
-	TraderId uint32
-	TradeId  uint32
-	StockId  uint32
-	Kind     OrderKind
+	Guid      int64
+	Price     int64
+	Amount    uint32
+	TraderId  uint32
+	TradeId   uint32
+	StockId   uint32
+	Kind      OrderKind
 	LimitNode Node
 }
 
 func (o *Order) setup() {
 	o.Guid = int64((uint64(o.TraderId) << 32) | uint64(o.TradeId))
+	initNode(o, o.Price, &o.LimitNode)
 }
 
 func (o *Order) String() string {
@@ -89,14 +90,14 @@ func NewDelete(tradeData TradeData) *Order {
 }
 
 func NewOrder(costData CostData, tradeData TradeData, orderKind OrderKind) *Order {
-	o := &Order{Price: costData.Price, Amount: costData.Amount, TraderId: tradeData.TraderId, TradeId: tradeData.TradeId, StockId: tradeData.StockId, Kind: orderKind}
+	o := &Order{Price: costData.Price, Amount: costData.Amount, TraderId: tradeData.TraderId, TradeId: tradeData.TradeId, StockId: tradeData.StockId, Kind: orderKind, LimitNode: Node{}}
 	o.setup()
 	return o
 }
 
 type Response struct {
 	Kind         ResponseKind
-	Price        int32  // The actual trade price, will be negative if a purchase was made
+	Price        int64  // The actual trade price, will be negative if a purchase was made
 	Amount       uint32 // The number of units actually bought or sold
 	TradeId      uint32 // Links this trade back to a previously submitted Order
 	CounterParty uint32 // The trader-id of the other half of this trade

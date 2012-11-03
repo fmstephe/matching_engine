@@ -18,6 +18,7 @@ func (b *Tree) Push(n *Node) {
 		b.root = n
 		n.pp = &b.root
 	}
+	b.size++
 }
 
 func (b *Tree) PeekMin() *Node {
@@ -67,10 +68,11 @@ type Node struct {
 	O     *Order
 }
 
-func initNode(val int64, o *Order, n *Node) {
+func initNode(o *Order, val int64, n *Node) {
 	*n = Node{val: val, O: o}
 	n.next = n
 	n.prev = n
+	n.size = 1
 }
 
 func (n *Node) peekMax() *Node {
@@ -88,7 +90,8 @@ func (n *Node) popMax() *Node {
 		return nil
 	}
 	m := n.peekMax()
-	return m.pop()
+	m.pop()
+	return m
 }
 
 func (n *Node) peekMin() *Node {
@@ -106,7 +109,8 @@ func (n *Node) popMin() *Node {
 		return nil
 	}
 	m := n.peekMin()
-	return m.pop()
+	m.pop()
+	return m
 }
 
 func (n *Node) popVal(val int64) *Node {
@@ -114,7 +118,8 @@ func (n *Node) popVal(val int64) *Node {
 	case n == nil:
 		return nil
 	case val == n.val:
-		return n.pop()
+		n.pop()
+		return n
 	case val < n.val:
 		return n.left.popVal(val)
 	case val > n.val:
@@ -149,33 +154,36 @@ func (n *Node) insert(in *Node) {
 	last.prev = in
 	in.next = last
 	in.prev = n
-	n.next = n
+	n.next = in
 	n.size++
 }
 
-func (n *Node) pop() *Node {
-	n.prev.next = n.next
-	n.next.prev = n.prev
-	nn := n.next
-	nn.size = n.size - 1
-	n.next = nil
-	n.prev = nil
-	n.size = 1
-	if n != nn {
+func (n *Node) pop() {
+	if n.size > 1 {
+		n.prev.next = n.next
+		n.next.prev = n.prev
+		nn := n.prev
+		nn.size = n.size - 1
+		n.next = nil
+		n.prev = nil
+		n.size = 1
 		swap(n, nn)
 	} else {
 		detatch(n)
 	}
-	return n
 }
 
 func swap(n *Node, nn *Node) {
 	nn.pp = n.pp
+	*nn.pp = nn
 	nn.left = n.left
 	nn.right = n.right
-	*nn.pp = nn
-	nn.left.pp = &nn
-	nn.right.pp = &nn
+	if nn.left != nil {
+		nn.left.pp = &nn
+	}
+	if nn.right != nil {
+		nn.right.pp = &nn
+	}
 }
 
 func detatch(n *Node) {

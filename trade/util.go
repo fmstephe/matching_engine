@@ -18,52 +18,52 @@ func NewOrderMaker() *orderMaker {
 	return &orderMaker{traderId: 0, r: r}
 }
 
-func (o *orderMaker) Rand32(lim int32) int32 {
-	return int32(o.r.Int63n(int64(lim)))
+func (o *orderMaker) Rand32(lim int64) int64 {
+	return int64(o.r.Int63n(int64(lim)))
 }
 
-func (o *orderMaker) MkPricedBuy(price int32) *Order {
+func (o *orderMaker) MkPricedBuy(price int64) *Order {
 	return o.MkPricedOrder(price, BUY)
 }
 
-func (o *orderMaker) MkPricedSell(price int32) *Order {
+func (o *orderMaker) MkPricedSell(price int64) *Order {
 	return o.MkPricedOrder(price, SELL)
 }
 
-func (o *orderMaker) MkPricedOrder(price int32, kind OrderKind) *Order {
+func (o *orderMaker) MkPricedOrder(price int64, kind OrderKind) *Order {
 	costData := CostData{Price: price, Amount: 1}
 	tradeData := TradeData{TraderId: o.traderId, TradeId: 1, StockId: 1}
 	o.traderId++
 	return NewOrder(costData, tradeData, kind)
 }
 
-func (o *orderMaker) ValRangePyramid(n int, low, high int32) []int32 {
+func (o *orderMaker) ValRangePyramid(n int, low, high int64) []int64 {
 	seq := (high - low) / 4
-	vals := make([]int32, n)
+	vals := make([]int64, n)
 	for i := 0; i < n; i++ {
 		val := o.Rand32(seq) + o.Rand32(seq) + o.Rand32(seq) + o.Rand32(seq)
-		vals[i] = int32(val) + low
+		vals[i] = int64(val) + low
 	}
 	return vals
 }
 
-func (o *orderMaker) ValRangeFlat(n int, low, high int32) []int32 {
-	vals := make([]int32, n)
+func (o *orderMaker) ValRangeFlat(n int, low, high int64) []int64 {
+	vals := make([]int64, n)
 	for i := 0; i < n; i++ {
 		vals[i] = o.Rand32(high-low) + low
 	}
 	return vals
 }
 
-func (o *orderMaker) MkBuys(prices []int32) []*Order {
+func (o *orderMaker) MkBuys(prices []int64) []*Order {
 	return o.MkOrders(prices, BUY)
 }
 
-func (o *orderMaker) MkSells(prices []int32) []*Order {
+func (o *orderMaker) MkSells(prices []int64) []*Order {
 	return o.MkOrders(prices, SELL)
 }
 
-func (o *orderMaker) MkOrders(prices []int32, kind OrderKind) []*Order {
+func (o *orderMaker) MkOrders(prices []int64, kind OrderKind) []*Order {
 	orders := make([]*Order, len(prices))
 	for i, price := range prices {
 		costData := CostData{Price: price, Amount: 1}
