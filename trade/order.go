@@ -57,41 +57,23 @@ type Order struct {
 	TradeId  uint32
 	StockId  uint32
 	Kind     OrderKind
-	Compare  int64 // Binary heap comparison value
-	Limit    *Limit
-	Higher   *Order // Next higher priority order in this limit
-	Lower    *Order // Next lower priority order in this limit
+	LimitNode Node
 }
 
 func (o *Order) setup() {
 	o.Guid = int64((uint64(o.TraderId) << 32) | uint64(o.TradeId))
 }
 
-func (o *Order) RemoveFromLimit() {
-	o.Limit.Size--
-	o.Limit = nil
-	o.Higher.Lower = o.Lower
-	o.Lower.Higher = o.Higher
-}
-
 func (o *Order) String() string {
 	if o == nil {
 		return "<nil>"
-	}
-	var state string
-	if o.Limit == nil && o.Higher == nil && o.Lower == nil {
-		state = "unlinked"
-	} else if o.Limit != nil && o.Higher != nil && o.Lower != nil {
-		state = "linked"
-	} else {
-		state = "broken"
 	}
 	price := fstrconv.Itoa64Delim(int64(o.Price), ',')
 	amount := fstrconv.Itoa64Delim(int64(o.Amount), ',')
 	traderId := fstrconv.Itoa64Delim(int64(o.TraderId), '-')
 	tradeId := fstrconv.Itoa64Delim(int64(o.TradeId), '-')
 	stockId := fstrconv.Itoa64Delim(int64(o.StockId), '-')
-	return fmt.Sprintf("%s, price %s, amount %s, trader %s, trade %s, stock %s, %s", KindString(o.Kind), price, amount, traderId, tradeId, stockId, state)
+	return fmt.Sprintf("%s, price %s, amount %s, trader %s, trade %s, stock %s", KindString(o.Kind), price, amount, traderId, tradeId, stockId)
 }
 
 func NewBuy(costData CostData, tradeData TradeData) *Order {

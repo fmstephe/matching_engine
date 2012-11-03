@@ -1,1 +1,0 @@
-The prioq package declares a simple interface for a priority queue. It also provies a test suite to ensure implementations of the prioq.Q interface work as we expect.

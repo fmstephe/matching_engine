@@ -2,25 +2,29 @@ package trade
 
 import ()
 
-type bst struct {
+type Tree struct {
 	size int
-	root *node
+	root *Node
 }
 
-func NewBST() *bst {
-	return &bst{}
+func NewTree() *Tree {
+	return &Tree{}
 }
 
-func (b *bst) Insert(n *node) {
+func (b *Tree) Push(n *Node) {
 	if b.root != nil {
-		b.root.insert(n)
+		b.root.push(n)
 	} else {
 		b.root = n
 		n.pp = &b.root
 	}
 }
 
-func (b *bst) PopMin() *node {
+func (b *Tree) PeekMin() *Node {
+	return b.root.peekMin()
+}
+
+func (b *Tree) PopMin() *Node {
 	if b.root != nil {
 		b.size--
 		return b.root.popMin()
@@ -28,7 +32,11 @@ func (b *bst) PopMin() *node {
 	return nil
 }
 
-func (b *bst) PopMax() *node {
+func (b *Tree) PeekMax() *Node {
+	return b.root.peekMax()
+}
+
+func (b *Tree) PopMax() *Node {
 	if b.root != nil {
 		b.size--
 		return b.root.popMax()
@@ -36,7 +44,7 @@ func (b *bst) PopMax() *node {
 	return nil
 }
 
-func (b *bst) Pop(val int64) *node {
+func (b *Tree) Pop(val int64) *Node {
 	n := b.root.popVal(val)
 	if n != nil {
 		b.size--
@@ -44,28 +52,28 @@ func (b *bst) Pop(val int64) *node {
 	return n
 }
 
-func (b *bst) Size() int {
+func (b *Tree) Size() int {
 	return b.size
 }
 
-type node struct {
-	pp    **node
-	left  *node
-	right *node
-	next  *node
-	prev  *node
+type Node struct {
+	pp    **Node
+	left  *Node
+	right *Node
+	next  *Node
+	prev  *Node
 	size  int
 	val   int64
-	o     *Order
+	O     *Order
 }
 
-func initNode(val int64, o *Order, n *node) {
-	*n = node{val: val, o: o}
+func initNode(val int64, o *Order, n *Node) {
+	*n = Node{val: val, O: o}
 	n.next = n
 	n.prev = n
 }
 
-func (n *node) peekMax() *node {
+func (n *Node) peekMax() *Node {
 	if n == nil {
 		return nil
 	}
@@ -75,7 +83,7 @@ func (n *node) peekMax() *node {
 	return n.right.peekMax()
 }
 
-func (n *node) popMax() *node {
+func (n *Node) popMax() *Node {
 	if n == nil {
 		return nil
 	}
@@ -83,7 +91,7 @@ func (n *node) popMax() *node {
 	return m.pop()
 }
 
-func (n *node) peekMin() *node {
+func (n *Node) peekMin() *Node {
 	if n == nil {
 		return nil
 	}
@@ -93,7 +101,7 @@ func (n *node) peekMin() *node {
 	return n.left.peekMin()
 }
 
-func (n *node) popMin() *node {
+func (n *Node) popMin() *Node {
 	if n == nil {
 		return nil
 	}
@@ -101,7 +109,7 @@ func (n *node) popMin() *node {
 	return m.pop()
 }
 
-func (n *node) popVal(val int64) *node {
+func (n *Node) popVal(val int64) *Node {
 	switch {
 	case n == nil:
 		return nil
@@ -115,28 +123,28 @@ func (n *node) popVal(val int64) *node {
 	panic("unreachable")
 }
 
-func (n *node) insert(in *node) {
+func (n *Node) push(in *Node) {
 	switch {
 	case in.val == n.val:
-		n.push(in)
+		n.insert(in)
 	case in.val < n.val:
 		if n.left == nil {
 			in.pp = &n
 			n.left = in
 		} else {
-			n.left.insert(in)
+			n.left.push(in)
 		}
 	case in.val > n.val:
 		if n.right == nil {
 			in.pp = &n
 			n.right = in
 		} else {
-			n.right.insert(in)
+			n.right.push(in)
 		}
 	}
 }
 
-func (n *node) push(in *node) {
+func (n *Node) insert(in *Node) {
 	last := n.next
 	last.prev = in
 	in.next = last
@@ -145,7 +153,7 @@ func (n *node) push(in *node) {
 	n.size++
 }
 
-func (n *node) pop() *node {
+func (n *Node) pop() *Node {
 	n.prev.next = n.next
 	n.next.prev = n.prev
 	nn := n.next
@@ -161,7 +169,7 @@ func (n *node) pop() *node {
 	return n
 }
 
-func swap(n *node, nn *node) {
+func swap(n *Node, nn *Node) {
 	nn.pp = n.pp
 	nn.left = n.left
 	nn.right = n.right
@@ -170,7 +178,7 @@ func swap(n *node, nn *node) {
 	nn.right.pp = &nn
 }
 
-func detatch(n *node) {
+func detatch(n *Node) {
 	switch {
 	case n.right == nil && n.left == nil:
 		*n.pp = nil
@@ -189,7 +197,7 @@ func detatch(n *node) {
 	n.right = nil
 }
 
-func (n *node) detatchMax() *node {
+func (n *Node) detatchMax() *Node {
 	m := n.peekMax()
 	detatch(m)
 	return m

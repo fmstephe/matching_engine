@@ -5,7 +5,6 @@ import (
 	"github.com/fmstephe/fstrconv"
 	"github.com/fmstephe/matching_engine/itch"
 	"github.com/fmstephe/matching_engine/matcher"
-	"github.com/fmstephe/matching_engine/prioq/limitheap"
 	"github.com/fmstephe/matching_engine/trade"
 	"log"
 	"math/rand"
@@ -29,10 +28,8 @@ func main() {
 	orders := getData()
 	orderCount := fstrconv.Itoa64Comma(int64(len(orders)))
 	println(orderCount, "Orders Built")
-	buysQ := limitheap.New(trade.BUY, 2000, 1000)
-	sellsQ := limitheap.New(trade.SELL, 2000, 1000)
 	buffer := matcher.NewResponseBuffer(2)
-	m := matcher.NewMatcher(buysQ, sellsQ, buffer)
+	m := matcher.NewMatcher(buffer)
 	startProfile()
 	defer endProfile()
 	start := time.Now().UnixNano()

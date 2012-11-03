@@ -2,28 +2,24 @@ package matcher
 
 import (
 	"fmt"
-	"github.com/fmstephe/matching_engine/prioq/limitheap"
 	"github.com/fmstephe/matching_engine/trade"
 )
 
 type M struct {
-	buys   *limitheap.H
-	sells  *limitheap.H
-	orders *trade.OrderSet
+	buys   *trade.Tree
+	sells  *trade.Tree
+	orders *trade.Tree
 	output *ResponseBuffer
 }
 
-func NewMatcher(buys, sells *limitheap.H, output *ResponseBuffer) *M {
-	if buys.Kind() != trade.BUY {
-		panic("Provided a buy priority queue that was not accepting buys!")
-	}
-	if sells.Kind() != trade.SELL {
-		panic("Provided a sell priority queue that was not accepting sells!")
-	}
-	orders := trade.NewOrderSet(1000) // Need a data structure that doesn't require an initialisation constant
+func NewMatcher(output *ResponseBuffer) *M {
+	buys := trade.NewTree()
+	sells := trade.NewTree()
+	orders := trade.NewTree()
 	return &M{buys: buys, sells: sells, orders: orders, output: output}
 }
 
+/*
 func (m *M) Survey() (buys []*trade.SurveyLimit, sells []*trade.SurveyLimit, orders *trade.OrderSet, executions int) {
 	buys = m.buys.Survey()
 	sells = m.sells.Survey()
@@ -31,6 +27,7 @@ func (m *M) Survey() (buys []*trade.SurveyLimit, sells []*trade.SurveyLimit, ord
 	executions = m.output.Writes()
 	return
 }
+*/
 
 func (m *M) Submit(o *trade.Order) {
 	switch o.Kind {
@@ -41,7 +38,7 @@ func (m *M) Submit(o *trade.Order) {
 	case trade.DELETE:
 		m.remove(o)
 	default:
-		panic(fmt.Sprintf("OrderKind %#v not currently supported", o.Kind))
+		panic(fmt.Sprintf("OrderKind %#v not supported", o.Kind))
 	}
 }
 
@@ -50,28 +47,30 @@ func (m *M) addBuy(b *trade.Order) {
 		panic("It is illegal to submit a buy at market price")
 	}
 	if !m.fillableBuy(b) {
-		m.orders.Put(b)
-		m.buys.Push(b)
+	//	m.orders.Push(b)
+		m.buys.Push(&b.LimitNode)
 	}
 }
 
 func (m *M) addSell(s *trade.Order) {
 	if !m.fillableSell(s) {
-		m.orders.Put(s)
-		m.sells.Push(s)
+	//	m.orders.Put(s)
+		m.sells.Push(&s.LimitNode)
 	}
 }
 
 func (m *M) remove(o *trade.Order) {
-	ro := m.orders.Remove(o.Guid)
+	//ro := m.orders.Remove(o.Guid)
+	/*
 	if ro != nil {
 		ro.RemoveFromLimit()
 	}
+	*/
 }
 
 func (m *M) fillableBuy(b *trade.Order) bool {
 	for {
-		s := m.sells.Peek()
+		s := m.sells.PopMin().O
 		if s == nil {
 			return false
 		}
@@ -79,7 +78,7 @@ func (m *M) fillableBuy(b *trade.Order) bool {
 			if b.Amount > s.Amount {
 				amount := s.Amount
 				price := price(b.Price, s.Price)
-				m.clearHead(m.sells)
+				m.sells.PopMin()
 				b.Amount -= amount
 				m.completeTrade(b, s, price, amount)
 				continue
@@ -95,7 +94,7 @@ func (m *M) fillableBuy(b *trade.Order) bool {
 				amount := b.Amount
 				price := price(b.Price, s.Price)
 				m.completeTrade(b, s, price, amount)
-				m.clearHead(m.sells)
+				m.sells.PopMin()
 				return true // The buy has been used up
 			}
 		} else {
@@ -107,7 +106,7 @@ func (m *M) fillableBuy(b *trade.Order) bool {
 
 func (m *M) fillableSell(s *trade.Order) bool {
 	for {
-		b := m.buys.Peek()
+		b := m.buys.PeekMax().O
 		if b == nil {
 			return false
 		}
@@ -124,14 +123,14 @@ func (m *M) fillableSell(s *trade.Order) bool {
 				price := price(b.Price, s.Price)
 				s.Amount -= amount
 				m.completeTrade(b, s, price, amount)
-				m.clearHead(m.buys)
+				m.buys.PopMax()
 				continue
 			}
 			if s.Amount == b.Amount {
 				amount := b.Amount
 				price := price(b.Price, s.Price)
 				m.completeTrade(b, s, price, amount)
-				m.clearHead(m.buys)
+				m.buys.PopMax()
 				return true // The sell has been used up
 			}
 		} else {
@@ -139,11 +138,6 @@ func (m *M) fillableSell(s *trade.Order) bool {
 		}
 	}
 	panic("Unreachable")
-}
-
-func (m *M) clearHead(q *limitheap.H) {
-	o := q.Pop()
-	m.orders.Remove(o.Guid)
 }
 
 func price(bPrice, sPrice int32) int32 {
