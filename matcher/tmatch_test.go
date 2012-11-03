@@ -1,7 +1,6 @@
 package matcher
 
 import (
-	"github.com/fmstephe/matching_engine/prioq/limitheap"
 	"github.com/fmstephe/matching_engine/trade"
 	"testing"
 )
@@ -71,9 +70,7 @@ func midpoint(t *testing.T, bPrice, sPrice, expected int32) {
 // Basic test matches lonely buy/sell trade pair which match exactly
 func TestSimpleMatch(t *testing.T) {
 	output := NewResponseBuffer(20)
-	buyQ := limitheap.New(trade.BUY, 2000, orderNum)
-	sellQ := limitheap.New(trade.SELL, 2000, orderNum)
-	m := NewMatcher(buyQ, sellQ, output)
+	m := NewMatcher(output)
 	addLowBuys(m, 5)
 	addHighSells(m, 10)
 	// Add Buy
@@ -92,9 +89,7 @@ func TestSimpleMatch(t *testing.T) {
 // Test matches one buy order to two separate sells
 func TestDoubleSellMatch(t *testing.T) {
 	output := NewResponseBuffer(20)
-	buyQ := limitheap.New(trade.BUY, 2000, orderNum)
-	sellQ := limitheap.New(trade.SELL, 2000, orderNum)
-	m := NewMatcher(buyQ, sellQ, output)
+	m := NewMatcher(output)
 	addLowBuys(m, 5)
 	addHighSells(m, 10)
 	// Add Buy
@@ -120,9 +115,7 @@ func TestDoubleSellMatch(t *testing.T) {
 // Test matches two buy orders to one sell
 func TestDoubleBuyMatch(t *testing.T) {
 	output := NewResponseBuffer(20)
-	buyQ := limitheap.New(trade.BUY, 2000, orderNum)
-	sellQ := limitheap.New(trade.SELL, 2000, orderNum)
-	m := NewMatcher(buyQ, sellQ, output)
+	m := NewMatcher(output)
 	addLowBuys(m, 5)
 	addHighSells(m, 10)
 	// Add Sell
@@ -146,9 +139,7 @@ func TestDoubleBuyMatch(t *testing.T) {
 // Test matches lonely buy/sell pair, with same quantity, uses the mid-price point for trade price
 func TestMidPrice(t *testing.T) {
 	output := NewResponseBuffer(20)
-	buyQ := limitheap.New(trade.BUY, 2000, orderNum)
-	sellQ := limitheap.New(trade.SELL, 2000, orderNum)
-	m := NewMatcher(buyQ, sellQ, output)
+	m := NewMatcher(output)
 	addLowBuys(m, 5)
 	addHighSells(m, 10)
 	// Add Buy
@@ -166,9 +157,7 @@ func TestMidPrice(t *testing.T) {
 // Test matches lonely buy/sell pair, sell > quantity, and uses the mid-price point for trade price
 func TestMidPriceBigSell(t *testing.T) {
 	output := NewResponseBuffer(20)
-	buyQ := limitheap.New(trade.BUY, 2000, orderNum)
-	sellQ := limitheap.New(trade.SELL, 2000, orderNum)
-	m := NewMatcher(buyQ, sellQ, output)
+	m := NewMatcher(output)
 	addLowBuys(m, 5)
 	addHighSells(m, 10)
 	// Add Buy
@@ -187,9 +176,7 @@ func TestMidPriceBigSell(t *testing.T) {
 // Test matches lonely buy/sell pair, buy > quantity, and uses the mid-price point for trade price
 func TestMidPriceBigBuy(t *testing.T) {
 	output := NewResponseBuffer(20)
-	buyQ := limitheap.New(trade.BUY, 2000, orderNum)
-	sellQ := limitheap.New(trade.SELL, 2000, orderNum)
-	m := NewMatcher(buyQ, sellQ, output)
+	m := NewMatcher(output)
 	addLowBuys(m, 5)
 	addHighSells(m, 10)
 	// Add Buy

@@ -2,7 +2,6 @@ package matcher
 
 import (
 	"encoding/json"
-	"github.com/fmstephe/matching_engine/prioq/limitheap"
 	"github.com/fmstephe/matching_engine/trade"
 	"io/ioutil"
 	"testing"
@@ -133,9 +132,7 @@ func BenchmarkAddBuyNarrow(b *testing.B) {
 func benchmarkAddBuy(b *testing.B, buys []*trade.Order) {
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
-		buyQ := limitheap.New(trade.BUY, 2000, orderNum)
-		sellQ := limitheap.New(trade.SELL, 2000, orderNum)
-		m := NewMatcher(buyQ, sellQ, output)
+		m := NewMatcher(output)
 		b.StartTimer()
 		for _, buy := range buys {
 			m.Submit(buy)
@@ -162,9 +159,7 @@ func benchmarkAddSell(b *testing.B, sells []*trade.Order) {
 	for i := 0; i < b.N; i++ {
 		prepare(b)
 		b.StopTimer()
-		buyQ := limitheap.New(trade.BUY, 2000, orderNum)
-		sellQ := limitheap.New(trade.SELL, 2000, orderNum)
-		m := NewMatcher(buyQ, sellQ, output)
+		m := NewMatcher(output)
 		b.StartTimer()
 		for _, sell := range sells {
 			m.Submit(sell)
@@ -190,9 +185,7 @@ func BenchmarkMatchNarrow(b *testing.B) {
 func benchmarkMatch(b *testing.B, buys, sells []*trade.Order, expMatches int) {
 	for i := 0; i < b.N; i++ {
 		prepare(b)
-		buyQ := limitheap.New(trade.BUY, 2000, orderNum)
-		sellQ := limitheap.New(trade.SELL, 2000, orderNum)
-		m := NewMatcher(buyQ, sellQ, output)
+		m := NewMatcher(output)
 		for j := 0; j < orderNum; j++ {
 			m.Submit(buys[j])
 			m.Submit(sells[j])
