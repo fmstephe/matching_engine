@@ -140,7 +140,7 @@ func (m *M) fillableSell(s *trade.Order) bool {
 	panic("Unreachable")
 }
 
-func price(bPrice, sPrice int32) int32 {
+func price(bPrice, sPrice int64) int64 {
 	if sPrice == trade.MARKET_PRICE {
 		return bPrice
 	}
@@ -148,7 +148,7 @@ func price(bPrice, sPrice int32) int32 {
 	return sPrice + (d >> 1)
 }
 
-func (m *M) completeTrade(b, s *trade.Order, price int32, amount uint32) {
+func (m *M) completeTrade(b, s *trade.Order, price int64, amount uint32) {
 	// TODO write the response type into these responses
 	// Write the buy response
 	rb := m.output.getForWrite()

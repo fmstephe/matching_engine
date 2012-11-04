@@ -12,8 +12,8 @@ import (
 
 type ItchReader struct {
 	lineCount uint
-	maxBuy    int32
-	minSell   int32
+	maxBuy    int64
+	minSell   int64
 	r         *bufio.Reader
 }
 
@@ -70,11 +70,11 @@ func (i *ItchReader) LineCount() uint {
 	return i.lineCount
 }
 
-func (i *ItchReader) MaxBuy() int32 {
+func (i *ItchReader) MaxBuy() int64 {
 	return i.maxBuy
 }
 
-func (i *ItchReader) MinSell() int32 {
+func (i *ItchReader) MinSell() int64 {
 	return i.minSell
 }
 
@@ -117,7 +117,7 @@ func mkData(useful []string) (cd trade.CostData, td trade.TradeData, err error) 
 	if err != nil {
 		return
 	}
-	cd = trade.CostData{Price: int32(price), Amount: uint32(amount)}
+	cd = trade.CostData{Price: int64(price), Amount: uint32(amount)}
 	td = trade.TradeData{TraderId: uint32(traderId), TradeId: uint32(tradeId), StockId: uint32(1)}
 	return
 }

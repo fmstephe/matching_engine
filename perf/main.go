@@ -95,21 +95,21 @@ func mkRandomData() []*trade.Order {
 	return orders
 }
 
-func myRand(lim int32, r *rand.Rand) int32 {
-	return int32(r.Int63n(int64(lim)))
+func myRand(lim int64, r *rand.Rand) int64 {
+	return int64(r.Int63n(int64(lim)))
 }
 
-func valRangeFlat(n int, low, high int32) []int32 {
-	vals := make([]int32, n)
+func valRangeFlat(n int, low, high int64) []int64 {
+	vals := make([]int64, n)
 	for i := 0; i < n; i++ {
 		vals[i] = myRand(high-low, perfRand) + low
 	}
 	return vals
 }
 
-func valRangePyramid(n int, low, high int32) []int32 {
+func valRangePyramid(n int, low, high int64) []int64 {
 	seq := (high - low) / 4
-	vals := make([]int32, n)
+	vals := make([]int64, n)
 	for i := 0; i < n; i++ {
 		val := myRand(seq, perfRand) + myRand(seq, perfRand) + myRand(seq, perfRand) + myRand(seq, perfRand)
 		vals[i] = val + low
@@ -117,15 +117,15 @@ func valRangePyramid(n int, low, high int32) []int32 {
 	return vals
 }
 
-func mkBuys(n int, low, high int32) []*trade.Order {
+func mkBuys(n int, low, high int64) []*trade.Order {
 	return mkOrders(n, low, high, trade.BUY)
 }
 
-func mkSells(n int, low, high int32) []*trade.Order {
+func mkSells(n int, low, high int64) []*trade.Order {
 	return mkOrders(n, low, high, trade.SELL)
 }
 
-func mkOrders(n int, low, high int32, tradeType trade.OrderKind) []*trade.Order {
+func mkOrders(n int, low, high int64, tradeType trade.OrderKind) []*trade.Order {
 	prices := valRangeFlat(n, low, high)
 	orders := make([]*trade.Order, n)
 	for i, price := range prices {
