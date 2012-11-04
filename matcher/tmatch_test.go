@@ -15,7 +15,7 @@ const (
 var matchTestOrderMaker = trade.NewOrderMaker()
 
 type responseVals struct {
-	price        int32
+	price        int64
 	amount       uint32
 	tradeId      uint32
 	counterParty uint32
@@ -60,7 +60,7 @@ func TestMidPoint(t *testing.T) {
 	midpoint(t, 30, 10, 20)
 }
 
-func midpoint(t *testing.T, bPrice, sPrice, expected int32) {
+func midpoint(t *testing.T, bPrice, sPrice, expected int64) {
 	result := price(bPrice, sPrice)
 	if result != expected {
 		t.Errorf("price(%d,%d) does not equal %d, got %d instead.", bPrice, sPrice, expected, result)
@@ -217,14 +217,14 @@ func TestAddRemoveBuy(t *testing.T) {
 }
 */
 
-func addLowBuys(m *M, highestPrice int32) {
+func addLowBuys(m *M, highestPrice int64) {
 	buys := matchTestOrderMaker.MkBuys(matchTestOrderMaker.ValRangeFlat(10, 1, highestPrice))
 	for _, buy := range buys {
 		m.Submit(buy)
 	}
 }
 
-func addHighSells(m *M, lowestPrice int32) {
+func addHighSells(m *M, lowestPrice int64) {
 	sells := matchTestOrderMaker.MkSells(matchTestOrderMaker.ValRangeFlat(10, lowestPrice, lowestPrice+10000))
 	for _, sell := range sells {
 		m.Submit(sell)
