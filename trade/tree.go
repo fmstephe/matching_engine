@@ -134,14 +134,14 @@ func (n *Node) push(in *Node) {
 		n.insert(in)
 	case in.val < n.val:
 		if n.left == nil {
-			in.pp = &n
+			in.pp = &n.left
 			n.left = in
 		} else {
 			n.left.push(in)
 		}
 	case in.val > n.val:
 		if n.right == nil {
-			in.pp = &n
+			in.pp = &n.right
 			n.right = in
 		} else {
 			n.right.push(in)

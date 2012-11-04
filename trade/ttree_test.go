@@ -119,3 +119,28 @@ func testRandomPushPopOnePrice(t *testing.T, pushCount int) {
 		ensureSize(bst, t)
 	}
 }
+
+func TestRandomPushPopBuy(t *testing.T) {
+	size := 3
+	priceRange := int64(500)
+	priceBase := int64(1000)
+	bst := NewTree()
+	for i := 0; i < size; i++ {
+		b := limitOrderMaker.MkPricedBuy(limitOrderMaker.Rand32(priceRange) + priceBase)
+		bst.Push(&b.LimitNode)
+		if bst.Size() != (i + 1) {
+			t.Errorf("Incorrect size found in RandomPushPopBuy push phase. Expecting %d, got %d instead", i+1, bst.Size())
+		}
+	}
+	leastPrice := priceRange + priceBase + 1
+	for i := 0; i < size; i++ {
+		b := bst.PopMax().O
+		if bst.Size() != size-(i+1) {
+			t.Errorf("Incorrect size found in RandomPushPopBuy pop phase. Expecting %d, got %d instead", size-(i+1), bst.Size())
+		}
+		if b.Price > leastPrice {
+			t.Errorf("Buy Pop reveals out of order buy order")
+		}
+		leastPrice = b.Price
+	}
+}
