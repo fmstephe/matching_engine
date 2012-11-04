@@ -7,27 +7,29 @@ import (
 
 var limitOrderMaker = NewOrderMaker()
 
-func ensureSize(l *Tree, t *testing.T) {
-	/*
-		count := 0
-		o := l.dummy.Lower
-		for o != &l.dummy {
-			count++
-			o = o.Lower
-		}
-		if count != l.Size {
-			t.Errorf("Mis-sized limit following Lower. Expecting %d, found %d", l.Size, count)
-		}
-		count = 0
-		o = l.dummy.Higher
-		for o != &l.dummy {
-			count++
-			o = o.Higher
-		}
-		if count != l.Size {
-			t.Errorf("Mis-sized limit following Higher. Expecting %d, found %d", l.Size, count)
-		}
-	*/
+func ensureSize(tree *Tree, t *testing.T) {
+	size := tree.Size()
+	countedSize := countSize(tree.root)
+	if size != countedSize {
+		t.Errorf("Wrong size reported, reported %d, counted %d", size, countedSize)
+	}
+}
+
+func countSize(n *Node) int {
+	if n == nil {
+		return 0
+	}
+	return countSize(n.left) + countSize(n.right) + countNodes(n)
+}
+
+func countNodes(n *Node) int {
+	count := 1
+	curr := n.next
+	for curr != n {
+		curr = curr.next
+		count++
+	}
+	return count
 }
 
 func TestPushThenPopOnePrice(t *testing.T) {
