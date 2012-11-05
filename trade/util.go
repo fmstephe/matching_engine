@@ -18,8 +18,12 @@ func NewOrderMaker() *orderMaker {
 	return &orderMaker{traderId: 0, r: r}
 }
 
-func (o *orderMaker) Rand32(lim int64) int64 {
-	return int64(o.r.Int63n(int64(lim)))
+func (o *orderMaker) Between(lower, upper int64) int64 {
+	if lower == upper {
+		return lower
+	}
+	r := upper - lower
+	return o.r.Int63n(r) + lower
 }
 
 func (o *orderMaker) MkPricedBuy(price int64) *Order {
@@ -41,7 +45,7 @@ func (o *orderMaker) ValRangePyramid(n int, low, high int64) []int64 {
 	seq := (high - low) / 4
 	vals := make([]int64, n)
 	for i := 0; i < n; i++ {
-		val := o.Rand32(seq) + o.Rand32(seq) + o.Rand32(seq) + o.Rand32(seq)
+		val := o.Between(0, seq) + o.Between(0, seq) + o.Between(0, seq) + o.Between(0, seq)
 		vals[i] = int64(val) + low
 	}
 	return vals
@@ -50,7 +54,7 @@ func (o *orderMaker) ValRangePyramid(n int, low, high int64) []int64 {
 func (o *orderMaker) ValRangeFlat(n int, low, high int64) []int64 {
 	vals := make([]int64, n)
 	for i := 0; i < n; i++ {
-		vals[i] = o.Rand32(high-low) + low
+		vals[i] = o.Between(low, high)
 	}
 	return vals
 }
