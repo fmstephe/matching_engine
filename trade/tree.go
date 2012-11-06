@@ -131,11 +131,12 @@ func (n *Node) popVal(val int64) *Node {
 func (n *Node) push(in *Node) {
 	switch {
 	case in.val == n.val:
-		n.insert(in)
+		n.addLast(in)
 	case in.val < n.val:
 		if n.left == nil {
 			in.pp = &n.left
 			n.left = in
+			in.size = 1
 		} else {
 			n.left.push(in)
 		}
@@ -143,13 +144,14 @@ func (n *Node) push(in *Node) {
 		if n.right == nil {
 			in.pp = &n.right
 			n.right = in
+			in.size = 1
 		} else {
 			n.right.push(in)
 		}
 	}
 }
 
-func (n *Node) insert(in *Node) {
+func (n *Node) addLast(in *Node) {
 	last := n.next
 	last.prev = in
 	in.next = last
