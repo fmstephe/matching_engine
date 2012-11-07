@@ -181,10 +181,10 @@ func swap(n *Node, nn *Node) {
 	nn.left = n.left
 	nn.right = n.right
 	if nn.left != nil {
-		nn.left.pp = &nn
+		nn.left.pp = &nn.left
 	}
 	if nn.right != nil {
-		nn.right.pp = &nn
+		nn.right.pp = &nn.right
 	}
 }
 

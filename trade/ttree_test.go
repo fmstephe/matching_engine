@@ -9,8 +9,8 @@ var limitOrderMaker = NewOrderMaker()
 
 func TestPushPopSimpleMin(t *testing.T) {
 	// buys
+	testPushPopSimple(t, 4, 100, 200, BUY, maxPopper)
 	testPushPopSimple(t, 100, 1, 1, BUY, maxPopper)
-	testPushPopSimple(t, 10, 100, 200, BUY, maxPopper)
 	testPushPopSimple(t, 100, 100, 10000, BUY, maxPopper)
 	// sells
 	testPushPopSimple(t, 100, 1, 1, SELL, minPopper)
@@ -39,7 +39,6 @@ func testPushPopSimple(t *testing.T, pushCount int, lowPrice, highPrice int64, k
 	}
 }
 
-/*
 func TestRandomPushPop(t *testing.T) {
 	// buys
 	testPushPopRandom(t, 100, 1, 1, BUY, maxPopper)
@@ -50,7 +49,6 @@ func TestRandomPushPop(t *testing.T) {
 	testPushPopRandom(t, 100, 100, 1000, SELL, minPopper)
 	testPushPopRandom(t, 100, 100, 1000, SELL, minPopper)
 }
-*/
 
 func testPushPopRandom(t *testing.T, pushCount int, lowPrice, highPrice int64, kind OrderKind, popper popperFun) {
 	bst := NewTree()
