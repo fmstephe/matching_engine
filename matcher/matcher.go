@@ -70,10 +70,11 @@ func (m *M) remove(o *trade.Order) {
 
 func (m *M) fillableBuy(b *trade.Order) bool {
 	for {
-		s := m.sells.PopMin().O
-		if s == nil {
+		sNode := m.sells.PeekMin()
+		if sNode == nil {
 			return false
 		}
+		s := sNode.O
 		if b.Price >= s.Price {
 			if b.Amount > s.Amount {
 				amount := s.Amount
@@ -106,10 +107,11 @@ func (m *M) fillableBuy(b *trade.Order) bool {
 
 func (m *M) fillableSell(s *trade.Order) bool {
 	for {
-		b := m.buys.PeekMax().O
-		if b == nil {
+		bNode := m.buys.PeekMax()
+		if bNode == nil {
 			return false
 		}
+		b := bNode.O
 		if b.Price >= s.Price {
 			if b.Amount > s.Amount {
 				amount := s.Amount
