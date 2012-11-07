@@ -54,18 +54,18 @@ func (m *M) addBuy(b *trade.Order) {
 
 func (m *M) addSell(s *trade.Order) {
 	if !m.fillableSell(s) {
-		//	m.orders.Put(s)
+		m.orders.Push(&s.GuidNode)
 		m.sells.Push(&s.PriceNode)
 	}
 }
 
 func (m *M) remove(o *trade.Order) {
-	//ro := m.orders.Remove(o.Guid)
-	/*
-		if ro != nil {
-			ro.RemoveFromLimit()
-		}
-	*/
+	gNode := m.orders.Pop(o.Guid)
+	if gNode != nil {
+		//ro := gNode.O
+		//pNode := ro.PriceNode
+		//pNode.detatch()
+	}
 }
 
 func (m *M) fillableBuy(b *trade.Order) bool {

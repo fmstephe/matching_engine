@@ -165,7 +165,7 @@ func (n *Node) pop() {
 		n.size = 1
 		swap(n, nn)
 	} else {
-		detatch(n)
+		n.detatchQ()
 	}
 }
 
@@ -182,7 +182,7 @@ func swap(n *Node, nn *Node) {
 	}
 }
 
-func detatch(n *Node) {
+func (n *Node) detatchQ() {
 	switch {
 	case n.right == nil && n.left == nil:
 		*n.pp = nil
@@ -201,8 +201,29 @@ func detatch(n *Node) {
 	n.right = nil
 }
 
+func (n *Node) detatch() {
+	/*
+	switch {
+	case n.right == nil && n.left == nil:
+		*n.pp = nil
+	case n.right == nil:
+		*n.pp = n.left
+		n.left.pp = n.pp
+	case n.left == nil:
+		*n.pp = n.right
+		n.right.pp = n.pp
+	default:
+		nn := n.left.detatchMax()
+		swap(n, nn)
+	}
+	n.pp = nil
+	n.left = nil
+	n.right = nil
+	*/
+}
+
 func (n *Node) detatchMax() *Node {
 	m := n.peekMax()
-	detatch(m)
+	m.detatchQ()
 	return m
 }
