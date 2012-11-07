@@ -86,9 +86,6 @@ func (n *Node) peekMax() *Node {
 }
 
 func (n *Node) popMax() *Node {
-	if n == nil {
-		return nil
-	}
 	m := n.peekMax()
 	m.pop()
 	return m
@@ -105,9 +102,6 @@ func (n *Node) peekMin() *Node {
 }
 
 func (n *Node) popMin() *Node {
-	if n == nil {
-		return nil
-	}
 	m := n.peekMin()
 	m.pop()
 	return m

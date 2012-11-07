@@ -5,16 +5,19 @@ import (
 	"testing"
 )
 
-var limitOrderMaker = NewOrderMaker()
+// A function signature allowing us to switch easily between min and max queues
+type popperFun func(*Tree, *prioq) (*Order, *Order, *Order)
+
+var maker = NewOrderMaker()
 
 func TestPushPopSimpleMin(t *testing.T) {
 	// buys
-	testPushPopSimple(t, 4, 100, 200, BUY, maxPopper)
 	testPushPopSimple(t, 100, 1, 1, BUY, maxPopper)
+	testPushPopSimple(t, 100, 10, 20, BUY, maxPopper)
 	testPushPopSimple(t, 100, 100, 10000, BUY, maxPopper)
 	// sells
 	testPushPopSimple(t, 100, 1, 1, SELL, minPopper)
-	testPushPopSimple(t, 100, 100, 200, SELL, minPopper)
+	testPushPopSimple(t, 100, 10, 20, SELL, minPopper)
 	testPushPopSimple(t, 100, 100, 10000, SELL, minPopper)
 }
 
@@ -23,7 +26,7 @@ func testPushPopSimple(t *testing.T, pushCount int, lowPrice, highPrice int64, k
 	validate(t, bst)
 	q := mkPrioq(pushCount, lowPrice, highPrice)
 	for i := 0; i < pushCount; i++ {
-		o := limitOrderMaker.MkPricedOrder(limitOrderMaker.Between(lowPrice, highPrice), kind)
+		o := maker.MkPricedOrder(maker.Between(lowPrice, highPrice), kind)
 		bst.Push(&o.LimitNode)
 		validate(t, bst)
 		q.push(o)
@@ -42,12 +45,12 @@ func testPushPopSimple(t *testing.T, pushCount int, lowPrice, highPrice int64, k
 func TestRandomPushPop(t *testing.T) {
 	// buys
 	testPushPopRandom(t, 100, 1, 1, BUY, maxPopper)
-	testPushPopRandom(t, 100, 100, 1000, BUY, maxPopper)
-	testPushPopRandom(t, 100, 100, 1000, BUY, maxPopper)
+	testPushPopRandom(t, 100, 10, 20, BUY, maxPopper)
+	testPushPopRandom(t, 100, 100, 10000, BUY, maxPopper)
 	// sells
 	testPushPopRandom(t, 100, 1, 1, SELL, minPopper)
-	testPushPopRandom(t, 100, 100, 1000, SELL, minPopper)
-	testPushPopRandom(t, 100, 100, 1000, SELL, minPopper)
+	testPushPopRandom(t, 100, 10, 20, SELL, minPopper)
+	testPushPopRandom(t, 100, 100, 10000, SELL, minPopper)
 }
 
 func testPushPopRandom(t *testing.T, pushCount int, lowPrice, highPrice int64, kind OrderKind, popper popperFun) {
@@ -58,7 +61,7 @@ func testPushPopRandom(t *testing.T, pushCount int, lowPrice, highPrice int64, k
 	for i := 0; i < pushCount; {
 		n := r.Int()
 		if n%2 == 0 || bst.Size() == 0 {
-			o := limitOrderMaker.MkPricedOrder(limitOrderMaker.Between(lowPrice, highPrice), kind)
+			o := maker.MkPricedOrder(maker.Between(lowPrice, highPrice), kind)
 			bst.Push(&o.LimitNode)
 			validate(t, bst)
 			q.push(o)
@@ -68,13 +71,90 @@ func testPushPopRandom(t *testing.T, pushCount int, lowPrice, highPrice int64, k
 		}
 	}
 	for bst.Size() > 0 {
-		fo := q.popMax()
 		po := bst.PopMax().O
+		fo := q.popMax()
 		if fo != po {
 			t.Errorf("Mismatched Push/Pop pair")
 			return
 		}
 		validate(t, bst)
+	}
+}
+
+func TestAddRemoveSimple(t *testing.T) {
+	// Buys
+	testAddRemoveSimple(t, 100, 1, 1, BUY)
+	testAddRemoveSimple(t, 100, 10, 20, BUY)
+	testAddRemoveSimple(t, 100, 100, 10000, BUY)
+	// Sells
+	testAddRemoveSimple(t, 100, 1, 1, SELL)
+	testAddRemoveSimple(t, 100, 10, 20, SELL)
+	testAddRemoveSimple(t, 100, 100, 10000, SELL)
+}
+
+func testAddRemoveSimple(t *testing.T, pushCount int, lowPrice, highPrice int64, kind OrderKind) {
+	bst := NewTree()
+	validate(t, bst)
+	orderMap := make(map[int64]*Order)
+	for i := 0; i < pushCount; i++ {
+		o := maker.MkPricedOrder(maker.Between(lowPrice, highPrice), kind)
+		bst.Push(&o.GuidNode)
+		validate(t, bst)
+		orderMap[o.Guid] = o
+	}
+	drainTree(t, bst, orderMap)
+}
+
+func TestAddRemoveRandom(t *testing.T) {
+	// Buys
+	testAddRemoveRandom(t, 100, 1, 1, BUY)
+	testAddRemoveRandom(t, 100, 10, 20, BUY)
+	testAddRemoveRandom(t, 100, 100, 10000, BUY)
+	// Sells
+	testAddRemoveRandom(t, 100, 1, 1, SELL)
+	testAddRemoveRandom(t, 100, 10, 20, SELL)
+	testAddRemoveRandom(t, 100, 100, 10000, SELL)
+}
+
+func testAddRemoveRandom(t *testing.T, pushCount int, lowPrice, highPrice int64, kind OrderKind) {
+	bst := NewTree()
+	validate(t, bst)
+	orderMap := make(map[int64]*Order)
+	r := rand.New(rand.NewSource(1))
+	for i := 0; i < pushCount; {
+		n := r.Int()
+		if n%2 == 0 || bst.Size() == 0 {
+			o := maker.MkPricedOrder(maker.Between(lowPrice, highPrice), kind)
+			bst.Push(&o.GuidNode)
+			validate(t, bst)
+			orderMap[o.Guid] = o
+			i++
+		} else {
+			for g, o := range orderMap {
+				po := bst.Pop(g).O
+				delete(orderMap, g)
+				if po != o {
+					t.Errorf("Bad pop")
+				}
+				validate(t, bst)
+				break
+			}
+		}
+	}
+	drainTree(t, bst, orderMap)
+}
+
+func drainTree(t *testing.T, bst *Tree, orderMap map[int64]*Order) {
+	for g := range orderMap {
+		o := orderMap[g]
+		po := bst.Pop(o.Guid).O
+		if po != o {
+			t.Errorf("Bad pop")
+		}
+		validate(t, bst)
+	}
+	if bst.Size() != 0 {
+		t.Errorf("Expecting empty tree, got %d remaining orders", bst.Size())
 	}
 }
 
@@ -142,9 +222,7 @@ func popCheck(t *testing.T, bst *Tree, q *prioq, popper popperFun) {
 	validate(t, bst)
 }
 
-// A function signature allowing us to switch easily between min and max queues
-type popperFun func(*Tree, *prioq) (*Order, *Order, *Order)
-
+// Helper functions for popping either the max or the min from our queues
 func maxPopper(bst *Tree, q *prioq) (peek, pop, check *Order) {
 	peek = bst.PeekMax().O
 	pop = bst.PopMax().O
@@ -161,31 +239,30 @@ func minPopper(bst *Tree, q *prioq) (peek, pop, check *Order) {
 
 // An easy to build priority queue
 type prioq struct {
-	chans               []chan *Order
+	prios               [][]*Order
 	lowPrice, highPrice int64
 }
 
 func mkPrioq(size int, lowPrice, highPrice int64) *prioq {
-	chans := make([]chan *Order, highPrice-lowPrice+1)
-	for i := range chans {
-		chans[i] = make(chan *Order, size)
-	}
-	return &prioq{chans: chans, lowPrice: lowPrice, highPrice: highPrice}
+	prios := make([][]*Order, highPrice-lowPrice+1)
+	return &prioq{prios: prios, lowPrice: lowPrice, highPrice: highPrice}
 }
 
 func (q *prioq) push(o *Order) {
 	idx := o.Price - q.lowPrice
-	q.chans[idx] <- o
+	prio := q.prios[idx]
+	prio = append(prio, o)
+	q.prios[idx] = prio
 }
 
 func (q *prioq) popMax() *Order {
-	if len(q.chans) == 0 {
+	if len(q.prios) == 0 {
 		return nil
 	}
-	for i := len(q.chans) - 1; i >= 0; i-- {
-		select {
-		case o := <-q.chans[i]:
-			return o
+	for i := len(q.prios) - 1; i >= 0; i-- {
+		switch {
+		case len(q.prios[i]) > 0:
+			return q.pop(i)
 		default:
 			continue
 		}
@@ -194,16 +271,24 @@ func (q *prioq) popMax() *Order {
 }
 
 func (q *prioq) popMin() *Order {
-	if len(q.chans) == 0 {
+	if len(q.prios) == 0 {
 		return nil
 	}
-	for i := 0; i < len(q.chans); i++ {
-		select {
-		case o := <-q.chans[i]:
-			return o
+	for i := 0; i < len(q.prios); i++ {
+		switch {
+		case len(q.prios[i]) > 0:
+			return q.pop(i)
 		default:
 			continue
 		}
 	}
 	return nil
+}
+
+func (q *prioq) pop(i int) *Order {
+	prio := q.prios[i]
+	o := prio[0]
+	prio = prio[1:]
+	q.prios[i] = prio
+	return o
 }

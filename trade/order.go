@@ -18,7 +18,11 @@ const (
 	NO_COUNTER_PARTY = 0
 )
 
-func KindString(k OrderKind) string {
+type OrderKind int32
+
+type ResponseKind int32
+
+func (k OrderKind) String() string {
 	switch k {
 	case BUY:
 		return "BUY"
@@ -31,10 +35,6 @@ func KindString(k OrderKind) string {
 	}
 	panic("Unreachable")
 }
-
-type OrderKind int32
-
-type ResponseKind int32
 
 // For readable constructors
 type CostData struct {
@@ -58,11 +58,13 @@ type Order struct {
 	StockId   uint32
 	Kind      OrderKind
 	LimitNode Node
+	GuidNode  Node
 }
 
 func (o *Order) setup() {
 	o.Guid = int64((uint64(o.TraderId) << 32) | uint64(o.TradeId))
 	initNode(o, o.Price, &o.LimitNode)
+	initNode(o, o.Guid, &o.GuidNode)
 }
 
 func (o *Order) String() string {
@@ -74,7 +76,7 @@ func (o *Order) String() string {
 	traderId := fstrconv.Itoa64Delim(int64(o.TraderId), '-')
 	tradeId := fstrconv.Itoa64Delim(int64(o.TradeId), '-')
 	stockId := fstrconv.Itoa64Delim(int64(o.StockId), '-')
-	return fmt.Sprintf("%s, price %s, amount %s, trader %s, trade %s, stock %s", KindString(o.Kind), price, amount, traderId, tradeId, stockId)
+	return fmt.Sprintf("%s, price %s, amount %s, trader %s, trade %s, stock %s", o.Kind.String(), price, amount, traderId, tradeId, stockId)
 }
 
 func NewBuy(costData CostData, tradeData TradeData) *Order {
