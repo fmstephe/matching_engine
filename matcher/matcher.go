@@ -47,15 +47,15 @@ func (m *M) addBuy(b *trade.Order) {
 		panic("It is illegal to submit a buy at market price")
 	}
 	if !m.fillableBuy(b) {
-		//	m.orders.Push(b)
-		m.buys.Push(&b.LimitNode)
+		m.orders.Push(&b.GuidNode)
+		m.buys.Push(&b.PriceNode)
 	}
 }
 
 func (m *M) addSell(s *trade.Order) {
 	if !m.fillableSell(s) {
 		//	m.orders.Put(s)
-		m.sells.Push(&s.LimitNode)
+		m.sells.Push(&s.PriceNode)
 	}
 }
 

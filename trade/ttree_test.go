@@ -27,7 +27,7 @@ func testPushPopSimple(t *testing.T, pushCount int, lowPrice, highPrice int64, k
 	q := mkPrioq(pushCount, lowPrice, highPrice)
 	for i := 0; i < pushCount; i++ {
 		o := maker.MkPricedOrder(maker.Between(lowPrice, highPrice), kind)
-		bst.Push(&o.LimitNode)
+		bst.Push(&o.PriceNode)
 		validate(t, bst)
 		q.push(o)
 		if bst.Size() != (i + 1) {
@@ -62,7 +62,7 @@ func testPushPopRandom(t *testing.T, pushCount int, lowPrice, highPrice int64, k
 		n := r.Int()
 		if n%2 == 0 || bst.Size() == 0 {
 			o := maker.MkPricedOrder(maker.Between(lowPrice, highPrice), kind)
-			bst.Push(&o.LimitNode)
+			bst.Push(&o.PriceNode)
 			validate(t, bst)
 			q.push(o)
 			i++

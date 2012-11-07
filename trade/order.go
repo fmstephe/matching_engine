@@ -57,13 +57,13 @@ type Order struct {
 	TradeId   uint32
 	StockId   uint32
 	Kind      OrderKind
-	LimitNode Node
+	PriceNode Node
 	GuidNode  Node
 }
 
 func (o *Order) setup() {
 	o.Guid = int64((uint64(o.TraderId) << 32) | uint64(o.TradeId))
-	initNode(o, o.Price, &o.LimitNode)
+	initNode(o, o.Price, &o.PriceNode)
 	initNode(o, o.Guid, &o.GuidNode)
 }
 
@@ -92,7 +92,7 @@ func NewDelete(tradeData TradeData) *Order {
 }
 
 func NewOrder(costData CostData, tradeData TradeData, orderKind OrderKind) *Order {
-	o := &Order{Price: costData.Price, Amount: costData.Amount, TraderId: tradeData.TraderId, TradeId: tradeData.TradeId, StockId: tradeData.StockId, Kind: orderKind, LimitNode: Node{}}
+	o := &Order{Price: costData.Price, Amount: costData.Amount, TraderId: tradeData.TraderId, TradeId: tradeData.TradeId, StockId: tradeData.StockId, Kind: orderKind, PriceNode: Node{}}
 	o.setup()
 	return o
 }
