@@ -60,12 +60,7 @@ func (m *M) addSell(s *trade.Order) {
 }
 
 func (m *M) remove(o *trade.Order) {
-	gNode := m.orders.Pop(o.Guid)
-	if gNode != nil {
-		//ro := gNode.O
-		//pNode := ro.PriceNode
-		//pNode.detatch()
-	}
+	m.orders.Pop(o.Guid)
 }
 
 func (m *M) fillableBuy(b *trade.Order) bool {

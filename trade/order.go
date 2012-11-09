@@ -63,8 +63,8 @@ type Order struct {
 
 func (o *Order) setup() {
 	o.Guid = int64((uint64(o.TraderId) << 32) | uint64(o.TradeId))
-	initNode(o, o.Price, &o.PriceNode)
-	initNode(o, o.Guid, &o.GuidNode)
+	initNode(o, o.Price, &o.PriceNode, &o.GuidNode)
+	initNode(o, o.Guid, &o.GuidNode, &o.PriceNode)
 }
 
 func (o *Order) String() string {

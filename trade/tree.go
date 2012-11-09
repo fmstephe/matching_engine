@@ -3,7 +3,6 @@ package trade
 import ()
 
 type Tree struct {
-	size int
 	root *Node
 }
 
@@ -18,7 +17,6 @@ func (b *Tree) Push(n *Node) {
 		b.root = n
 		n.pp = &b.root
 	}
-	b.size++
 }
 
 func (b *Tree) PeekMin() *Node {
@@ -27,8 +25,9 @@ func (b *Tree) PeekMin() *Node {
 
 func (b *Tree) PopMin() *Node {
 	if b.root != nil {
-		b.size--
-		return b.root.popMin()
+		n := b.root.popMin()
+		n.other.pop() // Clear complementary tree
+		return n
 	}
 	return nil
 }
@@ -39,8 +38,9 @@ func (b *Tree) PeekMax() *Node {
 
 func (b *Tree) PopMax() *Node {
 	if b.root != nil {
-		b.size--
-		return b.root.popMax()
+		n := b.root.popMax()
+		n.other.pop() // Clear complementary tree
+		return n
 	}
 	return nil
 }
@@ -48,31 +48,59 @@ func (b *Tree) PopMax() *Node {
 func (b *Tree) Pop(val int64) *Node {
 	n := b.root.popVal(val)
 	if n != nil {
-		b.size--
+		n.other.pop()
 	}
 	return n
 }
 
-func (b *Tree) Size() int {
-	return b.size
+func (b *Tree) Has(val int64) bool {
+	return b.root.has(val)
 }
 
 type Node struct {
+	// Tree fields
+	val   int64
 	pp    **Node
 	left  *Node
 	right *Node
-	next  *Node
-	prev  *Node
-	size  int
-	val   int64
-	O     *Order
+	// Limit queue fields
+	next *Node
+	prev *Node
+	// Order
+	O *Order
+	// This is the other node attaching O to another tree
+	other *Node
 }
 
-func initNode(o *Order, val int64, n *Node) {
-	*n = Node{val: val, O: o}
+func initNode(o *Order, val int64, n, other *Node) {
+	*n = Node{val: val, O: o, other: other}
 	n.next = n
 	n.prev = n
-	n.size = 1
+}
+
+func (n *Node) isHead() bool {
+	return n.pp != nil
+}
+
+func (n *Node) push(in *Node) {
+	switch {
+	case in.val == n.val:
+		n.addLast(in)
+	case in.val < n.val:
+		if n.left == nil {
+			in.pp = &n.left
+			n.left = in
+		} else {
+			n.left.push(in)
+		}
+	case in.val > n.val:
+		if n.right == nil {
+			in.pp = &n.right
+			n.right = in
+		} else {
+			n.right.push(in)
+		}
+	}
 }
 
 func (n *Node) peekMax() *Node {
@@ -122,27 +150,17 @@ func (n *Node) popVal(val int64) *Node {
 	panic("unreachable")
 }
 
-func (n *Node) push(in *Node) {
-	switch {
-	case in.val == n.val:
-		n.addLast(in)
-	case in.val < n.val:
-		if n.left == nil {
-			in.pp = &n.left
-			n.left = in
-			in.size = 1
-		} else {
-			n.left.push(in)
-		}
-	case in.val > n.val:
-		if n.right == nil {
-			in.pp = &n.right
-			n.right = in
-			in.size = 1
-		} else {
-			n.right.push(in)
-		}
+func (n *Node) has(val int64) bool {
+	if n == nil {
+		return false
 	}
+	if n.val == val {
+		return true
+	}
+	if n.val > val {
+		return n.left.has(val)
+	}
+	return n.right.has(val)
 }
 
 func (n *Node) addLast(in *Node) {
@@ -151,25 +169,26 @@ func (n *Node) addLast(in *Node) {
 	in.next = last
 	in.prev = n
 	n.next = in
-	n.size++
 }
 
 func (n *Node) pop() {
-	if n.size > 1 {
+	switch {
+	case !n.isHead():
+		n.prev.next = n.next
+		n.next.prev = n.prev
+	case n.next != n:
 		n.prev.next = n.next
 		n.next.prev = n.prev
 		nn := n.prev
-		nn.size = n.size - 1
 		n.next = nil
 		n.prev = nil
-		n.size = 1
-		swap(n, nn)
-	} else {
-		n.detatchQ()
+		n.swapWith(nn)
+	default:
+		n.detachAll()
 	}
 }
 
-func swap(n *Node, nn *Node) {
+func (n *Node) swapWith(nn *Node) {
 	nn.pp = n.pp
 	*nn.pp = nn
 	nn.left = n.left
@@ -182,7 +201,7 @@ func swap(n *Node, nn *Node) {
 	}
 }
 
-func (n *Node) detatchQ() {
+func (n *Node) detachAll() {
 	switch {
 	case n.right == nil && n.left == nil:
 		*n.pp = nil
@@ -193,37 +212,16 @@ func (n *Node) detatchQ() {
 		*n.pp = n.right
 		n.right.pp = n.pp
 	default:
-		nn := n.left.detatchMax()
-		swap(n, nn)
+		nn := n.left.detachMax()
+		n.swapWith(nn)
 	}
 	n.pp = nil
 	n.left = nil
 	n.right = nil
 }
 
-func (n *Node) detatch() {
-	/*
-	switch {
-	case n.right == nil && n.left == nil:
-		*n.pp = nil
-	case n.right == nil:
-		*n.pp = n.left
-		n.left.pp = n.pp
-	case n.left == nil:
-		*n.pp = n.right
-		n.right.pp = n.pp
-	default:
-		nn := n.left.detatchMax()
-		swap(n, nn)
-	}
-	n.pp = nil
-	n.left = nil
-	n.right = nil
-	*/
-}
-
-func (n *Node) detatchMax() *Node {
+func (n *Node) detachMax() *Node {
 	m := n.peekMax()
-	m.detatchQ()
+	m.detachAll()
 	return m
 }
