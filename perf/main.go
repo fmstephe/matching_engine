@@ -18,9 +18,10 @@ const (
 )
 
 var (
-	filePath = flag.String("f", "", "Relative path to an ITCH file providing test data")
-	profile  = flag.String("profile", "", "Write out a profile of this application, 'cpu' and 'mem' supported")
-	perfRand = rand.New(rand.NewSource(1))
+	filePath   = flag.String("f", "", "Relative path to an ITCH file providing test data")
+	profile    = flag.String("profile", "", "Write out a profile of this application, 'cpu' and 'mem' supported")
+	perfRand   = rand.New(rand.NewSource(1))
+	orderMaker = trade.NewOrderMaker()
 )
 
 func main() {
@@ -84,54 +85,13 @@ func getItchData() []*trade.Order {
 }
 
 func mkRandomData() []*trade.Order {
-	orderNum := 5 * 1000 * 1000
-	sells := mkSells(orderNum, 1000, 1500)
-	buys := mkBuys(orderNum, 1000, 1500)
-	orders := make([]*trade.Order, orderNum*2, 0)
+	orderNum := 10 * 1000
+	sells := orderMaker.MkSells(orderMaker.ValRangeFlat(orderNum, 1000, 1500))
+	buys := orderMaker.MkBuys(orderMaker.ValRangeFlat(orderNum, 1000, 1500))
+	orders := make([]*trade.Order, 0, orderNum*2)
 	for i := 0; i < orderNum; i++ {
 		orders = append(orders, sells[i])
 		orders = append(orders, buys[i])
-	}
-	return orders
-}
-
-func myRand(lim int64, r *rand.Rand) int64 {
-	return int64(r.Int63n(int64(lim)))
-}
-
-func valRangeFlat(n int, low, high int64) []int64 {
-	vals := make([]int64, n)
-	for i := 0; i < n; i++ {
-		vals[i] = myRand(high-low, perfRand) + low
-	}
-	return vals
-}
-
-func valRangePyramid(n int, low, high int64) []int64 {
-	seq := (high - low) / 4
-	vals := make([]int64, n)
-	for i := 0; i < n; i++ {
-		val := myRand(seq, perfRand) + myRand(seq, perfRand) + myRand(seq, perfRand) + myRand(seq, perfRand)
-		vals[i] = val + low
-	}
-	return vals
-}
-
-func mkBuys(n int, low, high int64) []*trade.Order {
-	return mkOrders(n, low, high, trade.BUY)
-}
-
-func mkSells(n int, low, high int64) []*trade.Order {
-	return mkOrders(n, low, high, trade.SELL)
-}
-
-func mkOrders(n int, low, high int64, tradeType trade.OrderKind) []*trade.Order {
-	prices := valRangeFlat(n, low, high)
-	orders := make([]*trade.Order, n)
-	for i, price := range prices {
-		costData := trade.CostData{Price: price, Amount: 1}
-		tradeData := trade.TradeData{TraderId: uint32(i), TradeId: uint32(i), StockId: stockId}
-		orders[i] = trade.NewOrder(costData, tradeData, tradeType)
 	}
 	return orders
 }
