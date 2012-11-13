@@ -64,7 +64,10 @@ func (m *M) addSell(s *trade.Order) {
 }
 
 func (m *M) remove(o *trade.Order) {
-	m.slab.Free(m.orders.Pop(o.Guid()).O)
+	n := m.orders.Pop(o.Guid())
+	if n != nil { // What does it mean if it is nil?
+		m.slab.Free(n.O)
+	}
 }
 
 func (m *M) fillableBuy(b *trade.Order) bool {
