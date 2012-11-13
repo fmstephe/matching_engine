@@ -9,6 +9,7 @@ type M struct {
 	buys   *trade.Tree
 	sells  *trade.Tree
 	orders *trade.Tree
+	slab   *trade.Slab
 	output *ResponseBuffer
 }
 
@@ -16,7 +17,8 @@ func NewMatcher(output *ResponseBuffer) *M {
 	buys := trade.NewTree()
 	sells := trade.NewTree()
 	orders := trade.NewTree()
-	return &M{buys: buys, sells: sells, orders: orders, output: output}
+	slab := trade.NewSlab(20 * 1000)
+	return &M{buys: buys, sells: sells, orders: orders, slab: slab, output: output}
 }
 
 /*
@@ -29,7 +31,9 @@ func (m *M) Survey() (buys []*trade.SurveyLimit, sells []*trade.SurveyLimit, ord
 }
 */
 
-func (m *M) Submit(o *trade.Order) {
+func (m *M) Submit(in *trade.Order) {
+	o := m.slab.Malloc()
+	in.CopyInto(o)
 	switch o.Kind {
 	case trade.BUY:
 		m.addBuy(o)
@@ -60,7 +64,7 @@ func (m *M) addSell(s *trade.Order) {
 }
 
 func (m *M) remove(o *trade.Order) {
-	m.orders.Pop(o.Guid())
+	m.slab.Free(m.orders.Pop(o.Guid()).O)
 }
 
 func (m *M) fillableBuy(b *trade.Order) bool {
@@ -74,7 +78,7 @@ func (m *M) fillableBuy(b *trade.Order) bool {
 			if b.Amount > s.Amount {
 				amount := s.Amount
 				price := price(b.Price(), s.Price())
-				m.sells.PopMin()
+				m.slab.Free(m.sells.PopMin().O)
 				b.Amount -= amount
 				m.completeTrade(b, s, price, amount)
 				continue
@@ -90,7 +94,7 @@ func (m *M) fillableBuy(b *trade.Order) bool {
 				amount := b.Amount
 				price := price(b.Price(), s.Price())
 				m.completeTrade(b, s, price, amount)
-				m.sells.PopMin()
+				m.slab.Free(m.sells.PopMin().O)
 				return true // The buy has been used up
 			}
 		} else {
@@ -120,14 +124,14 @@ func (m *M) fillableSell(s *trade.Order) bool {
 				price := price(b.Price(), s.Price())
 				s.Amount -= amount
 				m.completeTrade(b, s, price, amount)
-				m.buys.PopMax()
+				m.slab.Free(m.buys.PopMax().O)
 				continue
 			}
 			if s.Amount == b.Amount {
 				amount := b.Amount
 				price := price(b.Price(), s.Price())
 				m.completeTrade(b, s, price, amount)
-				m.buys.PopMax()
+				m.slab.Free(m.buys.PopMax().O)
 				return true // The sell has been used up
 			}
 		} else {
