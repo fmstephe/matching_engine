@@ -43,7 +43,7 @@ func (m *M) Submit(o *trade.Order) {
 }
 
 func (m *M) addBuy(b *trade.Order) {
-	if b.Price == trade.MARKET_PRICE {
+	if b.Price() == trade.MARKET_PRICE {
 		panic("It is illegal to submit a buy at market price")
 	}
 	if !m.fillableBuy(b) {
@@ -60,7 +60,7 @@ func (m *M) addSell(s *trade.Order) {
 }
 
 func (m *M) remove(o *trade.Order) {
-	m.orders.Pop(o.Guid)
+	m.orders.Pop(o.Guid())
 }
 
 func (m *M) fillableBuy(b *trade.Order) bool {
@@ -70,10 +70,10 @@ func (m *M) fillableBuy(b *trade.Order) bool {
 			return false
 		}
 		s := sNode.O
-		if b.Price >= s.Price {
+		if b.Price() >= s.Price() {
 			if b.Amount > s.Amount {
 				amount := s.Amount
-				price := price(b.Price, s.Price)
+				price := price(b.Price(), s.Price())
 				m.sells.PopMin()
 				b.Amount -= amount
 				m.completeTrade(b, s, price, amount)
@@ -81,14 +81,14 @@ func (m *M) fillableBuy(b *trade.Order) bool {
 			}
 			if s.Amount > b.Amount {
 				amount := b.Amount
-				price := price(b.Price, s.Price)
+				price := price(b.Price(), s.Price())
 				s.Amount -= amount
 				m.completeTrade(b, s, price, amount)
 				return true // The buy has been used up
 			}
 			if s.Amount == b.Amount {
 				amount := b.Amount
-				price := price(b.Price, s.Price)
+				price := price(b.Price(), s.Price())
 				m.completeTrade(b, s, price, amount)
 				m.sells.PopMin()
 				return true // The buy has been used up
@@ -107,17 +107,17 @@ func (m *M) fillableSell(s *trade.Order) bool {
 			return false
 		}
 		b := bNode.O
-		if b.Price >= s.Price {
+		if b.Price() >= s.Price() {
 			if b.Amount > s.Amount {
 				amount := s.Amount
-				price := price(b.Price, s.Price)
+				price := price(b.Price(), s.Price())
 				b.Amount -= amount
 				m.completeTrade(b, s, price, amount)
 				return true // The sell has been used up
 			}
 			if s.Amount > b.Amount {
 				amount := b.Amount
-				price := price(b.Price, s.Price)
+				price := price(b.Price(), s.Price())
 				s.Amount -= amount
 				m.completeTrade(b, s, price, amount)
 				m.buys.PopMax()
@@ -125,7 +125,7 @@ func (m *M) fillableSell(s *trade.Order) bool {
 			}
 			if s.Amount == b.Amount {
 				amount := b.Amount
-				price := price(b.Price, s.Price)
+				price := price(b.Price(), s.Price())
 				m.completeTrade(b, s, price, amount)
 				m.buys.PopMax()
 				return true // The sell has been used up
@@ -151,12 +151,12 @@ func (m *M) completeTrade(b, s *trade.Order, price int64, amount uint32) {
 	rb := m.output.getForWrite()
 	rb.Price = -price
 	rb.Amount = amount
-	rb.TradeId = b.TradeId
-	rb.CounterParty = s.TraderId
+	rb.TradeId = b.TradeId()
+	rb.CounterParty = s.TraderId()
 	// Write the sell response
 	rs := m.output.getForWrite()
 	rs.Price = price
 	rs.Amount = amount
-	rs.TradeId = s.TradeId
-	rs.CounterParty = b.TraderId
+	rs.TradeId = s.TradeId()
+	rs.CounterParty = b.TraderId()
 }

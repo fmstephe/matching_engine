@@ -125,16 +125,16 @@ func (b *Tree) get(val int64) *Node {
 type Node struct {
 	// Tree fields
 	val   int64
-	pp    **Node
 	left  *Node
 	right *Node
+	pp    **Node
 	// Limit queue fields
 	next *Node
 	prev *Node
-	// Order
-	O *Order
 	// This is the other node attaching O to another tree
 	other *Node
+	// Order
+	O *Order
 }
 
 func initNode(o *Order, val int64, n, other *Node) {

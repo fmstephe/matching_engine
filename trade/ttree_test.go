@@ -100,7 +100,7 @@ func testAddRemoveSimple(t *testing.T, pushCount int, lowPrice, highPrice int64,
 		priceTree.Push(&o.PriceNode)
 		guidTree.Push(&o.GuidNode)
 		validate(t, priceTree, guidTree)
-		orderMap[o.Guid] = o
+		orderMap[o.Guid()] = o
 	}
 	drainTree(t, priceTree, guidTree, orderMap)
 }
@@ -129,7 +129,7 @@ func testAddRemoveRandom(t *testing.T, pushCount int, lowPrice, highPrice int64,
 			priceTree.Push(&o.PriceNode)
 			guidTree.Push(&o.GuidNode)
 			validate(t, priceTree, guidTree)
-			orderMap[o.Guid] = o
+			orderMap[o.Guid()] = o
 			i++
 		} else {
 			for g, o := range orderMap {
@@ -149,7 +149,7 @@ func testAddRemoveRandom(t *testing.T, pushCount int, lowPrice, highPrice int64,
 func drainTree(t *testing.T, priceTree, guidTree *Tree, orderMap map[int64]*Order) {
 	for g := range orderMap {
 		o := orderMap[g]
-		po := guidTree.Pop(o.Guid).O
+		po := guidTree.Pop(o.Guid()).O
 		if po != o {
 			t.Errorf("Bad pop")
 		}
@@ -226,11 +226,11 @@ func popCheck(t *testing.T, priceTree, guidTree *Tree, q *prioq, popper popperFu
 // Helper functions for popping either the max or the min from our queues
 func maxPopper(t *testing.T, priceTree, guidTree *Tree, q *prioq) (peek, pop, check *Order) {
 	peek = priceTree.PeekMax().O
-	if !guidTree.Has(peek.Guid) {
+	if !guidTree.Has(peek.Guid()) {
 		t.Errorf("Guid tree does not contain peeked order")
 	}
 	pop = priceTree.PopMax().O
-	if guidTree.Has(peek.Price) {
+	if guidTree.Has(peek.Price()) {
 		t.Errorf("Guid tree still contains popped order")
 		return
 	}
@@ -240,7 +240,7 @@ func maxPopper(t *testing.T, priceTree, guidTree *Tree, q *prioq) (peek, pop, ch
 
 func minPopper(t *testing.T, priceTree, guidTree *Tree, q *prioq) (peek, pop, check *Order) {
 	peek = priceTree.PeekMin().O
-	if !guidTree.Has(peek.Guid) {
+	if !guidTree.Has(peek.Guid()) {
 		t.Errorf("Guid tree does not contain peeked order")
 	}
 	pop = priceTree.PopMin().O
@@ -260,7 +260,7 @@ func mkPrioq(size int, lowPrice, highPrice int64) *prioq {
 }
 
 func (q *prioq) push(o *Order) {
-	idx := o.Price - q.lowPrice
+	idx := o.Price() - q.lowPrice
 	prio := q.prios[idx]
 	prio = append(prio, o)
 	q.prios[idx] = prio

@@ -42,11 +42,11 @@ func (i *ItchReader) ReadOrder() (o *trade.Order, line string, err error) {
 		}
 	}
 	o, err = mkOrder(line)
-	if o != nil && o.Kind == trade.BUY && o.Price > i.maxBuy {
-		i.maxBuy = o.Price
+	if o != nil && o.Kind == trade.BUY && o.Price() > i.maxBuy {
+		i.maxBuy = o.Price()
 	}
-	if o != nil && o.Kind == trade.SELL && o.Price < i.minSell {
-		i.minSell = o.Price
+	if o != nil && o.Kind == trade.SELL && o.Price() < i.minSell {
+		i.minSell = o.Price()
 	}
 	return
 }

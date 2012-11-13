@@ -50,31 +50,43 @@ type TradeData struct {
 }
 
 type Order struct {
-	Guid      int64
-	Price     int64
 	Amount    uint32
-	TraderId  uint32
-	TradeId   uint32
 	StockId   uint32
 	Kind      OrderKind
 	PriceNode Node
 	GuidNode  Node
 }
 
-func (o *Order) setup() {
-	o.Guid = int64((uint64(o.TraderId) << 32) | uint64(o.TradeId))
-	initNode(o, o.Price, &o.PriceNode, &o.GuidNode)
-	initNode(o, o.Guid, &o.GuidNode, &o.PriceNode)
+func (o *Order) setup(price int64, traderId, tradeId uint32) {
+	guid := int64((uint64(traderId) << 32) | uint64(tradeId))
+	initNode(o, price, &o.PriceNode, &o.GuidNode)
+	initNode(o, guid, &o.GuidNode, &o.PriceNode)
+}
+
+func (o *Order) Price() int64 {
+	return o.PriceNode.val
+}
+
+func (o *Order) Guid() int64 {
+	return o.GuidNode.val
+}
+
+func (o *Order) TraderId() uint32 {
+	return uint32(uint64(o.GuidNode.val) >> 32) // untested
+}
+
+func (o *Order) TradeId() uint32 {
+	return uint32(uint64(o.GuidNode.val ^ int64(1)<<32)) // untested
 }
 
 func (o *Order) String() string {
 	if o == nil {
 		return "<nil>"
 	}
-	price := fstrconv.Itoa64Delim(int64(o.Price), ',')
+	price := fstrconv.Itoa64Delim(int64(o.Price()), ',')
 	amount := fstrconv.Itoa64Delim(int64(o.Amount), ',')
-	traderId := fstrconv.Itoa64Delim(int64(o.TraderId), '-')
-	tradeId := fstrconv.Itoa64Delim(int64(o.TradeId), '-')
+	traderId := fstrconv.Itoa64Delim(int64(o.TraderId()), '-')
+	tradeId := fstrconv.Itoa64Delim(int64(o.TradeId()), '-')
 	stockId := fstrconv.Itoa64Delim(int64(o.StockId), '-')
 	return fmt.Sprintf("%s, price %s, amount %s, trader %s, trade %s, stock %s", o.Kind.String(), price, amount, traderId, tradeId, stockId)
 }
@@ -92,8 +104,8 @@ func NewDelete(tradeData TradeData) *Order {
 }
 
 func NewOrder(costData CostData, tradeData TradeData, orderKind OrderKind) *Order {
-	o := &Order{Price: costData.Price, Amount: costData.Amount, TraderId: tradeData.TraderId, TradeId: tradeData.TradeId, StockId: tradeData.StockId, Kind: orderKind, PriceNode: Node{}}
-	o.setup()
+	o := &Order{Amount: costData.Amount, StockId: tradeData.StockId, Kind: orderKind, PriceNode: Node{}}
+	o.setup(costData.Price, tradeData.TraderId, tradeData.TradeId)
 	return o
 }
 
