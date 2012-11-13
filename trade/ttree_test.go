@@ -75,6 +75,7 @@ func testPushPopRandom(t *testing.T, pushCount int, lowPrice, highPrice int64, k
 			t.Errorf("Mismatched Push/Pop pair")
 			return
 		}
+		ensureFreed(t, po)
 		validate(t, priceTree, guidTree)
 	}
 }
@@ -138,6 +139,7 @@ func testAddRemoveRandom(t *testing.T, pushCount int, lowPrice, highPrice int64,
 				if po != o {
 					t.Errorf("Bad pop")
 				}
+				ensureFreed(t, po)
 				validate(t, priceTree, guidTree)
 				break
 			}
@@ -153,7 +155,17 @@ func drainTree(t *testing.T, priceTree, guidTree *Tree, orderMap map[int64]*Orde
 		if po != o {
 			t.Errorf("Bad pop")
 		}
+		ensureFreed(t, po)
 		validate(t, priceTree, guidTree)
+	}
+}
+
+func ensureFreed(t *testing.T, o *Order) {
+	if !o.PriceNode.isFree() {
+		t.Errorf("Price Node was not freed")
+	}
+	if !o.GuidNode.isFree() {
+		t.Errorf("Guid Node was not freed")
 	}
 }
 
@@ -235,6 +247,7 @@ func maxPopper(t *testing.T, priceTree, guidTree *Tree, q *prioq) (peek, pop, ch
 		return
 	}
 	check = q.popMax()
+	ensureFreed(t, pop)
 	return
 }
 
@@ -245,6 +258,7 @@ func minPopper(t *testing.T, priceTree, guidTree *Tree, q *prioq) (peek, pop, ch
 	}
 	pop = priceTree.PopMin().O
 	check = q.popMin()
+	ensureFreed(t, pop)
 	return
 }
 

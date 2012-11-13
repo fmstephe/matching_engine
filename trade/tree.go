@@ -143,6 +143,22 @@ func initNode(o *Order, val int64, n, other *Node) {
 	n.prev = n
 }
 
+func (n *Node) isFree() bool {
+	switch {
+	case n.left != nil:
+		return false
+	case n.right != nil:
+		return false
+	case n.pp != nil:
+		return false
+	case n.next != n:
+		return false
+	case n.prev != n:
+		return false
+	}
+	return true
+}
+
 func (n *Node) isHead() bool {
 	return n.pp != nil
 }
@@ -170,6 +186,11 @@ func (n *Node) pop() {
 	default:
 		n.detachAll()
 	}
+	n.next = n
+	n.prev = n
+	n.pp = nil
+	n.left = nil
+	n.right = nil
 }
 
 func (n *Node) swapWith(nn *Node) {
