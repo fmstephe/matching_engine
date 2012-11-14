@@ -47,13 +47,10 @@ func (b *Tree) PeekMin() *Node {
 	if n == nil {
 		return nil
 	}
-	for {
-		if n.left == nil {
-			return n
-		}
+	for n.left != nil{
 		n = n.left
 	}
-	panic("Unreachable")
+	return n
 }
 
 func (b *Tree) PopMin() *Node {
@@ -71,13 +68,10 @@ func (b *Tree) PeekMax() *Node {
 	if n == nil {
 		return nil
 	}
-	for {
-		if n.right == nil {
-			return n
-		}
+	for n.right != nil {
 		n = n.right
 	}
-	panic("Unreachable")
+	return n
 }
 
 func (b *Tree) PopMax() *Node {
