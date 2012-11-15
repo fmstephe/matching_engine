@@ -6,19 +6,14 @@ import (
 )
 
 type M struct {
-	buys   *trade.Tree
-	sells  *trade.Tree
-	orders *trade.Tree
-	slab   *trade.Slab
-	output *ResponseBuffer
+	matchTrees trade.MatchTrees // No constructor required
+	slab       *trade.Slab
+	output     *ResponseBuffer
 }
 
 func NewMatcher(output *ResponseBuffer) *M {
-	buys := trade.NewTree()
-	sells := trade.NewTree()
-	orders := trade.NewTree()
 	slab := trade.NewSlab(20 * 1000)
-	return &M{buys: buys, sells: sells, orders: orders, slab: slab, output: output}
+	return &M{slab: slab, output: output}
 }
 
 /*
@@ -51,37 +46,34 @@ func (m *M) addBuy(b *trade.Order) {
 		panic("It is illegal to submit a buy at market price")
 	}
 	if !m.fillableBuy(b) {
-		m.orders.Push(&b.GuidNode)
-		m.buys.Push(&b.PriceNode)
+		m.matchTrees.PushBuy(b)
 	}
 }
 
 func (m *M) addSell(s *trade.Order) {
 	if !m.fillableSell(s) {
-		m.orders.Push(&s.GuidNode)
-		m.sells.Push(&s.PriceNode)
+		m.matchTrees.PushSell(s)
 	}
 }
 
 func (m *M) remove(o *trade.Order) {
-	n := m.orders.Pop(o.Guid())
-	if n != nil { // What does it mean if it is nil?
-		m.slab.Free(n.O)
+	ro := m.matchTrees.Pop(o)
+	if ro != nil { // What does it mean if it is nil?
+		m.slab.Free(ro)
 	}
 }
 
 func (m *M) fillableBuy(b *trade.Order) bool {
 	for {
-		sNode := m.sells.PeekMin()
-		if sNode == nil {
+		s := m.matchTrees.PeekSell()
+		if s == nil {
 			return false
 		}
-		s := sNode.O
 		if b.Price() >= s.Price() {
 			if b.Amount > s.Amount {
 				amount := s.Amount
 				price := price(b.Price(), s.Price())
-				m.slab.Free(m.sells.PopMin().O)
+				m.slab.Free(m.matchTrees.PopSell())
 				b.Amount -= amount
 				m.completeTrade(b, s, price, amount)
 				continue
@@ -97,7 +89,7 @@ func (m *M) fillableBuy(b *trade.Order) bool {
 				amount := b.Amount
 				price := price(b.Price(), s.Price())
 				m.completeTrade(b, s, price, amount)
-				m.slab.Free(m.sells.PopMin().O)
+				m.slab.Free(m.matchTrees.PopSell())
 				return true // The buy has been used up
 			}
 		} else {
@@ -109,11 +101,10 @@ func (m *M) fillableBuy(b *trade.Order) bool {
 
 func (m *M) fillableSell(s *trade.Order) bool {
 	for {
-		bNode := m.buys.PeekMax()
-		if bNode == nil {
+		b := m.matchTrees.PeekBuy()
+		if b == nil {
 			return false
 		}
-		b := bNode.O
 		if b.Price() >= s.Price() {
 			if b.Amount > s.Amount {
 				amount := s.Amount
@@ -127,14 +118,14 @@ func (m *M) fillableSell(s *trade.Order) bool {
 				price := price(b.Price(), s.Price())
 				s.Amount -= amount
 				m.completeTrade(b, s, price, amount)
-				m.slab.Free(m.buys.PopMax().O)
+				m.slab.Free(m.matchTrees.PopBuy())
 				continue
 			}
 			if s.Amount == b.Amount {
 				amount := b.Amount
 				price := price(b.Price(), s.Price())
 				m.completeTrade(b, s, price, amount)
-				m.slab.Free(m.buys.PopMax().O)
+				m.slab.Free(m.matchTrees.PopBuy())
 				return true // The sell has been used up
 			}
 		} else {

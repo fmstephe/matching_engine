@@ -53,14 +53,14 @@ type Order struct {
 	Amount    uint32
 	StockId   uint32
 	Kind      OrderKind
-	PriceNode Node
-	GuidNode  Node
+	priceNode node
+	guidNode  node
 	nextFree  *Order
 }
 
 func (o *Order) setup(price, guid int64) {
-	initNode(o, price, &o.PriceNode, &o.GuidNode)
-	initNode(o, guid, &o.GuidNode, &o.PriceNode)
+	initNode(o, price, &o.priceNode, &o.guidNode)
+	initNode(o, guid, &o.guidNode, &o.priceNode)
 }
 
 func (o *Order) CopyInto(into *Order) {
@@ -71,19 +71,19 @@ func (o *Order) CopyInto(into *Order) {
 }
 
 func (o *Order) Price() int64 {
-	return o.PriceNode.val
+	return o.priceNode.val
 }
 
 func (o *Order) Guid() int64 {
-	return o.GuidNode.val
+	return o.guidNode.val
 }
 
 func (o *Order) TraderId() uint32 {
-	return uint32(uint64(o.GuidNode.val) >> 32) // untested
+	return uint32(uint64(o.guidNode.val) >> 32) // untested
 }
 
 func (o *Order) TradeId() uint32 {
-	return uint32(uint64(o.GuidNode.val ^ int64(1)<<32)) // untested
+	return uint32(uint64(o.guidNode.val ^ int64(1)<<32)) // untested
 }
 
 func (o *Order) String() string {
@@ -111,7 +111,7 @@ func NewDelete(tradeData TradeData) *Order {
 }
 
 func NewOrder(costData CostData, tradeData TradeData, orderKind OrderKind) *Order {
-	o := &Order{Amount: costData.Amount, StockId: tradeData.StockId, Kind: orderKind, PriceNode: Node{}}
+	o := &Order{Amount: costData.Amount, StockId: tradeData.StockId, Kind: orderKind, priceNode: node{}}
 	guid := int64((uint64(tradeData.TraderId) << 32) | uint64(tradeData.TradeId))
 	o.setup(costData.Price, guid)
 	return o

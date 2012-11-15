@@ -2,15 +2,47 @@ package trade
 
 import ()
 
-type Tree struct {
-	root *Node
+type MatchTrees struct {
+	buyTree  tree
+	sellTree tree
+	orders   tree
 }
 
-func NewTree() *Tree {
-	return &Tree{}
+func (m *MatchTrees) PushBuy(b *Order) {
+	m.buyTree.push(&b.priceNode)
+	m.orders.push(&b.guidNode)
 }
 
-func (b *Tree) Push(in *Node) {
+func (m *MatchTrees) PushSell(s *Order) {
+	m.sellTree.push(&s.priceNode)
+	m.orders.push(&s.guidNode)
+}
+
+func (m *MatchTrees) PeekBuy() *Order {
+	return m.buyTree.peekMax().getOrder()
+}
+
+func (m *MatchTrees) PeekSell() *Order {
+	return m.sellTree.peekMin().getOrder()
+}
+
+func (m *MatchTrees) PopBuy() *Order {
+	return m.buyTree.popMax().getOrder()
+}
+
+func (m *MatchTrees) PopSell() *Order {
+	return m.sellTree.popMax().getOrder()
+}
+
+func (m *MatchTrees) Pop(o *Order) *Order {
+	return m.orders.pop(o.Guid()).getOrder()
+}
+
+type tree struct {
+	root *node
+}
+
+func (b *tree) push(in *node) {
 	if b.root == nil {
 		b.root = in
 		in.pp = &b.root
@@ -42,20 +74,20 @@ func (b *Tree) Push(in *Node) {
 	}
 }
 
-func (b *Tree) PeekMin() *Node {
+func (b *tree) peekMin() *node {
 	n := b.root
 	if n == nil {
 		return nil
 	}
-	for n.left != nil{
+	for n.left != nil {
 		n = n.left
 	}
 	return n
 }
 
-func (b *Tree) PopMin() *Node {
+func (b *tree) popMin() *node {
 	if b.root != nil {
-		n := b.PeekMin()
+		n := b.peekMin()
 		n.pop()
 		n.other.pop() // Clear complementary tree
 		return n
@@ -63,7 +95,7 @@ func (b *Tree) PopMin() *Node {
 	return nil
 }
 
-func (b *Tree) PeekMax() *Node {
+func (b *tree) peekMax() *node {
 	n := b.root
 	if n == nil {
 		return nil
@@ -74,9 +106,9 @@ func (b *Tree) PeekMax() *Node {
 	return n
 }
 
-func (b *Tree) PopMax() *Node {
+func (b *tree) popMax() *node {
 	if b.root != nil {
-		n := b.PeekMax()
+		n := b.peekMax()
 		n.pop()
 		n.other.pop() // Clear complementary tree
 		return n
@@ -84,7 +116,7 @@ func (b *Tree) PopMax() *Node {
 	return nil
 }
 
-func (b *Tree) Pop(val int64) *Node {
+func (b *tree) pop(val int64) *node {
 	n := b.get(val)
 	if n == nil {
 		return nil
@@ -94,11 +126,11 @@ func (b *Tree) Pop(val int64) *Node {
 	return n
 }
 
-func (b *Tree) Has(val int64) bool {
+func (b *tree) Has(val int64) bool {
 	return b.get(val) != nil
 }
 
-func (b *Tree) get(val int64) *Node {
+func (b *tree) get(val int64) *node {
 	n := b.root
 	for {
 		if n == nil {
@@ -116,28 +148,35 @@ func (b *Tree) get(val int64) *Node {
 	panic("Unreachable")
 }
 
-type Node struct {
+type node struct {
 	// Tree fields
 	val   int64
-	left  *Node
-	right *Node
-	pp    **Node
+	left  *node
+	right *node
+	pp    **node
 	// Limit queue fields
-	next *Node
-	prev *Node
+	next *node
+	prev *node
 	// This is the other node attaching O to another tree
-	other *Node
+	other *node
 	// Order
-	O *Order
+	order *Order
 }
 
-func initNode(o *Order, val int64, n, other *Node) {
-	*n = Node{val: val, O: o, other: other}
+func initNode(o *Order, val int64, n, other *node) {
+	*n = node{val: val, order: o, other: other}
 	n.next = n
 	n.prev = n
 }
 
-func (n *Node) isFree() bool {
+func (n *node) getOrder() *Order {
+	if n != nil {
+		return n.order
+	}
+	return nil
+}
+
+func (n *node) isFree() bool {
 	switch {
 	case n.left != nil:
 		return false
@@ -153,11 +192,11 @@ func (n *Node) isFree() bool {
 	return true
 }
 
-func (n *Node) isHead() bool {
+func (n *node) isHead() bool {
 	return n.pp != nil
 }
 
-func (n *Node) addLast(in *Node) {
+func (n *node) addLast(in *node) {
 	last := n.next
 	last.prev = in
 	in.next = last
@@ -165,7 +204,7 @@ func (n *Node) addLast(in *Node) {
 	n.next = in
 }
 
-func (n *Node) pop() {
+func (n *node) pop() {
 	switch {
 	case !n.isHead():
 		n.prev.next = n.next
@@ -187,7 +226,7 @@ func (n *Node) pop() {
 	n.right = nil
 }
 
-func (n *Node) swapWith(nn *Node) {
+func (n *node) swapWith(nn *node) {
 	nn.pp = n.pp
 	*nn.pp = nn
 	nn.left = n.left
@@ -200,7 +239,7 @@ func (n *Node) swapWith(nn *Node) {
 	}
 }
 
-func (n *Node) detachAll() {
+func (n *node) detachAll() {
 	switch {
 	case n.right == nil && n.left == nil:
 		*n.pp = nil
@@ -219,7 +258,7 @@ func (n *Node) detachAll() {
 	n.right = nil
 }
 
-func (n *Node) detachMax() *Node {
+func (n *node) detachMax() *node {
 	m := n
 	for {
 		if m.right == nil {

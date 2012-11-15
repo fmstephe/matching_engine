@@ -6,7 +6,7 @@ import (
 )
 
 // A function signature allowing us to switch easily between min and max queues
-type popperFun func(*testing.T, *Tree, *Tree, *prioq) (*Order, *Order, *Order)
+type popperFun func(*testing.T, *tree, *tree, *prioq) (*Order, *Order, *Order)
 
 var maker = NewOrderMaker()
 
@@ -22,14 +22,14 @@ func TestPushPopSimpleMin(t *testing.T) {
 }
 
 func testPushPopSimple(t *testing.T, pushCount int, lowPrice, highPrice int64, kind OrderKind, popper popperFun) {
-	priceTree := NewTree()
-	guidTree := NewTree()
+	priceTree := &tree{}
+	guidTree := &tree{}
 	validate(t, priceTree, guidTree)
 	q := mkPrioq(pushCount, lowPrice, highPrice)
 	for i := 0; i < pushCount; i++ {
 		o := maker.MkPricedOrder(maker.Between(lowPrice, highPrice), kind)
-		priceTree.Push(&o.PriceNode)
-		guidTree.Push(&o.GuidNode)
+		priceTree.push(&o.priceNode)
+		guidTree.push(&o.guidNode)
 		validate(t, priceTree, guidTree)
 		q.push(o)
 	}
@@ -50,17 +50,17 @@ func TestRandomPushPop(t *testing.T) {
 }
 
 func testPushPopRandom(t *testing.T, pushCount int, lowPrice, highPrice int64, kind OrderKind, popper popperFun) {
-	priceTree := NewTree()
-	guidTree := NewTree()
+	priceTree := &tree{}
+	guidTree := &tree{}
 	validate(t, priceTree, guidTree)
 	q := mkPrioq(pushCount, lowPrice, highPrice)
 	r := rand.New(rand.NewSource(1))
 	for i := 0; i < pushCount; {
 		n := r.Int()
-		if n%2 == 0 || priceTree.PeekMin() == nil {
+		if n%2 == 0 || priceTree.peekMin() == nil {
 			o := maker.MkPricedOrder(maker.Between(lowPrice, highPrice), kind)
-			priceTree.Push(&o.PriceNode)
-			guidTree.Push(&o.GuidNode)
+			priceTree.push(&o.priceNode)
+			guidTree.push(&o.guidNode)
 			validate(t, priceTree, guidTree)
 			q.push(o)
 			i++
@@ -68,8 +68,8 @@ func testPushPopRandom(t *testing.T, pushCount int, lowPrice, highPrice int64, k
 			popCheck(t, priceTree, guidTree, q, popper)
 		}
 	}
-	for priceTree.PeekMin() == nil {
-		po := priceTree.PopMax().O
+	for priceTree.peekMin() == nil {
+		po := priceTree.popMax().getOrder()
 		fo := q.popMax()
 		if fo != po {
 			t.Errorf("Mismatched Push/Pop pair")
@@ -92,14 +92,14 @@ func TestAddRemoveSimple(t *testing.T) {
 }
 
 func testAddRemoveSimple(t *testing.T, pushCount int, lowPrice, highPrice int64, kind OrderKind) {
-	priceTree := NewTree()
-	guidTree := NewTree()
+	priceTree := &tree{}
+	guidTree := &tree{}
 	validate(t, priceTree, guidTree)
 	orderMap := make(map[int64]*Order)
 	for i := 0; i < pushCount; i++ {
 		o := maker.MkPricedOrder(maker.Between(lowPrice, highPrice), kind)
-		priceTree.Push(&o.PriceNode)
-		guidTree.Push(&o.GuidNode)
+		priceTree.push(&o.priceNode)
+		guidTree.push(&o.guidNode)
 		validate(t, priceTree, guidTree)
 		orderMap[o.Guid()] = o
 	}
@@ -118,23 +118,23 @@ func TestAddRemoveRandom(t *testing.T) {
 }
 
 func testAddRemoveRandom(t *testing.T, pushCount int, lowPrice, highPrice int64, kind OrderKind) {
-	priceTree := NewTree()
-	guidTree := NewTree()
+	priceTree := &tree{}
+	guidTree := &tree{}
 	validate(t, priceTree, guidTree)
 	orderMap := make(map[int64]*Order)
 	r := rand.New(rand.NewSource(1))
 	for i := 0; i < pushCount; {
 		n := r.Int()
-		if n%2 == 0 || guidTree.PeekMin() == nil {
+		if n%2 == 0 || guidTree.peekMin() == nil {
 			o := maker.MkPricedOrder(maker.Between(lowPrice, highPrice), kind)
-			priceTree.Push(&o.PriceNode)
-			guidTree.Push(&o.GuidNode)
+			priceTree.push(&o.priceNode)
+			guidTree.push(&o.guidNode)
 			validate(t, priceTree, guidTree)
 			orderMap[o.Guid()] = o
 			i++
 		} else {
 			for g, o := range orderMap {
-				po := guidTree.Pop(g).O
+				po := guidTree.pop(g).getOrder()
 				delete(orderMap, g)
 				if po != o {
 					t.Errorf("Bad pop")
@@ -148,10 +148,10 @@ func testAddRemoveRandom(t *testing.T, pushCount int, lowPrice, highPrice int64,
 	drainTree(t, priceTree, guidTree, orderMap)
 }
 
-func drainTree(t *testing.T, priceTree, guidTree *Tree, orderMap map[int64]*Order) {
+func drainTree(t *testing.T, priceTree, guidTree *tree, orderMap map[int64]*Order) {
 	for g := range orderMap {
 		o := orderMap[g]
-		po := guidTree.Pop(o.Guid()).O
+		po := guidTree.pop(o.Guid()).getOrder()
 		if po != o {
 			t.Errorf("Bad pop")
 		}
@@ -161,21 +161,21 @@ func drainTree(t *testing.T, priceTree, guidTree *Tree, orderMap map[int64]*Orde
 }
 
 func ensureFreed(t *testing.T, o *Order) {
-	if !o.PriceNode.isFree() {
+	if !o.priceNode.isFree() {
 		t.Errorf("Price Node was not freed")
 	}
-	if !o.GuidNode.isFree() {
+	if !o.guidNode.isFree() {
 		t.Errorf("Guid Node was not freed")
 	}
 }
 
 // Quick check to ensure the tree's internal structure is valid
-func validate(t *testing.T, priceTree, guidTree *Tree) {
+func validate(t *testing.T, priceTree, guidTree *tree) {
 	checkStructure(t, priceTree.root)
 	checkStructure(t, guidTree.root)
 }
 
-func checkStructure(t *testing.T, n *Node) {
+func checkStructure(t *testing.T, n *node) {
 	if n == nil {
 		return
 	}
@@ -197,7 +197,7 @@ func checkStructure(t *testing.T, n *Node) {
 	}
 }
 
-func checkQueue(t *testing.T, n *Node) {
+func checkQueue(t *testing.T, n *node) {
 	curr := n.next
 	prev := n
 	for curr != n {
@@ -213,7 +213,7 @@ func checkQueue(t *testing.T, n *Node) {
 		if curr.right != nil {
 			t.Errorf("Internal queue node has non-nil right child")
 		}
-		if curr.O == nil {
+		if curr.order == nil {
 			t.Errorf("Internal queue node has nil Order")
 		}
 		prev = curr
@@ -222,7 +222,7 @@ func checkQueue(t *testing.T, n *Node) {
 }
 
 // Function to pop and peek and check that everything is in order
-func popCheck(t *testing.T, priceTree, guidTree *Tree, q *prioq, popper popperFun) {
+func popCheck(t *testing.T, priceTree, guidTree *tree, q *prioq, popper popperFun) {
 	peek, pop, check := popper(t, priceTree, guidTree, q)
 	if pop != check {
 		t.Errorf("Mismatched push/pop pair")
@@ -236,12 +236,12 @@ func popCheck(t *testing.T, priceTree, guidTree *Tree, q *prioq, popper popperFu
 }
 
 // Helper functions for popping either the max or the min from our queues
-func maxPopper(t *testing.T, priceTree, guidTree *Tree, q *prioq) (peek, pop, check *Order) {
-	peek = priceTree.PeekMax().O
+func maxPopper(t *testing.T, priceTree, guidTree *tree, q *prioq) (peek, pop, check *Order) {
+	peek = priceTree.peekMax().getOrder()
 	if !guidTree.Has(peek.Guid()) {
 		t.Errorf("Guid tree does not contain peeked order")
 	}
-	pop = priceTree.PopMax().O
+	pop = priceTree.popMax().getOrder()
 	if guidTree.Has(peek.Price()) {
 		t.Errorf("Guid tree still contains popped order")
 		return
@@ -251,12 +251,12 @@ func maxPopper(t *testing.T, priceTree, guidTree *Tree, q *prioq) (peek, pop, ch
 	return
 }
 
-func minPopper(t *testing.T, priceTree, guidTree *Tree, q *prioq) (peek, pop, check *Order) {
-	peek = priceTree.PeekMin().O
+func minPopper(t *testing.T, priceTree, guidTree *tree, q *prioq) (peek, pop, check *Order) {
+	peek = priceTree.peekMin().getOrder()
 	if !guidTree.Has(peek.Guid()) {
 		t.Errorf("Guid tree does not contain peeked order")
 	}
-	pop = priceTree.PopMin().O
+	pop = priceTree.popMin().getOrder()
 	check = q.popMin()
 	ensureFreed(t, pop)
 	return
