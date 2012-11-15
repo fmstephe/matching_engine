@@ -23,7 +23,6 @@ func (s *Slab) Malloc() *Order {
 	o := s.free
 	if o == nil {
 		o = &Order{}
-		println("Constructed new Order")
 	}
 	s.free = o.nextFree
 	o.nextFree = o // Slab allocated order marker
