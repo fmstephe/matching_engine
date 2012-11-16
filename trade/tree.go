@@ -31,7 +31,7 @@ func (m *MatchTrees) PopBuy() *Order {
 }
 
 func (m *MatchTrees) PopSell() *Order {
-	return m.sellTree.popMax().getOrder()
+	return m.sellTree.popMin().getOrder()
 }
 
 func (m *MatchTrees) Pop(o *Order) *Order {
