@@ -56,6 +56,7 @@ func (b *tree) push(in *node) {
 			return
 		case in.val < n.val:
 			if n.left == nil {
+				in.parent = n
 				in.pp = &n.left
 				n.left = in
 				return
@@ -64,6 +65,7 @@ func (b *tree) push(in *node) {
 			}
 		case in.val > n.val:
 			if n.right == nil {
+				n.parent = n
 				in.pp = &n.right
 				n.right = in
 				return
@@ -149,11 +151,13 @@ func (b *tree) get(val int64) *node {
 }
 
 type node struct {
+	black bool
 	// Tree fields
-	val   int64
-	left  *node
-	right *node
-	pp    **node
+	val    int64
+	left   *node
+	right  *node
+	parent *node
+	pp     **node
 	// Limit queue fields
 	next *node
 	prev *node
@@ -179,14 +183,19 @@ func (n *node) getOrder() *Order {
 func (n *node) isFree() bool {
 	switch {
 	case n.left != nil:
+		println("left")
 		return false
 	case n.right != nil:
+		println("right")
 		return false
 	case n.pp != nil:
+		println("pp")
 		return false
 	case n.next != n:
+		println("next")
 		return false
 	case n.prev != n:
+		println("prev")
 		return false
 	}
 	return true
@@ -204,58 +213,75 @@ func (n *node) addLast(in *node) {
 	n.next = in
 }
 
+func (n *node) giveParent(nn *node) {
+	nn.parent = n.parent
+	nn.pp = n.pp
+	*nn.pp = nn
+	n.parent = nil
+	n.pp = nil
+}
+
+func (n *node) giveChildren(nn *node) {
+	nn.left = n.left
+	nn.right = n.right
+	if nn.left != nil {
+		nn.left.parent = nn
+		nn.left.pp = &nn.left
+	}
+	if nn.right != nil {
+		nn.right.parent = nn
+		nn.right.pp = &nn.right
+	}
+	n.left = nil
+	n.right = nil
+}
+
+func (n *node) givePosition(nn *node) {
+	n.giveParent(nn)
+	n.giveChildren(nn)
+	// Guarantee: Each of n.parent/pp/left/right are now nil
+}
+
+func (n *node) detach() {
+	switch {
+	case n.right == nil && n.left == nil:
+		*n.pp = nil
+		n.pp = nil
+		n.parent = nil
+	case n.right == nil:
+		n.giveParent(n.left)
+		n.left = nil
+	case n.left == nil:
+		n.giveParent(n.right)
+		n.right = nil
+	default:
+		nn := n.left.detachMax()
+		n.givePosition(nn)
+	}
+	// Guarantee: Each of n.parent/pp/left/right are now nil
+}
+
 func (n *node) pop() {
 	switch {
 	case !n.isHead():
 		n.prev.next = n.next
 		n.next.prev = n.prev
+		n.parent = nil
+		n.pp = nil
+		n.left = nil
+		n.right = nil
 	case n.next != n:
 		n.prev.next = n.next
 		n.next.prev = n.prev
 		nn := n.prev
-		n.next = nil
-		n.prev = nil
-		n.swapWith(nn)
+		n.givePosition(nn)
 	default:
-		n.detachAll()
+		n.detach()
 	}
 	n.next = n
 	n.prev = n
-	n.pp = nil
-	n.left = nil
-	n.right = nil
-}
-
-func (n *node) swapWith(nn *node) {
-	nn.pp = n.pp
-	*nn.pp = nn
-	nn.left = n.left
-	nn.right = n.right
-	if nn.left != nil {
-		nn.left.pp = &nn.left
-	}
-	if nn.right != nil {
-		nn.right.pp = &nn.right
-	}
-}
-
-func (n *node) detachAll() {
-	switch {
-	case n.right == nil && n.left == nil:
-		*n.pp = nil
-	case n.right == nil:
-		*n.pp = n.left
-		n.left.pp = n.pp
-	case n.left == nil:
-		*n.pp = n.right
-		n.right.pp = n.pp
-	default:
-		nn := n.left.detachMax()
-		n.swapWith(nn)
-	}
-	n.pp = nil
-	n.left = nil
-	n.right = nil
+	// Guarantee: Each of n.parent/pp/left/right are now nil
+	// Guarantee: Both n.left/right point to n
 }
 
 func (n *node) detachMax() *node {
@@ -266,6 +292,87 @@ func (n *node) detachMax() *node {
 		}
 		m = m.right
 	}
-	m.detachAll()
+	m.detach()
 	return m
+}
+
+func (n *node) toRight(to *node) {
+	to.right = n
+	if n != nil {
+		*n.pp = nil
+		n.parent = to
+		n.pp = &to.right
+	}
+}
+
+func (n *node) toLeft(to *node) {
+	to.left = n
+	if n != nil {
+		*n.pp = nil
+		n.parent = to
+		n.pp = &to.left
+	}
+}
+
+func (n *node) rotateLeft() {
+	r := n.right
+	n.giveParent(r)
+	r.left.toRight(n)
+	n.toLeft(r)
+	r.black = n.black
+	n.black = false
+}
+
+func (n *node) rotateRight() {
+	l := n.left
+	n.giveParent(l)
+	l.right.toLeft(n)
+	n.toRight(l)
+	l.black = n.black
+	n.black = false
+}
+
+func (n *node) flip() {
+	n.black = !n.black
+	n.left.black = !n.left.black
+	n.right.black = !n.right.black
+}
+
+func (n *node) moveRedLeft() {
+	n.flip()
+	if n.right.left.isRed() {
+		n.right.rotateRight()
+		n.rotateLeft()
+		n.parent.flip()
+	}
+}
+
+func (n *node) moveRedRight() {
+	n.flip()
+	if n.left.left.isRed() {
+		n.rotateRight()
+		n.parent.flip()
+	}
+}
+
+func (n *node) fixup() {
+	p := n
+	if p.isRed() {
+		p.rotateLeft()
+		p = p.parent
+	}
+	if p.left.isRed() && p.left.left.isRed() {
+		p.rotateRight()
+		p = p.parent
+	}
+	if p.left.isRed() && p.right.isRed() {
+		p.flip()
+	}
+}
+
+func (n *node) isRed() bool {
+	if n != nil {
+		return !n.black
+	}
+	return false
 }

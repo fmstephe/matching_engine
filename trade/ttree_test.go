@@ -12,13 +12,54 @@ var maker = NewOrderMaker()
 
 func TestPushPopSimpleMin(t *testing.T) {
 	// buys
+	testPushPopSimple(t, 1, 1, 1, BUY, maxPopper)
 	testPushPopSimple(t, 100, 1, 1, BUY, maxPopper)
 	testPushPopSimple(t, 100, 10, 20, BUY, maxPopper)
 	testPushPopSimple(t, 100, 100, 10000, BUY, maxPopper)
 	// sells
+	testPushPopSimple(t, 1, 1, 1, SELL, minPopper)
 	testPushPopSimple(t, 100, 1, 1, SELL, minPopper)
 	testPushPopSimple(t, 100, 10, 20, SELL, minPopper)
 	testPushPopSimple(t, 100, 100, 10000, SELL, minPopper)
+}
+
+func TestRandomPushPop(t *testing.T) {
+	// buys
+	testPushPopRandom(t, 1, 1, 1, BUY, maxPopper)
+	testPushPopRandom(t, 100, 1, 1, BUY, maxPopper)
+	testPushPopRandom(t, 100, 10, 20, BUY, maxPopper)
+	testPushPopRandom(t, 100, 100, 10000, BUY, maxPopper)
+	// sells
+	testPushPopRandom(t, 1, 1, 1, SELL, minPopper)
+	testPushPopRandom(t, 100, 1, 1, SELL, minPopper)
+	testPushPopRandom(t, 100, 10, 20, SELL, minPopper)
+	testPushPopRandom(t, 100, 100, 10000, SELL, minPopper)
+}
+
+func TestAddRemoveSimple(t *testing.T) {
+	// Buys
+	testAddRemoveSimple(t, 1, 1, 1, BUY)
+	testAddRemoveSimple(t, 100, 1, 1, BUY)
+	testAddRemoveSimple(t, 100, 10, 20, BUY)
+	testAddRemoveSimple(t, 100, 100, 10000, BUY)
+	// Sells
+	testAddRemoveSimple(t, 1, 1, 1, SELL)
+	testAddRemoveSimple(t, 100, 1, 1, SELL)
+	testAddRemoveSimple(t, 100, 10, 20, SELL)
+	testAddRemoveSimple(t, 100, 100, 10000, SELL)
+}
+
+func TestAddRemoveRandom(t *testing.T) {
+	// Buys
+	testAddRemoveRandom(t, 1, 1, 1, BUY)
+	testAddRemoveRandom(t, 100, 1, 1, BUY)
+	testAddRemoveRandom(t, 100, 10, 20, BUY)
+	testAddRemoveRandom(t, 100, 100, 10000, BUY)
+	// Sells
+	testAddRemoveRandom(t, 1, 1, 1, SELL)
+	testAddRemoveRandom(t, 100, 1, 1, SELL)
+	testAddRemoveRandom(t, 100, 10, 20, SELL)
+	testAddRemoveRandom(t, 100, 100, 10000, SELL)
 }
 
 func testPushPopSimple(t *testing.T, pushCount int, lowPrice, highPrice int64, kind OrderKind, popper popperFun) {
@@ -36,17 +77,6 @@ func testPushPopSimple(t *testing.T, pushCount int, lowPrice, highPrice int64, k
 	for i := 0; i < pushCount; i++ {
 		popCheck(t, priceTree, guidTree, q, popper)
 	}
-}
-
-func TestRandomPushPop(t *testing.T) {
-	// buys
-	testPushPopRandom(t, 100, 1, 1, BUY, maxPopper)
-	testPushPopRandom(t, 100, 10, 20, BUY, maxPopper)
-	testPushPopRandom(t, 100, 100, 10000, BUY, maxPopper)
-	// sells
-	testPushPopRandom(t, 100, 1, 1, SELL, minPopper)
-	testPushPopRandom(t, 100, 10, 20, SELL, minPopper)
-	testPushPopRandom(t, 100, 100, 10000, SELL, minPopper)
 }
 
 func testPushPopRandom(t *testing.T, pushCount int, lowPrice, highPrice int64, kind OrderKind, popper popperFun) {
@@ -80,17 +110,6 @@ func testPushPopRandom(t *testing.T, pushCount int, lowPrice, highPrice int64, k
 	}
 }
 
-func TestAddRemoveSimple(t *testing.T) {
-	// Buys
-	testAddRemoveSimple(t, 100, 1, 1, BUY)
-	testAddRemoveSimple(t, 100, 10, 20, BUY)
-	testAddRemoveSimple(t, 100, 100, 10000, BUY)
-	// Sells
-	testAddRemoveSimple(t, 100, 1, 1, SELL)
-	testAddRemoveSimple(t, 100, 10, 20, SELL)
-	testAddRemoveSimple(t, 100, 100, 10000, SELL)
-}
-
 func testAddRemoveSimple(t *testing.T, pushCount int, lowPrice, highPrice int64, kind OrderKind) {
 	priceTree := &tree{}
 	guidTree := &tree{}
@@ -104,17 +123,6 @@ func testAddRemoveSimple(t *testing.T, pushCount int, lowPrice, highPrice int64,
 		orderMap[o.Guid()] = o
 	}
 	drainTree(t, priceTree, guidTree, orderMap)
-}
-
-func TestAddRemoveRandom(t *testing.T) {
-	// Buys
-	testAddRemoveRandom(t, 100, 1, 1, BUY)
-	testAddRemoveRandom(t, 100, 10, 20, BUY)
-	testAddRemoveRandom(t, 100, 100, 10000, BUY)
-	// Sells
-	testAddRemoveRandom(t, 100, 1, 1, SELL)
-	testAddRemoveRandom(t, 100, 10, 20, SELL)
-	testAddRemoveRandom(t, 100, 100, 10000, SELL)
 }
 
 func testAddRemoveRandom(t *testing.T, pushCount int, lowPrice, highPrice int64, kind OrderKind) {
