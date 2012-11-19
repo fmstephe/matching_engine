@@ -46,6 +46,7 @@ func (b *tree) push(in *node) {
 	if b.root == nil {
 		b.root = in
 		in.pp = &b.root
+		b.root.black = true
 		return
 	}
 	n := b.root
@@ -53,27 +54,37 @@ func (b *tree) push(in *node) {
 		switch {
 		case in.val == n.val:
 			n.addLast(in)
-			return
+			goto repair
 		case in.val < n.val:
 			if n.left == nil {
-				in.parent = n
-				in.pp = &n.left
-				n.left = in
-				return
+				in.toLeftOf(n)
+				goto repair
 			} else {
 				n = n.left
 			}
 		case in.val > n.val:
 			if n.right == nil {
-				n.parent = n
-				in.pp = &n.right
-				n.right = in
-				return
+				in.toRightOf(n)
+				goto repair
 			} else {
 				n = n.right
 			}
 		}
 	}
+repair:
+	for n != nil {
+		if n.right.isRed() && !n.left.isRed() {
+			n = n.rotateLeft()
+		}
+		if n.left.isRed() && n.left.left.isRed() {
+			n = n.rotateRight()
+		}
+		if n.left.isRed() && n.right.isRed() {
+			n.flip()
+		}
+		n = n.parent
+	}
+	b.root.black = true
 }
 
 func (b *tree) peekMin() *node {
@@ -161,7 +172,7 @@ type node struct {
 	// Limit queue fields
 	next *node
 	prev *node
-	// This is the other node attaching O to another tree
+	// This is the other node toing O to another tree
 	other *node
 	// Order
 	order *Order
@@ -180,22 +191,24 @@ func (n *node) getOrder() *Order {
 	return nil
 }
 
+func (n *node) isRed() bool {
+	if n != nil {
+		return !n.black
+	}
+	return false
+}
+
 func (n *node) isFree() bool {
 	switch {
 	case n.left != nil:
-		println("left")
 		return false
 	case n.right != nil:
-		println("right")
 		return false
 	case n.pp != nil:
-		println("pp")
 		return false
 	case n.next != n:
-		println("next")
 		return false
 	case n.prev != n:
-		println("prev")
 		return false
 	}
 	return true
@@ -296,40 +309,40 @@ func (n *node) detachMax() *node {
 	return m
 }
 
-func (n *node) toRight(to *node) {
+func (n *node) toRightOf(to *node) {
 	to.right = n
 	if n != nil {
-		*n.pp = nil
 		n.parent = to
 		n.pp = &to.right
 	}
 }
 
-func (n *node) toLeft(to *node) {
+func (n *node) toLeftOf(to *node) {
 	to.left = n
 	if n != nil {
-		*n.pp = nil
 		n.parent = to
 		n.pp = &to.left
 	}
 }
 
-func (n *node) rotateLeft() {
+func (n *node) rotateLeft() *node {
 	r := n.right
 	n.giveParent(r)
-	r.left.toRight(n)
-	n.toLeft(r)
+	r.left.toRightOf(n)
+	n.toLeftOf(r)
 	r.black = n.black
 	n.black = false
+	return r
 }
 
-func (n *node) rotateRight() {
+func (n *node) rotateRight() *node {
 	l := n.left
 	n.giveParent(l)
-	l.right.toLeft(n)
-	n.toRight(l)
+	l.right.toLeftOf(n)
+	n.toRightOf(l)
 	l.black = n.black
 	n.black = false
+	return l
 }
 
 func (n *node) flip() {
@@ -368,11 +381,4 @@ func (n *node) fixup() {
 	if p.left.isRed() && p.right.isRed() {
 		p.flip()
 	}
-}
-
-func (n *node) isRed() bool {
-	if n != nil {
-		return !n.black
-	}
-	return false
 }
