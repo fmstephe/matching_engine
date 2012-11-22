@@ -1,6 +1,9 @@
 package trade
 
-import ()
+import (
+	"bytes"
+	"strconv"
+)
 
 type MatchTrees struct {
 	buyTree  tree
@@ -84,7 +87,6 @@ repair:
 		}
 		n = n.parent
 	}
-	b.root.black = true
 }
 
 func (b *tree) peekMin() *node {
@@ -172,16 +174,40 @@ type node struct {
 	// Limit queue fields
 	next *node
 	prev *node
-	// This is the other node toing O to another tree
-	other *node
 	// Order
 	order *Order
+	// This is the other node tying order to another tree
+	other *node
+}
+
+func (n *node) String() string {
+	if n == nil {
+		return "()"
+	}
+	valStr := strconv.Itoa(int(n.val))
+	colour := "R"
+	if n.black {
+		colour = "B"
+	}
+	b := bytes.NewBufferString("")
+	b.WriteString("(")
+	b.WriteString(valStr)
+	b.WriteString(colour)
+	if !(n.left == nil && n.right == nil) {
+		b.WriteString(", ")
+		b.WriteString(n.left.String())
+		b.WriteString(", ")
+		b.WriteString(n.right.String())
+	}
+	b.WriteString(")")
+	return b.String()
 }
 
 func initNode(o *Order, val int64, n, other *node) {
 	*n = node{val: val, order: o, other: other}
 	n.next = n
 	n.prev = n
+	n.black = false
 }
 
 func (n *node) getOrder() *Order {
@@ -218,6 +244,17 @@ func (n *node) isHead() bool {
 	return n.pp != nil
 }
 
+func (n *node) getSibling() *node {
+	p := n.parent
+	if p == nil {
+		return nil
+	}
+	if p.left == n {
+		return p.right
+	}
+	return p.left
+}
+
 func (n *node) addLast(in *node) {
 	last := n.next
 	last.prev = in
@@ -252,26 +289,104 @@ func (n *node) giveChildren(nn *node) {
 func (n *node) givePosition(nn *node) {
 	n.giveParent(nn)
 	n.giveChildren(nn)
+	nn.black = n.black
 	// Guarantee: Each of n.parent/pp/left/right are now nil
 }
 
 func (n *node) detach() {
+	p := n.parent
+	s := n.getSibling()
+	var nn *node
 	switch {
 	case n.right == nil && n.left == nil:
 		*n.pp = nil
 		n.pp = nil
 		n.parent = nil
 	case n.right == nil:
-		n.giveParent(n.left)
+		nn = n.left
+		n.giveParent(nn)
 		n.left = nil
 	case n.left == nil:
-		n.giveParent(n.right)
+		nn = n.right
+		n.giveParent(nn)
 		n.right = nil
 	default:
-		nn := n.left.detachMax()
+		nn = n.left.detachMax()
 		n.givePosition(nn)
+		return
 	}
 	// Guarantee: Each of n.parent/pp/left/right are now nil
+	if n.isRed() {
+		return
+	}
+	if nn.isRed() {
+		nn.black = true
+		return
+	}
+	if s.isRed() {
+		// Perform a rotation to make sibling black
+		if p.left == s {
+			p.rotateRight()
+			s = p.left
+		} else {
+			p.rotateLeft()
+			s = p.right
+		}
+	}
+	// repair
+	for p != nil {
+		if s == nil {
+			for p != nil {
+				p = p.fixPop()
+				p = p.parent
+			}
+			return
+		}
+		pRed := p.isRed()
+		sRed := s.isRed()
+		slRed := s.left.isRed()
+		if !sRed && !slRed && pRed {
+			p.black = true
+			s.black = false
+			for p != nil {
+				p = p.fixPop()
+				p = p.parent
+			}
+			return
+		}
+		if !sRed && !slRed && !pRed {
+			// Introduce black violation
+			s.black = false
+		} else if !sRed && slRed {
+			if p.left == s {
+				p = p.rotateRight()
+			} else {
+				s.rotateRight()
+				p = p.rotateLeft()
+			}
+			for p != nil {
+				p = p.fixPop()
+				p = p.parent
+			}
+			return
+		}
+		p = p.fixPop()
+		s = p.getSibling()
+		p = p.parent
+	}
+}
+
+func (n *node) fixPop() *node {
+	if n.right.isRed() && !n.left.isRed() {
+		n = n.rotateLeft()
+	}
+	if n.left.isRed() && n.left.left.isRed() {
+		n = n.rotateRight()
+	}
+	if n.left.isRed() && n.right.isRed() {
+		n.flip()
+	}
+	return n
 }
 
 func (n *node) pop() {
@@ -365,20 +480,5 @@ func (n *node) moveRedRight() {
 	if n.left.left.isRed() {
 		n.rotateRight()
 		n.parent.flip()
-	}
-}
-
-func (n *node) fixup() {
-	p := n
-	if p.isRed() {
-		p.rotateLeft()
-		p = p.parent
-	}
-	if p.left.isRed() && p.left.left.isRed() {
-		p.rotateRight()
-		p = p.parent
-	}
-	if p.left.isRed() && p.right.isRed() {
-		p.flip()
 	}
 }

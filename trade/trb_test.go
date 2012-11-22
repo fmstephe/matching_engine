@@ -5,45 +5,35 @@ import (
 )
 
 func validateRBT(t *testing.T, rbt *tree) {
-	blackBalance(t, rbt.root)
-	testReds(t, rbt.root)
+	blackBalance(t, rbt.root, 0)
+	testReds(t, rbt.root, 0)
 }
 
-func blackBalance(t *testing.T, n *node) int {
+func blackBalance(t *testing.T, n *node, depth int) int {
 	if n == nil {
 		return 0
 	}
-	lb := blackBalance(t, n.left)
-	rb := blackBalance(t, n.right)
+	lb := blackBalance(t, n.left, depth+1)
+	rb := blackBalance(t, n.right, depth+1)
 	if lb != rb {
-		t.Errorf("Unbalanced tree found. Left: , %d Right: %d", lb, rb)
+		t.Errorf("Unbalanced tree found at depth %d. Left: , %d Right: %d", depth, lb, rb)
 	}
 	return lb
 }
 
-func testReds(t *testing.T, n *node) {
+func testReds(t *testing.T, n *node, depth int) {
 	if n == nil {
 		return
 	}
-	if n.isRed() && (n.left.isRed() || n.right.isRed()) {
-		t.Errorf("Red violation found.")
+	if n.isRed() && (n.left.isRed() || n.right.isRed()) && depth != 0 {
+		t.Errorf("Red violation found at depth %d", depth)
 	}
-	testReds(t, n.left)
-	testReds(t, n.right)
-}
-
-func TestRBTInserts(t *testing.T) {
-	testRBTInserts(t, 1, 1, 1)
-	testRBTInserts(t, 100, 1, 1)
-	testRBTInserts(t, 100, 10, 20)
-	testRBTInserts(t, 100, 1000, 20000)
-}
-
-func testRBTInserts(t *testing.T, pushCount int, lowPrice, highPrice int64) {
-	rbt := &tree{}
-	for i := 0; i < pushCount; i++ {
-		o := maker.MkPricedOrder(maker.Between(lowPrice, highPrice), SELL)
-		rbt.push(&o.priceNode)
-		validateRBT(t, rbt)
+	if !n.left.isRed() && n.right.isRed() {
+		t.Errorf("Right leaning red leaf found at depth %d", depth)
 	}
+	if n.left.isRed() && n.right.isRed() {
+		t.Errorf("Red child pair found at depth", depth)
+	}
+	testReds(t, n.left, depth+1)
+	testReds(t, n.right, depth+1)
 }
