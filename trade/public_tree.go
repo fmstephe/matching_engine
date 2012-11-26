@@ -7,14 +7,21 @@ type MatchTrees struct {
 	buyTree  tree
 	sellTree tree
 	orders   tree
+	size int
+}
+
+func (m *MatchTrees) Size() int {
+	return m.size
 }
 
 func (m *MatchTrees) PushBuy(b *Order) {
+	m.size++
 	m.buyTree.push(&b.priceNode)
 	m.orders.push(&b.guidNode)
 }
 
 func (m *MatchTrees) PushSell(s *Order) {
+	m.size++
 	m.sellTree.push(&s.priceNode)
 	m.orders.push(&s.guidNode)
 }
@@ -28,15 +35,21 @@ func (m *MatchTrees) PeekSell() *Order {
 }
 
 func (m *MatchTrees) PopBuy() *Order {
+	m.size--
 	return m.buyTree.popMax().getOrder()
 }
 
 func (m *MatchTrees) PopSell() *Order {
+	m.size--
 	return m.sellTree.popMin().getOrder()
 }
 
 func (m *MatchTrees) Pop(o *Order) *Order {
-	return m.orders.pop(o.Guid()).getOrder()
+	po := m.orders.pop(o.Guid()).getOrder()
+	if po != nil {
+		m.size--
+	}
+	return po
 }
 
 type PriceTree struct {
