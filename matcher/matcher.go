@@ -16,16 +16,6 @@ func NewMatcher(output *ResponseBuffer) *M {
 	return &M{slab: slab, output: output}
 }
 
-/*
-func (m *M) Survey() (buys []*trade.SurveyLimit, sells []*trade.SurveyLimit, orders *trade.OrderSet, executions int) {
-	buys = m.buys.Survey()
-	sells = m.sells.Survey()
-	orders = m.orders
-	executions = m.output.Writes()
-	return
-}
-*/
-
 func (m *M) Submit(in *trade.Order) {
 	o := m.slab.Malloc()
 	in.CopyInto(o)
@@ -58,7 +48,7 @@ func (m *M) addSell(s *trade.Order) {
 
 func (m *M) remove(o *trade.Order) {
 	ro := m.matchTrees.Pop(o)
-	if ro != nil { // What does it mean if it is nil?
+	if ro != nil {
 		m.slab.Free(ro)
 	}
 }
@@ -83,6 +73,7 @@ func (m *M) fillableBuy(b *trade.Order) bool {
 				price := price(b.Price(), s.Price())
 				s.Amount -= amount
 				m.completeTrade(b, s, price, amount)
+				m.slab.Free(b)
 				return true // The buy has been used up
 			}
 			if s.Amount == b.Amount {
@@ -90,6 +81,7 @@ func (m *M) fillableBuy(b *trade.Order) bool {
 				price := price(b.Price(), s.Price())
 				m.completeTrade(b, s, price, amount)
 				m.slab.Free(m.matchTrees.PopSell())
+				m.slab.Free(b)
 				return true // The buy has been used up
 			}
 		} else {
@@ -111,6 +103,7 @@ func (m *M) fillableSell(s *trade.Order) bool {
 				price := price(b.Price(), s.Price())
 				b.Amount -= amount
 				m.completeTrade(b, s, price, amount)
+				m.slab.Free(s)
 				return true // The sell has been used up
 			}
 			if s.Amount > b.Amount {
@@ -126,6 +119,7 @@ func (m *M) fillableSell(s *trade.Order) bool {
 				price := price(b.Price(), s.Price())
 				m.completeTrade(b, s, price, amount)
 				m.slab.Free(m.matchTrees.PopBuy())
+				m.slab.Free(s)
 				return true // The sell has been used up
 			}
 		} else {
