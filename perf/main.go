@@ -14,12 +14,14 @@ import (
 )
 
 const (
-	stockId = uint32(1)
+	StockId = uint32(1)
 )
 
 var (
 	filePath   = flag.String("f", "", "Relative path to an ITCH file providing test data")
-	profile    = flag.String("profile", "", "Write out a profile of this application, 'cpu' and 'mem' supported")
+	profile    = flag.String("p", "", "Write out a profile of this application, 'cpu' and 'mem' supported")
+	orderNum    = flag.Int("o", 100*1000, "The number of orders to generate. Ignored if -f is provided")
+	delDelay    = flag.Int("d", 100, "The number of orders generated before we begin deleting existing orders")
 	perfRand   = rand.New(rand.NewSource(1))
 	orderMaker = trade.NewOrderMaker()
 )
@@ -85,13 +87,32 @@ func getItchData() []*trade.Order {
 }
 
 func mkRandomData() []*trade.Order {
-	orderNum := 10 * 1000
-	sells := orderMaker.MkSells(orderMaker.ValRangeFlat(orderNum, 1000, 1500))
-	buys := orderMaker.MkBuys(orderMaker.ValRangeFlat(orderNum, 1000, 1500))
-	orders := make([]*trade.Order, 0, orderNum*2)
-	for i := 0; i < orderNum; i++ {
+	sells := orderMaker.MkSells(orderMaker.ValRangeFlat(*orderNum, 1000, 1500))
+	sellTree := &trade.PriceTree{}
+	buys := orderMaker.MkBuys(orderMaker.ValRangeFlat(*orderNum, 1000, 1500))
+	buyTree := &trade.PriceTree{}
+	orders := make([]*trade.Order, 0, *orderNum*2)
+	for i := 0; i < *orderNum; i++ {
 		orders = append(orders, sells[i])
+		sellTree.Push(sells[i])
 		orders = append(orders, buys[i])
+		buyTree.Push(buys[i])
+		if i > *delDelay {
+			s := sellTree.PopMax()
+			b := buyTree.PopMin()
+			delSell := trade.NewDelete(trade.TradeData{TraderId: s.TraderId(), TradeId: s.TradeId(), StockId: s.StockId})
+			delBuy := trade.NewDelete(trade.TradeData{TraderId: b.TraderId(), TradeId: b.TradeId(), StockId: b.StockId})
+			orders = append(orders, delSell)
+			orders = append(orders, delBuy)
+		}
+	}
+	for sellTree.PeekMin() != nil {
+		s := sellTree.PopMax()
+		b := buyTree.PopMin()
+		delSell := trade.NewDelete(trade.TradeData{TraderId: s.TraderId(), TradeId: s.TradeId(), StockId: s.StockId})
+		delBuy := trade.NewDelete(trade.TradeData{TraderId: b.TraderId(), TradeId: b.TradeId(), StockId: b.StockId})
+		orders = append(orders, delSell)
+		orders = append(orders, delBuy)
 	}
 	return orders
 }
