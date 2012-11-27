@@ -70,7 +70,7 @@ func midpoint(t *testing.T, bPrice, sPrice, expected int64) {
 // Basic test matches lonely buy/sell trade pair which match exactly
 func TestSimpleMatch(t *testing.T) {
 	output := NewResponseBuffer(20)
-	m := NewMatcher(output)
+	m := NewMatcher(100, output)
 	addLowBuys(m, 5)
 	addHighSells(m, 10)
 	// Add Buy
@@ -89,7 +89,7 @@ func TestSimpleMatch(t *testing.T) {
 // Test matches one buy order to two separate sells
 func TestDoubleSellMatch(t *testing.T) {
 	output := NewResponseBuffer(20)
-	m := NewMatcher(output)
+	m := NewMatcher(100, output)
 	addLowBuys(m, 5)
 	addHighSells(m, 10)
 	// Add Buy
@@ -115,7 +115,7 @@ func TestDoubleSellMatch(t *testing.T) {
 // Test matches two buy orders to one sell
 func TestDoubleBuyMatch(t *testing.T) {
 	output := NewResponseBuffer(20)
-	m := NewMatcher(output)
+	m := NewMatcher(100, output)
 	addLowBuys(m, 5)
 	addHighSells(m, 10)
 	// Add Sell
@@ -139,7 +139,7 @@ func TestDoubleBuyMatch(t *testing.T) {
 // Test matches lonely buy/sell pair, with same quantity, uses the mid-price point for trade price
 func TestMidPrice(t *testing.T) {
 	output := NewResponseBuffer(20)
-	m := NewMatcher(output)
+	m := NewMatcher(100, output)
 	addLowBuys(m, 5)
 	addHighSells(m, 10)
 	// Add Buy
@@ -157,7 +157,7 @@ func TestMidPrice(t *testing.T) {
 // Test matches lonely buy/sell pair, sell > quantity, and uses the mid-price point for trade price
 func TestMidPriceBigSell(t *testing.T) {
 	output := NewResponseBuffer(20)
-	m := NewMatcher(output)
+	m := NewMatcher(100, output)
 	addLowBuys(m, 5)
 	addHighSells(m, 10)
 	// Add Buy
@@ -176,7 +176,7 @@ func TestMidPriceBigSell(t *testing.T) {
 // Test matches lonely buy/sell pair, buy > quantity, and uses the mid-price point for trade price
 func TestMidPriceBigBuy(t *testing.T) {
 	output := NewResponseBuffer(20)
-	m := NewMatcher(output)
+	m := NewMatcher(100, output)
 	addLowBuys(m, 5)
 	addHighSells(m, 10)
 	// Add Buy
@@ -190,32 +190,6 @@ func TestMidPriceBigBuy(t *testing.T) {
 	verifyResponse(t, output.getForRead(), responseVals{price: -7, amount: 1, tradeId: 1, counterParty: trader2})
 	verifyResponse(t, output.getForRead(), responseVals{price: 7, amount: 1, tradeId: 1, counterParty: trader1})
 }
-
-/*
-func TestAddRemoveBuy(t *testing.T) {
-	output := NewResponseBuffer(20)
-	buyQ := limitheap.New(trade.BUY, 2000, orderNum)
-	sellQ := limitheap.New(trade.SELL, 2000, orderNum)
-	m := NewMatcher(buyQ, sellQ, output)
-	addLowBuys(m, 5)
-	addHighSells(m, 10)
-	// Add Buy
-	costData := trade.CostData{Price: 9, Amount: 10}
-	tradeData := trade.TradeData{TraderId: trader1, TradeId: 1, StockId: stockId}
-	b := trade.NewBuy(costData, tradeData)
-	m.Submit(b)
-	// Delete Buy
-	del := trade.NewDeleteBuy(tradeData)
-	m.Submit(del)
-	// Add Sell
-	costData = trade.CostData{Price: 6, Amount: 1}
-	tradeData = trade.TradeData{TraderId: trader2, TradeId: 1, StockId: stockId}
-	m.Submit(trade.NewSell(costData, tradeData))
-	if output.Writes() != 0 {
-		t.Errorf("Deleted buy was executed as a trade")
-	}
-}
-*/
 
 func addLowBuys(m *M, highestPrice int64) {
 	buys := matchTestOrderMaker.MkBuys(matchTestOrderMaker.ValRangeFlat(10, 1, highestPrice))

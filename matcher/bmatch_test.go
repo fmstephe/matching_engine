@@ -132,7 +132,7 @@ func BenchmarkAddBuyNarrow(b *testing.B) {
 func benchmarkAddBuy(b *testing.B, buys []*trade.Order) {
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
-		m := NewMatcher(output)
+		m := NewMatcher(len(buys), output)
 		b.StartTimer()
 		for _, buy := range buys {
 			m.Submit(buy)
@@ -159,7 +159,7 @@ func benchmarkAddSell(b *testing.B, sells []*trade.Order) {
 	for i := 0; i < b.N; i++ {
 		prepare(b)
 		b.StopTimer()
-		m := NewMatcher(output)
+		m := NewMatcher(len(sells), output)
 		b.StartTimer()
 		for _, sell := range sells {
 			m.Submit(sell)
@@ -185,7 +185,7 @@ func BenchmarkMatchNarrow(b *testing.B) {
 func benchmarkMatch(b *testing.B, buys, sells []*trade.Order, expMatches int) {
 	for i := 0; i < b.N; i++ {
 		prepare(b)
-		m := NewMatcher(output)
+		m := NewMatcher(len(buys)*2, output)
 		for j := 0; j < orderNum; j++ {
 			m.Submit(buys[j])
 			m.Submit(sells[j])

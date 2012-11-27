@@ -11,8 +11,8 @@ type M struct {
 	output     *ResponseBuffer
 }
 
-func NewMatcher(output *ResponseBuffer) *M {
-	slab := trade.NewSlab(20 * 1000)
+func NewMatcher(slabSize int, output *ResponseBuffer) *M {
+	slab := trade.NewSlab(slabSize)
 	return &M{slab: slab, output: output}
 }
 
@@ -51,6 +51,7 @@ func (m *M) remove(o *trade.Order) {
 	if ro != nil {
 		m.slab.Free(ro)
 	}
+	m.slab.Free(o)
 }
 
 func (m *M) fillableBuy(b *trade.Order) bool {

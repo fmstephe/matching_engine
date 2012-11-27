@@ -1,13 +1,12 @@
 package trade
 
-import (
-)
+import ()
 
 type MatchTrees struct {
 	buyTree  tree
 	sellTree tree
 	orders   tree
-	size int
+	size     int
 }
 
 func (m *MatchTrees) Size() int {
