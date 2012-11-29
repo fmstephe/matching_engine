@@ -27,6 +27,9 @@ func (o *orderMaker) Between(lower, upper int64) int64 {
 }
 
 func (o *orderMaker) MkPricedBuy(price int64) *Order {
+	if price == 0 {
+		price = 1 // 'market' buys are not allowed
+	}
 	return o.MkPricedOrder(price, BUY)
 }
 

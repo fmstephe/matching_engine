@@ -8,12 +8,12 @@ import (
 type M struct {
 	matchTrees trade.MatchTrees // No constructor required
 	slab       *trade.Slab
-	output     *ResponseBuffer
+	rb         *ResponseBuffer
 }
 
-func NewMatcher(slabSize int, output *ResponseBuffer) *M {
+func NewMatcher(slabSize int, rb *ResponseBuffer) *M {
 	slab := trade.NewSlab(slabSize)
-	return &M{slab: slab, output: output}
+	return &M{slab: slab, rb: rb}
 }
 
 func (m *M) Submit(in *trade.Order) {
@@ -66,21 +66,21 @@ func (m *M) fillableBuy(b *trade.Order) bool {
 				price := price(b.Price(), s.Price())
 				m.slab.Free(m.matchTrees.PopSell())
 				b.Amount -= amount
-				m.completeTrade(b, s, price, amount)
+				completeTrade(b, s, m.rb, price, amount)
 				continue
 			}
 			if s.Amount > b.Amount {
 				amount := b.Amount
 				price := price(b.Price(), s.Price())
 				s.Amount -= amount
-				m.completeTrade(b, s, price, amount)
+				completeTrade(b, s, m.rb, price, amount)
 				m.slab.Free(b)
 				return true // The buy has been used up
 			}
 			if s.Amount == b.Amount {
 				amount := b.Amount
 				price := price(b.Price(), s.Price())
-				m.completeTrade(b, s, price, amount)
+				completeTrade(b, s, m.rb, price, amount)
 				m.slab.Free(m.matchTrees.PopSell())
 				m.slab.Free(b)
 				return true // The buy has been used up
@@ -103,7 +103,7 @@ func (m *M) fillableSell(s *trade.Order) bool {
 				amount := s.Amount
 				price := price(b.Price(), s.Price())
 				b.Amount -= amount
-				m.completeTrade(b, s, price, amount)
+				completeTrade(b, s, m.rb, price, amount)
 				m.slab.Free(s)
 				return true // The sell has been used up
 			}
@@ -111,14 +111,14 @@ func (m *M) fillableSell(s *trade.Order) bool {
 				amount := b.Amount
 				price := price(b.Price(), s.Price())
 				s.Amount -= amount
-				m.completeTrade(b, s, price, amount)
+				completeTrade(b, s, m.rb, price, amount)
 				m.slab.Free(m.matchTrees.PopBuy())
 				continue
 			}
 			if s.Amount == b.Amount {
 				amount := b.Amount
 				price := price(b.Price(), s.Price())
-				m.completeTrade(b, s, price, amount)
+				completeTrade(b, s, m.rb, price, amount)
 				m.slab.Free(m.matchTrees.PopBuy())
 				m.slab.Free(s)
 				return true // The sell has been used up
@@ -138,18 +138,18 @@ func price(bPrice, sPrice int64) int64 {
 	return sPrice + (d >> 1)
 }
 
-func (m *M) completeTrade(b, s *trade.Order, price int64, amount uint32) {
+func completeTrade(b, s *trade.Order, rb *ResponseBuffer, price int64, amount uint32) {
 	// TODO write the response type into these responses
 	// Write the buy response
-	rb := m.output.getForWrite()
-	rb.Price = -price
-	rb.Amount = amount
-	rb.TradeId = b.TradeId()
-	rb.CounterParty = s.TraderId()
+	br := rb.getForWrite()
+	br.Price = -price
+	br.Amount = amount
+	br.TradeId = b.TradeId()
+	br.CounterParty = s.TraderId()
 	// Write the sell response
-	rs := m.output.getForWrite()
-	rs.Price = price
-	rs.Amount = amount
-	rs.TradeId = s.TradeId()
-	rs.CounterParty = b.TraderId()
+	sr := rb.getForWrite()
+	sr.Price = price
+	sr.Amount = amount
+	sr.TradeId = s.TradeId()
+	sr.CounterParty = b.TraderId()
 }
