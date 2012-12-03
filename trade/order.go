@@ -6,16 +6,14 @@ import (
 )
 
 const (
-	BUY              = OrderKind(1)
-	SELL             = OrderKind(-1)
-	DELETE           = OrderKind(2)
-	EXECUTE          = ResponseKind(3)
-	CANCEL           = ResponseKind(2)
-	FULL             = ResponseKind(3)
-	X                = ResponseKind(4)
-	TRANSPARENT      = ResponseKind(5)
-	MARKET_PRICE     = 0
-	NO_COUNTER_PARTY = 0
+	BUY          = OrderKind(0)
+	SELL         = OrderKind(1)
+	DELETE       = OrderKind(2)
+	PARTIAL      = ResponseKind(0)
+	FULL         = ResponseKind(1)
+	DELETED      = ResponseKind(2)
+	NOT_DELETED  = ResponseKind(3)
+	MARKET_PRICE = 0
 )
 
 type OrderKind int32
@@ -121,6 +119,22 @@ type Response struct {
 	Kind         ResponseKind
 	Price        int64  // The actual trade price, will be negative if a purchase was made
 	Amount       uint32 // The number of units actually bought or sold
+	TraderId     uint32 // The trader-id of the trader to whom this response is directed
 	TradeId      uint32 // Links this trade back to a previously submitted Order
 	CounterParty uint32 // The trader-id of the other half of this trade
+}
+
+func (r *Response) WriteTrade(kind ResponseKind, price int64, amount, traderId, tradeId, counterParty uint32) {
+	r.Kind = kind
+	r.Price = price
+	r.Amount = amount
+	r.TraderId = traderId
+	r.TradeId = tradeId
+	r.CounterParty = counterParty
+}
+
+func (r *Response) WriteDelete(kind ResponseKind, traderId, tradeId uint32) {
+	r.Kind = kind
+	r.TraderId = traderId
+	r.TradeId = tradeId
 }

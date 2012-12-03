@@ -45,7 +45,7 @@ func (m *refmatcher) match() {
 			price := price(b.Price(), s.Price())
 			s.Amount = 0
 			b.Amount = 0
-			completeTrade(b, s, m.rb, price, amount)
+			completeTrade(m.rb, trade.FULL, trade.FULL, b, s, price, amount)
 		}
 		if s.Amount > b.Amount {
 			// pop buy
@@ -54,7 +54,7 @@ func (m *refmatcher) match() {
 			price := price(b.Price(), s.Price())
 			s.Amount = s.Amount - b.Amount
 			b.Amount = 0
-			completeTrade(b, s, m.rb, price, amount)
+			completeTrade(m.rb, trade.FULL, trade.PARTIAL, b, s, price, amount)
 		}
 		if b.Amount > s.Amount {
 			// pop sell
@@ -63,7 +63,7 @@ func (m *refmatcher) match() {
 			price := price(b.Price(), s.Price())
 			b.Amount = b.Amount - s.Amount
 			s.Amount = 0
-			completeTrade(b, s, m.rb, price, amount)
+			completeTrade(m.rb, trade.PARTIAL, trade.FULL, b, s, price, amount)
 		}
 	}
 }
