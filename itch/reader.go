@@ -98,7 +98,7 @@ func mkOrder(line string) (o *trade.Order, err error) {
 		o = trade.NewSell(cd, td)
 		return
 	case "D":
-		o = trade.NewDelete(td)
+		o = trade.NewCancel(td)
 		return
 	default:
 		return

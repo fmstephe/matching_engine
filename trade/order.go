@@ -6,14 +6,14 @@ import (
 )
 
 const (
-	BUY          = OrderKind(0)
-	SELL         = OrderKind(1)
-	DELETE       = OrderKind(2)
-	PARTIAL      = ResponseKind(0)
-	FULL         = ResponseKind(1)
-	DELETED      = ResponseKind(2)
-	NOT_DELETED  = ResponseKind(3)
-	MARKET_PRICE = 0
+	BUY           = OrderKind(0)
+	SELL          = OrderKind(1)
+	CANCEL        = OrderKind(2)
+	PARTIAL       = ResponseKind(0)
+	FULL          = ResponseKind(1)
+	CANCELLED     = ResponseKind(2)
+	NOT_CANCELLED = ResponseKind(3)
+	MARKET_PRICE  = 0
 )
 
 type OrderKind int32
@@ -26,8 +26,8 @@ func (k OrderKind) String() string {
 		return "BUY"
 	case SELL:
 		return "SELL"
-	case DELETE:
-		return "DELETE"
+	case CANCEL:
+		return "CANCEL"
 	default:
 		return "Unkown OrderKind"
 	}
@@ -104,8 +104,8 @@ func NewSell(costData CostData, tradeData TradeData) *Order {
 	return NewOrder(costData, tradeData, SELL)
 }
 
-func NewDelete(tradeData TradeData) *Order {
-	return NewOrder(CostData{}, tradeData, DELETE)
+func NewCancel(tradeData TradeData) *Order {
+	return NewOrder(CostData{}, tradeData, CANCEL)
 }
 
 func NewOrder(costData CostData, tradeData TradeData, orderKind OrderKind) *Order {
@@ -133,7 +133,7 @@ func (r *Response) WriteTrade(kind ResponseKind, price int64, amount, traderId, 
 	r.CounterParty = counterParty
 }
 
-func (r *Response) WriteDelete(kind ResponseKind, traderId, tradeId uint32) {
+func (r *Response) WriteCancel(kind ResponseKind, traderId, tradeId uint32) {
 	r.Kind = kind
 	r.TraderId = traderId
 	r.TradeId = tradeId

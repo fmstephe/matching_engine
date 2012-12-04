@@ -43,8 +43,8 @@ func (m *MatchTrees) PopSell() *Order {
 	return m.sellTree.popMin().getOrder()
 }
 
-func (m *MatchTrees) Pop(o *Order) *Order {
-	po := m.orders.pop(o.Guid()).getOrder()
+func (m *MatchTrees) Cancel(o *Order) *Order {
+	po := m.orders.cancel(o.Guid()).getOrder()
 	if po != nil {
 		m.size--
 	}
@@ -59,8 +59,8 @@ func (p *PriceTree) Push(o *Order) {
 	p.t.push(&o.priceNode)
 }
 
-func (p *PriceTree) Pop(o *Order) *Order {
-	return p.t.pop(o.Guid()).getOrder()
+func (p *PriceTree) Cancel(o *Order) *Order {
+	return p.t.cancel(o.Guid()).getOrder()
 }
 
 func (p *PriceTree) peekMax() *Order {

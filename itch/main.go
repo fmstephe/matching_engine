@@ -48,7 +48,7 @@ func loop() {
 				println(err.Error())
 				return
 			}
-			if o != nil && (o.Kind == trade.BUY || o.Kind == trade.SELL || o.Kind == trade.DELETE) {
+			if o != nil && (o.Kind == trade.BUY || o.Kind == trade.SELL || o.Kind == trade.CANCEL) {
 				m.Submit(o)
 			}
 			checkPrint(ir, o, m, l)

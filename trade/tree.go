@@ -95,7 +95,7 @@ func (b *tree) popMax() *node {
 	return nil
 }
 
-func (b *tree) pop(val int64) *node {
+func (b *tree) cancel(val int64) *node {
 	n := b.get(val)
 	if n == nil {
 		return nil

@@ -19,7 +19,7 @@ func newRefmatcher(lowPrice, highPrice int64, rb *ResponseBuffer) *refmatcher {
 func (m *refmatcher) submit(in *trade.Order) {
 	o := &trade.Order{}
 	in.CopyInto(o)
-	if o.Kind == trade.DELETE {
+	if o.Kind == trade.CANCEL {
 		m.pop(o)
 	} else {
 		m.push(o)

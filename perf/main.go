@@ -100,8 +100,8 @@ func mkRandomData() []*trade.Order {
 		if i > *delDelay {
 			s := sellTree.PopMax()
 			b := buyTree.PopMin()
-			delSell := trade.NewDelete(trade.TradeData{TraderId: s.TraderId(), TradeId: s.TradeId(), StockId: s.StockId})
-			delBuy := trade.NewDelete(trade.TradeData{TraderId: b.TraderId(), TradeId: b.TradeId(), StockId: b.StockId})
+			delSell := trade.NewCancel(trade.TradeData{TraderId: s.TraderId(), TradeId: s.TradeId(), StockId: s.StockId})
+			delBuy := trade.NewCancel(trade.TradeData{TraderId: b.TraderId(), TradeId: b.TradeId(), StockId: b.StockId})
 			orders = append(orders, delSell)
 			orders = append(orders, delBuy)
 		}
@@ -109,8 +109,8 @@ func mkRandomData() []*trade.Order {
 	for sellTree.PeekMin() != nil {
 		s := sellTree.PopMax()
 		b := buyTree.PopMin()
-		delSell := trade.NewDelete(trade.TradeData{TraderId: s.TraderId(), TradeId: s.TradeId(), StockId: s.StockId})
-		delBuy := trade.NewDelete(trade.TradeData{TraderId: b.TraderId(), TradeId: b.TradeId(), StockId: b.StockId})
+		delSell := trade.NewCancel(trade.TradeData{TraderId: s.TraderId(), TradeId: s.TradeId(), StockId: s.StockId})
+		delBuy := trade.NewCancel(trade.TradeData{TraderId: b.TraderId(), TradeId: b.TradeId(), StockId: b.StockId})
 		orders = append(orders, delSell)
 		orders = append(orders, delBuy)
 	}

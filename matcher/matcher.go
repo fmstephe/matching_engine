@@ -24,10 +24,10 @@ func (m *M) Submit(in *trade.Order) {
 		m.addBuy(o)
 	case trade.SELL:
 		m.addSell(o)
-	case trade.DELETE:
-		m.remove(o)
+	case trade.CANCEL:
+		m.cancel(o)
 	default:
-		panic(fmt.Sprintf("OrderKind %#v not supported", o.Kind))
+		panic(fmt.Sprintf("OrderKind %s not supported", o.Kind.String()))
 	}
 }
 
@@ -46,13 +46,13 @@ func (m *M) addSell(s *trade.Order) {
 	}
 }
 
-func (m *M) remove(o *trade.Order) {
-	ro := m.matchTrees.Pop(o)
+func (m *M) cancel(o *trade.Order) {
+	ro := m.matchTrees.Cancel(o)
 	if ro != nil {
-		completeDelete(m.rb, trade.DELETED, ro)
+		completeCancel(m.rb, trade.CANCELLED, ro)
 		m.slab.Free(ro)
 	} else {
-		completeDelete(m.rb, trade.NOT_DELETED, o)
+		completeCancel(m.rb, trade.NOT_CANCELLED, o)
 	}
 	m.slab.Free(o)
 }
@@ -148,7 +148,7 @@ func completeTrade(rb *ResponseBuffer, brk, srk trade.ResponseKind, b, s *trade.
 	sr.WriteTrade(srk, price, amount, s.TraderId(), s.TradeId(), b.TraderId())
 }
 
-func completeDelete(rb *ResponseBuffer, rk trade.ResponseKind, d *trade.Order) {
+func completeCancel(rb *ResponseBuffer, rk trade.ResponseKind, d *trade.Order) {
 	r := rb.getForWrite()
-	r.WriteDelete(rk, d.TraderId(), d.TradeId())
+	r.WriteCancel(rk, d.TraderId(), d.TradeId())
 }

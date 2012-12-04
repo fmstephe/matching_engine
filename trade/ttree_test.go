@@ -150,7 +150,7 @@ func testAddRemoveRandom(t *testing.T, pushCount int, lowPrice, highPrice int64,
 			i++
 		} else {
 			for g, o := range orderMap {
-				po := guidTree.pop(g).getOrder()
+				po := guidTree.cancel(g).getOrder()
 				delete(orderMap, g)
 				if po != o {
 					t.Errorf("Bad pop")
@@ -167,7 +167,7 @@ func testAddRemoveRandom(t *testing.T, pushCount int, lowPrice, highPrice int64,
 func drainTree(t *testing.T, priceTree, guidTree *tree, orderMap map[int64]*Order) {
 	for g := range orderMap {
 		o := orderMap[g]
-		po := guidTree.pop(o.Guid()).getOrder()
+		po := guidTree.cancel(o.Guid()).getOrder()
 		if po != o {
 			t.Errorf("Bad pop")
 		}
