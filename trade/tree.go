@@ -13,44 +13,9 @@ func (b *tree) push(in *node) {
 	if b.root == nil {
 		b.root = in
 		in.pp = &b.root
-		b.root.black = true
 		return
 	}
-	n := b.root
-	for {
-		switch {
-		case in.val == n.val:
-			n.addLast(in)
-			goto repair
-		case in.val < n.val:
-			if n.left == nil {
-				in.toLeftOf(n)
-				goto repair
-			} else {
-				n = n.left
-			}
-		case in.val > n.val:
-			if n.right == nil {
-				in.toRightOf(n)
-				goto repair
-			} else {
-				n = n.right
-			}
-		}
-	}
-repair:
-	for n != nil {
-		if n.right.isRed() && !n.left.isRed() {
-			n = n.rotateLeft()
-		}
-		if n.left.isRed() && n.left.left.isRed() {
-			n = n.rotateRight()
-		}
-		if n.left.isRed() && n.right.isRed() {
-			n.flip()
-		}
-		n = n.parent
-	}
+	b.root.push(in)
 }
 
 func (b *tree) peekMin() *node {
@@ -257,6 +222,32 @@ func (n *node) givePosition(nn *node) {
 	// Guarantee: Each of n.parent/pp/left/right are now nil
 }
 
+func (n *node) push(in *node) {
+	for {
+		switch {
+		case in.val == n.val:
+			n.addLast(in)
+			return
+		case in.val < n.val:
+			if n.left == nil {
+				in.toLeftOf(n)
+				llrbToRoot(n)
+				return
+			} else {
+				n = n.left
+			}
+		case in.val > n.val:
+			if n.right == nil {
+				in.toRightOf(n)
+				llrbToRoot(n)
+				return
+			} else {
+				n = n.right
+			}
+		}
+	}
+}
+
 func (n *node) detach() {
 	p := n.parent
 	s := n.getSibling()
@@ -279,6 +270,10 @@ func (n *node) detach() {
 		n.givePosition(nn)
 		return
 	}
+	repairDetach(p, n, s, nn)
+}
+
+func repairDetach(p, n, s, nn *node) {
 	// Guarantee: Each of n.parent/pp/left/right are now nil
 	if n.isRed() {
 		return
@@ -297,13 +292,13 @@ func (n *node) detach() {
 			s = p.right
 		}
 	}
-	// repair
+	repairToRoot(p, n, s)
+}
+
+func repairToRoot(p, n, s *node) {
 	for p != nil {
 		if s == nil {
-			for p != nil {
-				p = p.fixPop()
-				p = p.parent
-			}
+			llrbToRoot(p)
 			return
 		}
 		pRed := p.isRed()
@@ -312,10 +307,7 @@ func (n *node) detach() {
 		if !sRed && !slRed && pRed {
 			p.black = true
 			s.black = false
-			for p != nil {
-				p = p.fixPop()
-				p = p.parent
-			}
+			llrbToRoot(p)
 			return
 		}
 		if !sRed && !slRed && !pRed {
@@ -328,19 +320,23 @@ func (n *node) detach() {
 				s.rotateRight()
 				p = p.rotateLeft()
 			}
-			for p != nil {
-				p = p.fixPop()
-				p = p.parent
-			}
+			llrbToRoot(p)
 			return
 		}
-		p = p.fixPop()
+		p = llrb(p)
 		s = p.getSibling()
 		p = p.parent
 	}
 }
 
-func (n *node) fixPop() *node {
+func llrbToRoot(n *node) {
+	for n != nil {
+		n = llrb(n)
+		n = n.parent
+	}
+}
+
+func llrb(n *node) *node {
 	if n.right.isRed() && !n.left.isRed() {
 		n = n.rotateLeft()
 	}
