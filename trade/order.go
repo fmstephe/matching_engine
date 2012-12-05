@@ -48,9 +48,9 @@ type TradeData struct {
 }
 
 type Order struct {
-	Amount    uint32
-	StockId   uint32
-	Kind      OrderKind
+	amount    uint32
+	stockId   uint32
+	kind      OrderKind
 	priceNode node
 	guidNode  node
 	nextFree  *Order
@@ -62,9 +62,9 @@ func (o *Order) setup(price, guid int64) {
 }
 
 func (o *Order) CopyInto(into *Order) {
-	into.Amount = o.Amount
-	into.StockId = o.StockId
-	into.Kind = o.Kind
+	into.amount = o.Amount()
+	into.stockId = o.StockId()
+	into.kind = o.Kind()
 	into.setup(o.Price(), o.Guid())
 }
 
@@ -84,16 +84,32 @@ func (o *Order) TradeId() uint32 {
 	return uint32(uint64(o.guidNode.val ^ int64(1)<<32)) // untested
 }
 
+func (o *Order) Amount() uint32 {
+	return o.amount
+}
+
+func (o *Order) ReduceAmount(s uint32) {
+	o.amount -= s
+}
+
+func (o *Order) StockId() uint32 {
+	return o.stockId
+}
+
+func (o *Order) Kind() OrderKind {
+	return o.kind
+}
+
 func (o *Order) String() string {
 	if o == nil {
 		return "<nil>"
 	}
 	price := fstrconv.Itoa64Delim(int64(o.Price()), ',')
-	amount := fstrconv.Itoa64Delim(int64(o.Amount), ',')
+	amount := fstrconv.Itoa64Delim(int64(o.Amount()), ',')
 	traderId := fstrconv.Itoa64Delim(int64(o.TraderId()), '-')
 	tradeId := fstrconv.Itoa64Delim(int64(o.TradeId()), '-')
-	stockId := fstrconv.Itoa64Delim(int64(o.StockId), '-')
-	return fmt.Sprintf("%s, price %s, amount %s, trader %s, trade %s, stock %s", o.Kind.String(), price, amount, traderId, tradeId, stockId)
+	stockId := fstrconv.Itoa64Delim(int64(o.StockId()), '-')
+	return fmt.Sprintf("%s, price %s, amount %s, trader %s, trade %s, stock %s", o.Kind().String(), price, amount, traderId, tradeId, stockId)
 }
 
 func NewBuy(costData CostData, tradeData TradeData) *Order {
@@ -109,7 +125,7 @@ func NewCancel(tradeData TradeData) *Order {
 }
 
 func NewOrder(costData CostData, tradeData TradeData, orderKind OrderKind) *Order {
-	o := &Order{Amount: costData.Amount, StockId: tradeData.StockId, Kind: orderKind, priceNode: node{}}
+	o := &Order{amount: costData.Amount, stockId: tradeData.StockId, kind: orderKind, priceNode: node{}}
 	guid := int64((uint64(tradeData.TraderId) << 32) | uint64(tradeData.TradeId))
 	o.setup(costData.Price, guid)
 	return o

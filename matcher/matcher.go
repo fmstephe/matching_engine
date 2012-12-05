@@ -19,7 +19,7 @@ func NewMatcher(slabSize int, rb *ResponseBuffer) *M {
 func (m *M) Submit(in *trade.Order) {
 	o := m.slab.Malloc()
 	in.CopyInto(o)
-	switch o.Kind {
+	switch o.Kind() {
 	case trade.BUY:
 		m.addBuy(o)
 	case trade.SELL:
@@ -27,7 +27,7 @@ func (m *M) Submit(in *trade.Order) {
 	case trade.CANCEL:
 		m.cancel(o)
 	default:
-		panic(fmt.Sprintf("OrderKind %s not supported", o.Kind.String()))
+		panic(fmt.Sprintf("OrderKind %s not supported", o.Kind().String()))
 	}
 }
 
@@ -64,24 +64,24 @@ func (m *M) fillableBuy(b *trade.Order) bool {
 			return false
 		}
 		if b.Price() >= s.Price() {
-			if b.Amount > s.Amount {
-				amount := s.Amount
+			if b.Amount() > s.Amount() {
+				amount := s.Amount()
 				price := price(b.Price(), s.Price())
 				m.slab.Free(m.matchTrees.PopSell())
-				b.Amount -= amount
+				b.ReduceAmount(amount)
 				completeTrade(m.rb, trade.PARTIAL, trade.FULL, b, s, price, amount)
 				continue
 			}
-			if s.Amount > b.Amount {
-				amount := b.Amount
+			if s.Amount() > b.Amount() {
+				amount := b.Amount()
 				price := price(b.Price(), s.Price())
-				s.Amount -= amount
+				s.ReduceAmount(amount)
 				completeTrade(m.rb, trade.FULL, trade.PARTIAL, b, s, price, amount)
 				m.slab.Free(b)
 				return true // The buy has been used up
 			}
-			if s.Amount == b.Amount {
-				amount := b.Amount
+			if s.Amount() == b.Amount() {
+				amount := b.Amount()
 				price := price(b.Price(), s.Price())
 				completeTrade(m.rb, trade.FULL, trade.FULL, b, s, price, amount)
 				m.slab.Free(m.matchTrees.PopSell())
@@ -102,24 +102,24 @@ func (m *M) fillableSell(s *trade.Order) bool {
 			return false
 		}
 		if b.Price() >= s.Price() {
-			if b.Amount > s.Amount {
-				amount := s.Amount
+			if b.Amount() > s.Amount() {
+				amount := s.Amount()
 				price := price(b.Price(), s.Price())
-				b.Amount -= amount
+				b.ReduceAmount(amount)
 				completeTrade(m.rb, trade.PARTIAL, trade.FULL, b, s, price, amount)
 				m.slab.Free(s)
 				return true // The sell has been used up
 			}
-			if s.Amount > b.Amount {
-				amount := b.Amount
+			if s.Amount() > b.Amount() {
+				amount := b.Amount()
 				price := price(b.Price(), s.Price())
-				s.Amount -= amount
+				s.ReduceAmount(amount)
 				completeTrade(m.rb, trade.PARTIAL, trade.FULL, b, s, price, amount)
 				m.slab.Free(m.matchTrees.PopBuy())
 				continue
 			}
-			if s.Amount == b.Amount {
-				amount := b.Amount
+			if s.Amount() == b.Amount() {
+				amount := b.Amount()
 				price := price(b.Price(), s.Price())
 				completeTrade(m.rb, trade.FULL, trade.FULL, b, s, price, amount)
 				m.slab.Free(m.matchTrees.PopBuy())

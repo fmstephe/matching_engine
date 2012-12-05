@@ -19,7 +19,7 @@ func newRefmatcher(lowPrice, highPrice int64, rb *ResponseBuffer) *refmatcher {
 func (m *refmatcher) submit(in *trade.Order) {
 	o := &trade.Order{}
 	in.CopyInto(o)
-	if o.Kind == trade.CANCEL {
+	if o.Kind() == trade.CANCEL {
 		m.pop(o)
 	} else {
 		m.push(o)
@@ -37,32 +37,28 @@ func (m *refmatcher) match() {
 		if s.Price() > b.Price() {
 			return
 		}
-		if s.Amount == b.Amount {
+		if s.Amount() == b.Amount() {
 			// pop both
 			m.popSell()
 			m.popBuy()
-			amount := s.Amount
+			amount := s.Amount()
 			price := price(b.Price(), s.Price())
-			s.Amount = 0
-			b.Amount = 0
 			completeTrade(m.rb, trade.FULL, trade.FULL, b, s, price, amount)
 		}
-		if s.Amount > b.Amount {
+		if s.Amount() > b.Amount() {
 			// pop buy
 			m.popBuy()
-			amount := b.Amount
+			amount := b.Amount()
 			price := price(b.Price(), s.Price())
-			s.Amount = s.Amount - b.Amount
-			b.Amount = 0
+			s.ReduceAmount(b.Amount())
 			completeTrade(m.rb, trade.FULL, trade.PARTIAL, b, s, price, amount)
 		}
-		if b.Amount > s.Amount {
+		if b.Amount() > s.Amount() {
 			// pop sell
 			m.popSell()
-			amount := s.Amount
+			amount := s.Amount()
 			price := price(b.Price(), s.Price())
-			b.Amount = b.Amount - s.Amount
-			s.Amount = 0
+			b.ReduceAmount(s.Amount())
 			completeTrade(m.rb, trade.PARTIAL, trade.FULL, b, s, price, amount)
 		}
 	}
@@ -73,11 +69,11 @@ func (m *refmatcher) Size() int {
 }
 
 func (m *refmatcher) push(o *trade.Order) {
-	if o.Kind == trade.BUY {
+	if o.Kind() == trade.BUY {
 		m.buys.push(o)
 		return
 	}
-	if o.Kind == trade.SELL {
+	if o.Kind() == trade.SELL {
 		m.sells.push(o)
 		return
 	}
