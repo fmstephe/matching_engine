@@ -5,6 +5,9 @@ import (
 	"github.com/fmstephe/fstrconv"
 )
 
+type OrderKind int32
+type ResponseKind int32
+
 const (
 	BUY           = OrderKind(0)
 	SELL          = OrderKind(1)
@@ -16,10 +19,6 @@ const (
 	MARKET_PRICE  = 0
 )
 
-type OrderKind int32
-
-type ResponseKind int32
-
 func (k OrderKind) String() string {
 	switch k {
 	case BUY:
@@ -28,10 +27,34 @@ func (k OrderKind) String() string {
 		return "SELL"
 	case CANCEL:
 		return "CANCEL"
-	default:
-		return "Unkown OrderKind"
 	}
 	panic("Unreachable")
+}
+
+func (k ResponseKind) String() string {
+	switch k {
+	case PARTIAL:
+		return "PARTIAL"
+	case FULL:
+		return "FULL"
+	case CANCELLED:
+		return "CANCELLED"
+	case NOT_CANCELLED:
+		return "NOT_CANCELLED"
+	}
+	panic("Uncreachable")
+}
+
+func mkGuid(traderId, tradeId uint32) int64 {
+	return int64((uint64(traderId) << 32) | uint64(tradeId))
+}
+
+func getTraderId(guid int64) uint32 {
+	return uint32(uint64(guid >> 32)) // untested
+}
+
+func getTradeId(guid int64) uint32 {
+	return uint32(uint64(guid ^ int64(1)<<32)) // untested
 }
 
 // For readable constructors
@@ -47,13 +70,70 @@ type TradeData struct {
 	StockId  uint32 // Identifies the stock for trade
 }
 
+// Flat description of an incoming order
+type OrderData struct {
+	Price   int64
+	Guid    int64
+	Amount  uint32
+	StockId uint32
+	Kind    OrderKind
+}
+
+func NewBuyData(costData CostData, tradeData TradeData) *OrderData {
+	return NewOrderData(costData, tradeData, BUY)
+}
+
+func NewSellData(costData CostData, tradeData TradeData) *OrderData {
+	return NewOrderData(costData, tradeData, SELL)
+}
+
+func NewCancelData(tradeData TradeData) *OrderData {
+	return NewOrderData(CostData{}, tradeData, CANCEL)
+}
+
+func NewOrderData(costData CostData, tradeData TradeData, kind OrderKind) *OrderData {
+	od := &OrderData{}
+	od.Price = costData.Price
+	od.Guid = mkGuid(tradeData.TraderId, tradeData.TradeId)
+	od.Amount = costData.Amount
+	od.StockId = tradeData.StockId
+	od.Kind = kind
+	return od
+}
+
+// Description of an order which can live inside a guid and price tree
 type Order struct {
+	priceNode node
+	guidNode  node
 	amount    uint32
 	stockId   uint32
 	kind      OrderKind
-	priceNode node
-	guidNode  node
 	nextFree  *Order
+}
+
+func NewBuy(costData CostData, tradeData TradeData) *Order {
+	return NewOrder(costData, tradeData, BUY)
+}
+
+func NewSell(costData CostData, tradeData TradeData) *Order {
+	return NewOrder(costData, tradeData, SELL)
+}
+
+func NewCancel(tradeData TradeData) *Order {
+	return NewOrder(CostData{}, tradeData, CANCEL)
+}
+
+func NewOrder(costData CostData, tradeData TradeData, orderKind OrderKind) *Order {
+	o := &Order{amount: costData.Amount, stockId: tradeData.StockId, kind: orderKind, priceNode: node{}}
+	guid := mkGuid(tradeData.TraderId, tradeData.TradeId)
+	o.setup(costData.Price, guid)
+	return o
+}
+
+func NewOrderFromData(od *OrderData) *Order {
+	o := &Order{}
+	o.CopyFrom(od)
+	return o
 }
 
 func (o *Order) setup(price, guid int64) {
@@ -61,11 +141,11 @@ func (o *Order) setup(price, guid int64) {
 	initNode(o, guid, &o.guidNode, &o.priceNode)
 }
 
-func (o *Order) CopyInto(into *Order) {
-	into.amount = o.Amount()
-	into.stockId = o.StockId()
-	into.kind = o.Kind()
-	into.setup(o.Price(), o.Guid())
+func (o *Order) CopyFrom(from *OrderData) {
+	o.amount = from.Amount
+	o.stockId = from.StockId
+	o.kind = from.Kind
+	o.setup(from.Price, from.Guid)
 }
 
 func (o *Order) Price() int64 {
@@ -77,11 +157,11 @@ func (o *Order) Guid() int64 {
 }
 
 func (o *Order) TraderId() uint32 {
-	return uint32(uint64(o.guidNode.val) >> 32) // untested
+	return getTraderId(o.guidNode.val)
 }
 
 func (o *Order) TradeId() uint32 {
-	return uint32(uint64(o.guidNode.val ^ int64(1)<<32)) // untested
+	return getTradeId(o.guidNode.val)
 }
 
 func (o *Order) Amount() uint32 {
@@ -110,25 +190,6 @@ func (o *Order) String() string {
 	tradeId := fstrconv.Itoa64Delim(int64(o.TradeId()), '-')
 	stockId := fstrconv.Itoa64Delim(int64(o.StockId()), '-')
 	return fmt.Sprintf("%s, price %s, amount %s, trader %s, trade %s, stock %s", o.Kind().String(), price, amount, traderId, tradeId, stockId)
-}
-
-func NewBuy(costData CostData, tradeData TradeData) *Order {
-	return NewOrder(costData, tradeData, BUY)
-}
-
-func NewSell(costData CostData, tradeData TradeData) *Order {
-	return NewOrder(costData, tradeData, SELL)
-}
-
-func NewCancel(tradeData TradeData) *Order {
-	return NewOrder(CostData{}, tradeData, CANCEL)
-}
-
-func NewOrder(costData CostData, tradeData TradeData, orderKind OrderKind) *Order {
-	o := &Order{amount: costData.Amount, stockId: tradeData.StockId, kind: orderKind, priceNode: node{}}
-	guid := int64((uint64(tradeData.TraderId) << 32) | uint64(tradeData.TradeId))
-	o.setup(costData.Price, guid)
-	return o
 }
 
 type Response struct {

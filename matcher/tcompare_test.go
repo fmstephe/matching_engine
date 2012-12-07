@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-var orderMaker = trade.NewOrderMaker()
+var tcompareOrderMaker = trade.NewOrderMaker()
 
 func TestCompareMatchers(t *testing.T) {
 	compareMatchers(t, 100, 1, 1)
@@ -22,8 +22,8 @@ func compareMatchers(t *testing.T, orderPairs int, lowPrice, highPrice int64) {
 	rb := NewResponseBuffer(orderPairs * 2)
 	m := NewMatcher(orderPairs*2, rb)
 	for i := 0; i < orderPairs; i++ {
-		b := orderMaker.MkPricedBuy(orderMaker.Between(lowPrice, highPrice))
-		s := orderMaker.MkPricedSell(orderMaker.Between(lowPrice, highPrice))
+		b := tcompareOrderMaker.MkPricedBuy(tcompareOrderMaker.Between(lowPrice, highPrice))
+		s := tcompareOrderMaker.MkPricedSell(tcompareOrderMaker.Between(lowPrice, highPrice))
 		sm.submit(b)
 		sm.submit(s)
 		m.Submit(b)

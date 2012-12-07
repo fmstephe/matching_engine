@@ -70,11 +70,14 @@ func endProfile() {
 	}
 }
 
-func getData() []*trade.Order {
-	if *filePath == "" {
-		return mkRandomData()
-	}
-	return getItchData()
+func getData() []*trade.OrderData {
+	return mkRandomData()
+	/*
+		if *filePath == "" {
+			return mkRandomData()
+		}
+		return getItchData()
+	*/
 }
 
 func getItchData() []*trade.Order {
@@ -86,22 +89,22 @@ func getItchData() []*trade.Order {
 	return orders
 }
 
-func mkRandomData() []*trade.Order {
+func mkRandomData() []*trade.OrderData {
 	sells := orderMaker.MkSells(orderMaker.ValRangeFlat(*orderNum, 1000, 1500))
 	sellTree := &trade.PriceTree{}
 	buys := orderMaker.MkBuys(orderMaker.ValRangeFlat(*orderNum, 1000, 1500))
 	buyTree := &trade.PriceTree{}
-	orders := make([]*trade.Order, 0, *orderNum*2)
+	orders := make([]*trade.OrderData, 0, *orderNum*2)
 	for i := 0; i < *orderNum; i++ {
 		orders = append(orders, sells[i])
-		sellTree.Push(sells[i])
+		sellTree.Push(trade.NewOrderFromData(sells[i]))
 		orders = append(orders, buys[i])
-		buyTree.Push(buys[i])
+		buyTree.Push(trade.NewOrderFromData(buys[i]))
 		if i > *delDelay {
 			s := sellTree.PopMax()
 			b := buyTree.PopMin()
-			delSell := trade.NewCancel(trade.TradeData{TraderId: s.TraderId(), TradeId: s.TradeId(), StockId: s.StockId()})
-			delBuy := trade.NewCancel(trade.TradeData{TraderId: b.TraderId(), TradeId: b.TradeId(), StockId: b.StockId()})
+			delSell := trade.NewCancelData(trade.TradeData{TraderId: s.TraderId(), TradeId: s.TradeId(), StockId: s.StockId()})
+			delBuy := trade.NewCancelData(trade.TradeData{TraderId: b.TraderId(), TradeId: b.TradeId(), StockId: b.StockId()})
 			orders = append(orders, delSell)
 			orders = append(orders, delBuy)
 		}
@@ -109,8 +112,8 @@ func mkRandomData() []*trade.Order {
 	for sellTree.PeekMin() != nil {
 		s := sellTree.PopMax()
 		b := buyTree.PopMin()
-		delSell := trade.NewCancel(trade.TradeData{TraderId: s.TraderId(), TradeId: s.TradeId(), StockId: s.StockId()})
-		delBuy := trade.NewCancel(trade.TradeData{TraderId: b.TraderId(), TradeId: b.TradeId(), StockId: b.StockId()})
+		delSell := trade.NewCancelData(trade.TradeData{TraderId: s.TraderId(), TradeId: s.TradeId(), StockId: s.StockId()})
+		delBuy := trade.NewCancelData(trade.TradeData{TraderId: b.TraderId(), TradeId: b.TradeId(), StockId: b.StockId()})
 		orders = append(orders, delSell)
 		orders = append(orders, delBuy)
 	}

@@ -16,9 +16,9 @@ func NewMatcher(slabSize int, rb *ResponseBuffer) *M {
 	return &M{slab: slab, rb: rb}
 }
 
-func (m *M) Submit(in *trade.Order) {
+func (m *M) Submit(od *trade.OrderData) {
 	o := m.slab.Malloc()
-	in.CopyInto(o)
+	o.CopyFrom(od)
 	switch o.Kind() {
 	case trade.BUY:
 		m.addBuy(o)

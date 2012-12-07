@@ -12,7 +12,7 @@ const (
 	trader3 = 3
 )
 
-var matchTestOrderMaker = trade.NewOrderMaker()
+var tmatchOrderMaker = trade.NewOrderMaker()
 
 type responseVals struct {
 	price        int64
@@ -76,11 +76,11 @@ func TestSimpleMatch(t *testing.T) {
 	// Add Buy
 	costData := trade.CostData{Price: 7, Amount: 1}
 	tradeData := trade.TradeData{TraderId: trader1, TradeId: 1, StockId: stockId}
-	m.Submit(trade.NewBuy(costData, tradeData))
+	m.Submit(trade.NewBuyData(costData, tradeData))
 	// Add sell
 	costData = trade.CostData{Price: 7, Amount: 1}
 	tradeData = trade.TradeData{TraderId: trader2, TradeId: 2, StockId: stockId}
-	m.Submit(trade.NewSell(costData, tradeData))
+	m.Submit(trade.NewSellData(costData, tradeData))
 	// Verify
 	verifyResponse(t, output.getForRead(), responseVals{price: -7, amount: 1, tradeId: 1, counterParty: trader2})
 	verifyResponse(t, output.getForRead(), responseVals{price: 7, amount: 1, tradeId: 2, counterParty: trader1})
@@ -95,18 +95,18 @@ func TestDoubleSellMatch(t *testing.T) {
 	// Add Buy
 	costData := trade.CostData{Price: 7, Amount: 2}
 	tradeData := trade.TradeData{TraderId: trader1, TradeId: 1, StockId: stockId}
-	m.Submit(trade.NewBuy(costData, tradeData))
+	m.Submit(trade.NewBuyData(costData, tradeData))
 	// Add Sell
 	costData = trade.CostData{Price: 7, Amount: 1}
 	tradeData = trade.TradeData{TraderId: trader2, TradeId: 2, StockId: stockId}
-	m.Submit(trade.NewSell(costData, tradeData))
+	m.Submit(trade.NewSellData(costData, tradeData))
 	// Verify
 	verifyResponse(t, output.getForRead(), responseVals{price: -7, amount: 1, tradeId: 1, counterParty: trader2})
 	verifyResponse(t, output.getForRead(), responseVals{price: 7, amount: 1, tradeId: 2, counterParty: trader1})
 	// Add Sell
 	costData = trade.CostData{Price: 7, Amount: 1}
 	tradeData = trade.TradeData{TraderId: trader3, TradeId: 3, StockId: stockId}
-	m.Submit(trade.NewSell(costData, tradeData))
+	m.Submit(trade.NewSellData(costData, tradeData))
 	// Verify
 	verifyResponse(t, output.getForRead(), responseVals{price: -7, amount: 1, tradeId: 1, counterParty: trader3})
 	verifyResponse(t, output.getForRead(), responseVals{price: 7, amount: 1, tradeId: 3, counterParty: trader1})
@@ -121,17 +121,17 @@ func TestDoubleBuyMatch(t *testing.T) {
 	// Add Sell
 	costData := trade.CostData{Price: 7, Amount: 2}
 	tradeData := trade.TradeData{TraderId: trader1, TradeId: 1, StockId: stockId}
-	m.Submit(trade.NewSell(costData, tradeData))
+	m.Submit(trade.NewSellData(costData, tradeData))
 	// Add Buy
 	costData = trade.CostData{Price: 7, Amount: 1}
 	tradeData = trade.TradeData{TraderId: trader2, TradeId: 2, StockId: stockId}
-	m.Submit(trade.NewBuy(costData, tradeData))
+	m.Submit(trade.NewBuyData(costData, tradeData))
 	verifyResponse(t, output.getForRead(), responseVals{price: -7, amount: 1, tradeId: 2, counterParty: trader1})
 	verifyResponse(t, output.getForRead(), responseVals{price: 7, amount: 1, tradeId: 1, counterParty: trader2})
 	// Add Buy
 	costData = trade.CostData{Price: 7, Amount: 1}
 	tradeData = trade.TradeData{TraderId: trader3, TradeId: 3, StockId: stockId}
-	m.Submit(trade.NewBuy(costData, tradeData))
+	m.Submit(trade.NewBuyData(costData, tradeData))
 	verifyResponse(t, output.getForRead(), responseVals{price: -7, amount: 1, tradeId: 3, counterParty: trader1})
 	verifyResponse(t, output.getForRead(), responseVals{price: 7, amount: 1, tradeId: 1, counterParty: trader3})
 }
@@ -145,11 +145,11 @@ func TestMidPrice(t *testing.T) {
 	// Add Buy
 	costData := trade.CostData{Price: 9, Amount: 1}
 	tradeData := trade.TradeData{TraderId: trader1, TradeId: 1, StockId: stockId}
-	m.Submit(trade.NewBuy(costData, tradeData))
+	m.Submit(trade.NewBuyData(costData, tradeData))
 	// Add Sell
 	costData = trade.CostData{Price: 6, Amount: 1}
 	tradeData = trade.TradeData{TraderId: trader2, TradeId: 1, StockId: stockId}
-	m.Submit(trade.NewSell(costData, tradeData))
+	m.Submit(trade.NewSellData(costData, tradeData))
 	verifyResponse(t, output.getForRead(), responseVals{price: -7, amount: 1, tradeId: 1, counterParty: trader2})
 	verifyResponse(t, output.getForRead(), responseVals{price: 7, amount: 1, tradeId: 1, counterParty: trader1})
 }
@@ -163,11 +163,11 @@ func TestMidPriceBigSell(t *testing.T) {
 	// Add Buy
 	costData := trade.CostData{Price: 9, Amount: 1}
 	tradeData := trade.TradeData{TraderId: trader1, TradeId: 1, StockId: stockId}
-	m.Submit(trade.NewBuy(costData, tradeData))
+	m.Submit(trade.NewBuyData(costData, tradeData))
 	// Add Sell
 	costData = trade.CostData{Price: 6, Amount: 10}
 	tradeData = trade.TradeData{TraderId: trader2, TradeId: 1, StockId: stockId}
-	m.Submit(trade.NewSell(costData, tradeData))
+	m.Submit(trade.NewSellData(costData, tradeData))
 	// Verify
 	verifyResponse(t, output.getForRead(), responseVals{price: -7, amount: 1, tradeId: 1, counterParty: trader2})
 	verifyResponse(t, output.getForRead(), responseVals{price: 7, amount: 1, tradeId: 1, counterParty: trader1})
@@ -182,24 +182,24 @@ func TestMidPriceBigBuy(t *testing.T) {
 	// Add Buy
 	costData := trade.CostData{Price: 9, Amount: 10}
 	tradeData := trade.TradeData{TraderId: trader1, TradeId: 1, StockId: stockId}
-	m.Submit(trade.NewBuy(costData, tradeData))
+	m.Submit(trade.NewBuyData(costData, tradeData))
 	// Add Sell
 	costData = trade.CostData{Price: 6, Amount: 1}
 	tradeData = trade.TradeData{TraderId: trader2, TradeId: 1, StockId: stockId}
-	m.Submit(trade.NewSell(costData, tradeData))
+	m.Submit(trade.NewSellData(costData, tradeData))
 	verifyResponse(t, output.getForRead(), responseVals{price: -7, amount: 1, tradeId: 1, counterParty: trader2})
 	verifyResponse(t, output.getForRead(), responseVals{price: 7, amount: 1, tradeId: 1, counterParty: trader1})
 }
 
 func addLowBuys(m *M, highestPrice int64) {
-	buys := matchTestOrderMaker.MkBuys(matchTestOrderMaker.ValRangeFlat(10, 1, highestPrice))
+	buys := tmatchOrderMaker.MkBuys(tmatchOrderMaker.ValRangeFlat(10, 1, highestPrice))
 	for _, buy := range buys {
 		m.Submit(buy)
 	}
 }
 
 func addHighSells(m *M, lowestPrice int64) {
-	sells := matchTestOrderMaker.MkSells(matchTestOrderMaker.ValRangeFlat(10, lowestPrice, lowestPrice+10000))
+	sells := tmatchOrderMaker.MkSells(tmatchOrderMaker.ValRangeFlat(10, lowestPrice, lowestPrice+10000))
 	for _, sell := range sells {
 		m.Submit(sell)
 	}
