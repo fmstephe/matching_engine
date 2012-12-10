@@ -76,7 +76,7 @@ func testPushPopSimple(t *testing.T, pushCount int, lowPrice, highPrice int64, k
 	validate(t, priceTree, guidTree)
 	q := mkPrioq(pushCount, lowPrice, highPrice)
 	for i := 0; i < pushCount; i++ {
-		o := NewOrderFromData(ttreeOrderMaker.MkPricedOrder(ttreeOrderMaker.Between(lowPrice, highPrice), kind))
+		o := ttreeOrderMaker.MkPricedOrder(ttreeOrderMaker.Between(lowPrice, highPrice), kind)
 		priceTree.push(&o.priceNode)
 		guidTree.push(&o.guidNode)
 		validate(t, priceTree, guidTree)
@@ -96,7 +96,7 @@ func testPushPopRandom(t *testing.T, pushCount int, lowPrice, highPrice int64, k
 	for i := 0; i < pushCount; {
 		n := r.Int()
 		if n%2 == 0 || priceTree.peekMin() == nil {
-			o := NewOrderFromData(ttreeOrderMaker.MkPricedOrder(ttreeOrderMaker.Between(lowPrice, highPrice), kind))
+			o := ttreeOrderMaker.MkPricedOrder(ttreeOrderMaker.Between(lowPrice, highPrice), kind)
 			priceTree.push(&o.priceNode)
 			guidTree.push(&o.guidNode)
 			validate(t, priceTree, guidTree)
@@ -124,7 +124,7 @@ func testAddRemoveSimple(t *testing.T, pushCount int, lowPrice, highPrice int64,
 	validate(t, priceTree, guidTree)
 	orderMap := make(map[int64]*Order)
 	for i := 0; i < pushCount; i++ {
-		o := NewOrderFromData(ttreeOrderMaker.MkPricedOrder(ttreeOrderMaker.Between(lowPrice, highPrice), kind))
+		o := ttreeOrderMaker.MkPricedOrder(ttreeOrderMaker.Between(lowPrice, highPrice), kind)
 		priceTree.push(&o.priceNode)
 		guidTree.push(&o.guidNode)
 		validate(t, priceTree, guidTree)
@@ -142,7 +142,7 @@ func testAddRemoveRandom(t *testing.T, pushCount int, lowPrice, highPrice int64,
 	for i := 0; i < pushCount; {
 		n := r.Int()
 		if n%2 == 0 || guidTree.peekMin() == nil {
-			o := NewOrderFromData(ttreeOrderMaker.MkPricedOrder(ttreeOrderMaker.Between(lowPrice, highPrice), kind))
+			o := ttreeOrderMaker.MkPricedOrder(ttreeOrderMaker.Between(lowPrice, highPrice), kind)
 			priceTree.push(&o.priceNode)
 			guidTree.push(&o.guidNode)
 			validate(t, priceTree, guidTree)

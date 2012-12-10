@@ -26,18 +26,30 @@ func (o *OrderMaker) Between(lower, upper int64) int64 {
 	return o.r.Int63n(r) + lower
 }
 
-func (o *OrderMaker) MkPricedBuy(price int64) *OrderData {
+func (o *OrderMaker) MkPricedBuyData(price int64) *OrderData {
 	if price == 0 {
 		price = 1 // 'market' buys are not allowed
 	}
-	return o.MkPricedOrder(price, BUY)
+	return o.MkPricedOrderData(price, BUY)
 }
 
-func (o *OrderMaker) MkPricedSell(price int64) *OrderData {
-	return o.MkPricedOrder(price, SELL)
+func (o *OrderMaker) MkPricedBuy(price int64) *Order {
+	return NewOrderFromData(o.MkPricedBuyData(price))
 }
 
-func (o *OrderMaker) MkPricedOrder(price int64, kind OrderKind) *OrderData {
+func (o *OrderMaker) MkPricedSellData(price int64) *OrderData {
+	return o.MkPricedOrderData(price, SELL)
+}
+
+func (o *OrderMaker) MkPricedSell(price int64) *Order {
+	return o.MkPricedSell(price)
+}
+
+func (o *OrderMaker) MkPricedOrder(price int64, kind OrderKind) *Order {
+	return NewOrderFromData(o.MkPricedOrderData(price, kind))
+}
+
+func (o *OrderMaker) MkPricedOrderData(price int64, kind OrderKind) *OrderData {
 	costData := CostData{Price: price, Amount: 1}
 	tradeData := TradeData{TraderId: o.traderId, TradeId: 1, StockId: 1}
 	o.traderId++
