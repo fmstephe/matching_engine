@@ -1,6 +1,7 @@
 package matcher
 
 import (
+	"github.com/fmstephe/matching_engine/cbuf"
 	"github.com/fmstephe/matching_engine/trade"
 	"testing"
 )
@@ -17,9 +18,9 @@ func TestCompareMatchers(t *testing.T) {
 }
 
 func compareMatchers(t *testing.T, orderPairs int, lowPrice, highPrice int64) {
-	srb := NewResponseBuffer(orderPairs * 2)
+	srb := cbuf.New(orderPairs * 2)
 	sm := newRefmatcher(lowPrice, highPrice, srb)
-	rb := NewResponseBuffer(orderPairs * 2)
+	rb := cbuf.New(orderPairs * 2)
 	m := NewMatcher(orderPairs*2, rb)
 	for i := 0; i < orderPairs; i++ {
 		b := tcompareOrderMaker.MkPricedBuyData(tcompareOrderMaker.Between(lowPrice, highPrice))
@@ -32,15 +33,24 @@ func compareMatchers(t *testing.T, orderPairs int, lowPrice, highPrice int64) {
 	}
 }
 
-func checkBuffers(t *testing.T, srb, rb *ResponseBuffer) {
+func checkBuffers(t *testing.T, srb, rb *cbuf.Response) {
 	if srb.Writes() != rb.Writes() {
 		t.Errorf("Different number of writes detected. Simple: %d, Real: %d", srb.Writes(), rb.Writes())
 	}
-	for srb.Reads() <= srb.Writes() {
-		sr := srb.getForRead()
-		r := rb.getForRead()
+	for srb.Reads() < srb.Writes() {
+		sr, serr := srb.GetForRead()
+		if serr != nil {
+			t.Errorf(serr.Error())
+			return
+		}
+		r, err := rb.GetForRead()
+		if err != nil {
+			t.Errorf(err.Error())
+			return
+		}
 		if *sr != *r {
 			t.Errorf("Different responses read. Simple: %v, Real: %v", sr, r)
+			return
 		}
 	}
 }

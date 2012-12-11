@@ -1,16 +1,17 @@
 package matcher
 
 import (
+	"github.com/fmstephe/matching_engine/cbuf"
 	"github.com/fmstephe/matching_engine/trade"
 )
 
 type refmatcher struct {
 	buys  *prioq
 	sells *prioq
-	rb    *ResponseBuffer
+	rb    *cbuf.Response
 }
 
-func newRefmatcher(lowPrice, highPrice int64, rb *ResponseBuffer) *refmatcher {
+func newRefmatcher(lowPrice, highPrice int64, rb *cbuf.Response) *refmatcher {
 	buys := newPrioq(lowPrice, highPrice)
 	sells := newPrioq(lowPrice, highPrice)
 	return &refmatcher{buys: buys, sells: sells, rb: rb}

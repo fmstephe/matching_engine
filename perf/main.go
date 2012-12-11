@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"github.com/fmstephe/fstrconv"
+	"github.com/fmstephe/matching_engine/cbuf"
 	"github.com/fmstephe/matching_engine/itch"
 	"github.com/fmstephe/matching_engine/matcher"
 	"github.com/fmstephe/matching_engine/trade"
@@ -31,7 +32,7 @@ func main() {
 	orders := getData()
 	orderCount := fstrconv.Itoa64Comma(int64(len(orders)))
 	println(orderCount, "Orders Built")
-	buffer := matcher.NewResponseBuffer(2)
+	buffer := cbuf.New(len(orders))
 	m := matcher.NewMatcher(*delDelay*2, buffer)
 	startProfile()
 	defer endProfile()

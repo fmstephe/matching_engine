@@ -2,16 +2,17 @@ package matcher
 
 import (
 	"fmt"
+	"github.com/fmstephe/matching_engine/cbuf"
 	"github.com/fmstephe/matching_engine/trade"
 )
 
 type M struct {
 	matchTrees trade.MatchTrees // No constructor required
 	slab       *trade.Slab
-	rb         *ResponseBuffer
+	rb         *cbuf.Response
 }
 
-func NewMatcher(slabSize int, rb *ResponseBuffer) *M {
+func NewMatcher(slabSize int, rb *cbuf.Response) *M {
 	slab := trade.NewSlab(slabSize)
 	return &M{slab: slab, rb: rb}
 }
@@ -141,14 +142,23 @@ func price(bPrice, sPrice int64) int64 {
 	return sPrice + (d >> 1)
 }
 
-func completeTrade(rb *ResponseBuffer, brk, srk trade.ResponseKind, b, s *trade.Order, price int64, amount uint32) {
-	br := rb.getForWrite()
-	sr := rb.getForWrite()
+func completeTrade(rb *cbuf.Response, brk, srk trade.ResponseKind, b, s *trade.Order, price int64, amount uint32) {
+	br, berr := rb.GetForWrite()
+	if berr != nil {
+		panic(berr.Error())
+	}
+	sr, serr := rb.GetForWrite()
+	if serr != nil {
+		panic(serr.Error())
+	}
 	br.WriteTrade(brk, -price, amount, b.TraderId(), b.TradeId(), s.TraderId())
 	sr.WriteTrade(srk, price, amount, s.TraderId(), s.TradeId(), b.TraderId())
 }
 
-func completeCancel(rb *ResponseBuffer, rk trade.ResponseKind, d *trade.Order) {
-	r := rb.getForWrite()
+func completeCancel(rb *cbuf.Response, rk trade.ResponseKind, d *trade.Order) {
+	r, err := rb.GetForWrite()
+	if err != nil {
+		panic(err.Error())
+	}
 	r.WriteCancel(rk, d.TraderId(), d.TradeId())
 }
