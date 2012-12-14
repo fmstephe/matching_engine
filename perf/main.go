@@ -38,7 +38,7 @@ func main() {
 	defer endProfile()
 	start := time.Now().UnixNano()
 	for i := range orders {
-		m.Submit(orders[i])
+		m.Submit(&orders[i])
 	}
 	println("Buffer Writes: ", buffer.Writes())
 	total := time.Now().UnixNano() - start
@@ -71,8 +71,12 @@ func endProfile() {
 	}
 }
 
-func getData() []*trade.OrderData {
-	return mkRandomData()
+func getData() []trade.OrderData {
+	orders, err := orderMaker.RndTradeSet(*orderNum, *delDelay, 1000, 1500)
+	if err != nil {
+		panic(err.Error())
+	}
+	return orders
 	/*
 		if *filePath == "" {
 			return mkRandomData()
@@ -86,37 +90,6 @@ func getItchData() []*trade.Order {
 	orders, err := ir.ReadAll()
 	if err != nil {
 		panic(err.Error())
-	}
-	return orders
-}
-
-func mkRandomData() []*trade.OrderData {
-	sells := orderMaker.MkSells(orderMaker.ValRangeFlat(*orderNum, 1000, 1500))
-	sellTree := &trade.PriceTree{}
-	buys := orderMaker.MkBuys(orderMaker.ValRangeFlat(*orderNum, 1000, 1500))
-	buyTree := &trade.PriceTree{}
-	orders := make([]*trade.OrderData, 0, *orderNum*2)
-	for i := 0; i < *orderNum; i++ {
-		orders = append(orders, sells[i])
-		sellTree.Push(trade.NewOrderFromData(sells[i]))
-		orders = append(orders, buys[i])
-		buyTree.Push(trade.NewOrderFromData(buys[i]))
-		if i > *delDelay {
-			s := sellTree.PopMax()
-			b := buyTree.PopMin()
-			delSell := trade.NewCancelData(trade.TradeData{TraderId: s.TraderId(), TradeId: s.TradeId(), StockId: s.StockId()})
-			delBuy := trade.NewCancelData(trade.TradeData{TraderId: b.TraderId(), TradeId: b.TradeId(), StockId: b.StockId()})
-			orders = append(orders, delSell)
-			orders = append(orders, delBuy)
-		}
-	}
-	for sellTree.PeekMin() != nil {
-		s := sellTree.PopMax()
-		b := buyTree.PopMin()
-		delSell := trade.NewCancelData(trade.TradeData{TraderId: s.TraderId(), TradeId: s.TradeId(), StockId: s.StockId()})
-		delBuy := trade.NewCancelData(trade.TradeData{TraderId: b.TraderId(), TradeId: b.TradeId(), StockId: b.StockId()})
-		orders = append(orders, delSell)
-		orders = append(orders, delBuy)
 	}
 	return orders
 }

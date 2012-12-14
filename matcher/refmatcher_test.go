@@ -21,7 +21,13 @@ func (m *refmatcher) submit(od *trade.OrderData) {
 	o := &trade.Order{}
 	o.CopyFrom(od)
 	if o.Kind() == trade.CANCEL {
-		m.pop(o)
+		co := m.pop(o)
+		if co != nil {
+			completeCancel(m.rb, trade.CANCELLED, co)
+		}
+		if co == nil {
+			completeCancel(m.rb, trade.NOT_CANCELLED, o)
+		}
 	} else {
 		m.push(o)
 		m.match()

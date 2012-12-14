@@ -9,9 +9,9 @@ type OrderKind int32
 type ResponseKind int32
 
 const (
-	BUY           = OrderKind(0)
-	SELL          = OrderKind(1)
-	CANCEL        = OrderKind(2)
+	BUY           = OrderKind(1)
+	SELL          = OrderKind(2)
+	CANCEL        = OrderKind(3)
 	PARTIAL       = ResponseKind(0)
 	FULL          = ResponseKind(1)
 	CANCELLED     = ResponseKind(2)
@@ -80,25 +80,55 @@ type OrderData struct {
 }
 
 func NewBuyData(costData CostData, tradeData TradeData) *OrderData {
-	return NewOrderData(costData, tradeData, BUY)
+	od := &OrderData{}
+	WriteBuyData(costData, tradeData, od)
+	return od
 }
 
 func NewSellData(costData CostData, tradeData TradeData) *OrderData {
-	return NewOrderData(costData, tradeData, SELL)
+	od := &OrderData{}
+	WriteSellData(costData, tradeData, od)
+	return od
+}
+
+func CancelOrderData(o *Order) *OrderData {
+	return NewCancelData(TradeData{TraderId: o.TraderId(), TradeId: o.TradeId(), StockId: o.StockId()})
 }
 
 func NewCancelData(tradeData TradeData) *OrderData {
-	return NewOrderData(CostData{}, tradeData, CANCEL)
+	od := &OrderData{}
+	WriteCancelData(tradeData, od)
+	return od
 }
 
 func NewOrderData(costData CostData, tradeData TradeData, kind OrderKind) *OrderData {
 	od := &OrderData{}
+	WriteOrderData(costData, tradeData, kind, od)
+	return od
+}
+
+func WriteBuyData(costData CostData, tradeData TradeData, od *OrderData) {
+	WriteOrderData(costData, tradeData, BUY, od)
+}
+
+func WriteSellData(costData CostData, tradeData TradeData, od *OrderData) {
+	WriteOrderData(costData, tradeData, SELL, od)
+}
+
+func WriteCancelOrderData(o *Order, od *OrderData) {
+	WriteCancelData(TradeData{TraderId: o.TraderId(), TradeId: o.TradeId(), StockId: o.StockId()}, od)
+}
+
+func WriteCancelData(tradeData TradeData, od *OrderData) {
+	WriteOrderData(CostData{}, tradeData, CANCEL, od)
+}
+
+func WriteOrderData(costData CostData, tradeData TradeData, kind OrderKind, od *OrderData) {
 	od.Price = costData.Price
 	od.Guid = mkGuid(tradeData.TraderId, tradeData.TradeId)
 	od.Amount = costData.Amount
 	od.StockId = tradeData.StockId
 	od.Kind = kind
-	return od
 }
 
 // Description of an order which can live inside a guid and price tree
@@ -123,6 +153,10 @@ func NewCancel(tradeData TradeData) *Order {
 	return NewOrder(CostData{}, tradeData, CANCEL)
 }
 
+func CancelOrder(o *Order) *Order {
+	return NewCancel(TradeData{TraderId: o.TraderId(), TradeId: o.TradeId(), StockId: o.StockId()})
+}
+
 func NewOrder(costData CostData, tradeData TradeData, orderKind OrderKind) *Order {
 	o := &Order{amount: costData.Amount, stockId: tradeData.StockId, kind: orderKind, priceNode: node{}}
 	guid := mkGuid(tradeData.TraderId, tradeData.TradeId)
@@ -130,15 +164,15 @@ func NewOrder(costData CostData, tradeData TradeData, orderKind OrderKind) *Orde
 	return o
 }
 
+func (o *Order) setup(price, guid int64) {
+	initNode(o, price, &o.priceNode, &o.guidNode)
+	initNode(o, guid, &o.guidNode, &o.priceNode)
+}
+
 func NewOrderFromData(od *OrderData) *Order {
 	o := &Order{}
 	o.CopyFrom(od)
 	return o
-}
-
-func (o *Order) setup(price, guid int64) {
-	initNode(o, price, &o.priceNode, &o.guidNode)
-	initNode(o, guid, &o.guidNode, &o.priceNode)
 }
 
 func (o *Order) CopyFrom(from *OrderData) {

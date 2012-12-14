@@ -1,6 +1,8 @@
 package trade
 
 import (
+	"errors"
+	"fmt"
 	"math/rand"
 )
 
@@ -50,10 +52,16 @@ func (o *OrderMaker) MkPricedOrder(price int64, kind OrderKind) *Order {
 }
 
 func (o *OrderMaker) MkPricedOrderData(price int64, kind OrderKind) *OrderData {
+	od := &OrderData{}
+	o.writePricedOrderData(price, kind, od)
+	return od
+}
+
+func (o *OrderMaker) writePricedOrderData(price int64, kind OrderKind, od *OrderData) {
 	costData := CostData{Price: price, Amount: 1}
 	tradeData := TradeData{TraderId: o.traderId, TradeId: 1, StockId: 1}
 	o.traderId++
-	return NewOrderData(costData, tradeData, kind)
+	WriteOrderData(costData, tradeData, kind, od)
 }
 
 func (o *OrderMaker) ValRangePyramid(n int, low, high int64) []int64 {
@@ -90,4 +98,40 @@ func (o *OrderMaker) MkOrderDatas(prices []int64, kind OrderKind) []*OrderData {
 		orders[i] = NewOrderData(costData, tradeData, kind)
 	}
 	return orders
+}
+
+func (o *OrderMaker) RndTradeSet(size, depth int, low, high int64) ([]OrderData, error) {
+	if depth > size {
+		return nil, errors.New(fmt.Sprintf("Size (%d) must be greater than or equal to (%d)", size, depth))
+	}
+	orders := make([]OrderData, size*4)
+	sellTree := &PriceTree{}
+	buyTree := &PriceTree{}
+	idx := 0
+	for i := 0; i < size+depth; i++ {
+		if i < size {
+			bd := &orders[idx]
+			idx++
+			o.writePricedOrderData(o.Between(low, high), BUY, bd)
+			if bd.Price == 0 {
+				bd.Price = 1 // TODO find a better place to put this logic
+			}
+			buyTree.Push(NewOrderFromData(bd))
+			sd := &orders[idx]
+			idx++
+			o.writePricedOrderData(o.Between(low, high), SELL, sd)
+			sellTree.Push(NewOrderFromData(sd))
+		}
+		if i >= depth {
+			b := buyTree.PopMin()
+			cbd := &orders[idx]
+			idx++
+			WriteCancelOrderData(b, cbd)
+			s := sellTree.PopMax()
+			csd := &orders[idx]
+			idx++
+			WriteCancelOrderData(s, csd)
+		}
+	}
+	return orders, nil
 }
