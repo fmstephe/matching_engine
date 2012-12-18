@@ -79,51 +79,19 @@ type OrderData struct {
 	Kind    OrderKind
 }
 
-func NewBuyData(costData CostData, tradeData TradeData) *OrderData {
-	od := &OrderData{}
-	WriteBuyData(costData, tradeData, od)
-	return od
+func (od *OrderData) WriteBuy(costData CostData, tradeData TradeData) {
+	od.Write(costData, tradeData, BUY)
 }
 
-func NewSellData(costData CostData, tradeData TradeData) *OrderData {
-	od := &OrderData{}
-	WriteSellData(costData, tradeData, od)
-	return od
+func (od *OrderData) WriteSell(costData CostData, tradeData TradeData) {
+	od.Write(costData, tradeData, SELL)
 }
 
-func CancelOrderData(o *Order) *OrderData {
-	return NewCancelData(TradeData{TraderId: o.TraderId(), TradeId: o.TradeId(), StockId: o.StockId()})
+func (od *OrderData) WriteCancel(o *Order) {
+	od.Write(CostData{}, TradeData{TraderId: o.TraderId(), TradeId: o.TradeId(), StockId: o.StockId()}, CANCEL)
 }
 
-func NewCancelData(tradeData TradeData) *OrderData {
-	od := &OrderData{}
-	WriteCancelData(tradeData, od)
-	return od
-}
-
-func NewOrderData(costData CostData, tradeData TradeData, kind OrderKind) *OrderData {
-	od := &OrderData{}
-	WriteOrderData(costData, tradeData, kind, od)
-	return od
-}
-
-func WriteBuyData(costData CostData, tradeData TradeData, od *OrderData) {
-	WriteOrderData(costData, tradeData, BUY, od)
-}
-
-func WriteSellData(costData CostData, tradeData TradeData, od *OrderData) {
-	WriteOrderData(costData, tradeData, SELL, od)
-}
-
-func WriteCancelOrderData(o *Order, od *OrderData) {
-	WriteCancelData(TradeData{TraderId: o.TraderId(), TradeId: o.TradeId(), StockId: o.StockId()}, od)
-}
-
-func WriteCancelData(tradeData TradeData, od *OrderData) {
-	WriteOrderData(CostData{}, tradeData, CANCEL, od)
-}
-
-func WriteOrderData(costData CostData, tradeData TradeData, kind OrderKind, od *OrderData) {
+func (od *OrderData) Write(costData CostData, tradeData TradeData, kind OrderKind) {
 	od.Price = costData.Price
 	od.Guid = mkGuid(tradeData.TraderId, tradeData.TradeId)
 	od.Amount = costData.Amount

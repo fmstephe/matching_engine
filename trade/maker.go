@@ -61,7 +61,7 @@ func (o *OrderMaker) writePricedOrderData(price int64, kind OrderKind, od *Order
 	costData := CostData{Price: price, Amount: 1}
 	tradeData := TradeData{TraderId: o.traderId, TradeId: 1, StockId: 1}
 	o.traderId++
-	WriteOrderData(costData, tradeData, kind, od)
+	od.Write(costData, tradeData, kind)
 }
 
 func (o *OrderMaker) ValRangePyramid(n int, low, high int64) []int64 {
@@ -82,20 +82,20 @@ func (o *OrderMaker) ValRangeFlat(n int, low, high int64) []int64 {
 	return vals
 }
 
-func (o *OrderMaker) MkBuys(prices []int64) []*OrderData {
+func (o *OrderMaker) MkBuys(prices []int64) []OrderData {
 	return o.MkOrderDatas(prices, BUY)
 }
 
-func (o *OrderMaker) MkSells(prices []int64) []*OrderData {
+func (o *OrderMaker) MkSells(prices []int64) []OrderData {
 	return o.MkOrderDatas(prices, SELL)
 }
 
-func (o *OrderMaker) MkOrderDatas(prices []int64, kind OrderKind) []*OrderData {
-	orders := make([]*OrderData, len(prices))
+func (o *OrderMaker) MkOrderDatas(prices []int64, kind OrderKind) []OrderData {
+	orders := make([]OrderData, len(prices))
 	for i, price := range prices {
 		costData := CostData{Price: price, Amount: 1}
 		tradeData := TradeData{TraderId: uint32(i), TradeId: uint32(i), StockId: stockId}
-		orders[i] = NewOrderData(costData, tradeData, kind)
+		orders[i].Write(costData, tradeData, kind)
 	}
 	return orders
 }
@@ -126,11 +126,11 @@ func (o *OrderMaker) RndTradeSet(size, depth int, low, high int64) ([]OrderData,
 			b := buyTree.PopMin()
 			cbd := &orders[idx]
 			idx++
-			WriteCancelOrderData(b, cbd)
+			cbd.WriteCancel(b)
 			s := sellTree.PopMax()
 			csd := &orders[idx]
 			idx++
-			WriteCancelOrderData(s, csd)
+			csd.WriteCancel(s)
 		}
 	}
 	return orders, nil
