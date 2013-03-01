@@ -18,7 +18,11 @@ func blackBalance(t *testing.T, n *node, depth int) int {
 	if lb != rb {
 		t.Errorf("Unbalanced tree found at depth %d. Left: , %d Right: %d", depth, lb, rb)
 	}
-	return lb
+	b := lb
+	if !n.isRed() {
+		b++
+	}
+	return b
 }
 
 func testReds(t *testing.T, n *node, depth int) {
