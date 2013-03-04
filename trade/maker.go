@@ -28,8 +28,8 @@ func (o *OrderMaker) Between(lower, upper int64) int64 {
 	if lower == upper {
 		return lower
 	}
-	r := upper - lower
-	return o.r.Int63n(r) + lower
+	d := upper - lower
+	return o.r.Int63n(d) + lower
 }
 
 func (o *OrderMaker) MkPricedBuyData(price int64) *OrderData {
