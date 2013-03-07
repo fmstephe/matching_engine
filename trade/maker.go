@@ -20,6 +20,10 @@ func NewOrderMaker() *OrderMaker {
 	return &OrderMaker{traderId: 0, r: r}
 }
 
+func (o *OrderMaker) Seed(seed int64) {
+	o.r.Seed(seed)
+}
+
 func (o *OrderMaker) Between(lower, upper int64) int64 {
 	if lower == upper {
 		return lower
