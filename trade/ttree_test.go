@@ -187,8 +187,12 @@ func ensureFreed(t *testing.T, o *Order) {
 
 // Quick check to ensure the tree's internal structure is valid
 func validate(t *testing.T, priceTree, guidTree *tree) {
-	validateRBT(t, priceTree)
-	validateRBT(t, guidTree)
+	if err := validateRBT(priceTree); err != nil {
+		t.Errorf("%s",err.Error())
+	}
+	if err := validateRBT(guidTree); err != nil {
+		t.Errorf("%s",err.Error())
+	}
 	checkStructure(t, priceTree.root)
 	checkStructure(t, guidTree.root)
 }

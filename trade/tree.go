@@ -2,6 +2,8 @@ package trade
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"strconv"
 )
 
@@ -279,6 +281,7 @@ func repairDetach(p, n, s, nn *node) {
 		return
 	}
 	if nn.isRed() {
+		// Since n was black we can happily make its red replacement black
 		nn.black = true
 		return
 	}
@@ -441,4 +444,48 @@ func (n *node) moveRedRight() {
 		n.rotateRight()
 		n.parent.flip()
 	}
+}
+
+func validateRBT(rbt *tree) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = r.(error)
+		}
+	}()
+	blackBalance(rbt.root, 0)
+	testReds(rbt.root, 0)
+	return nil
+}
+
+func blackBalance(n *node, depth int) int {
+	if n == nil {
+		return 0
+	}
+	lb := blackBalance(n.left, depth+1)
+	rb := blackBalance(n.right, depth+1)
+	if lb != rb {
+		panic(errors.New(fmt.Sprintf("Unbalanced tree found at depth %d. Left: , %d Right: %d", depth, lb, rb)))
+	}
+	b := lb
+	if !n.isRed() {
+		b++
+	}
+	return b
+}
+
+func testReds(n *node, depth int) {
+	if n == nil {
+		return
+	}
+	if n.isRed() && (n.left.isRed() || n.right.isRed()) && depth != 0 {
+		panic(errors.New(fmt.Sprintf("Red violation found at depth %d", depth)))
+	}
+	if !n.left.isRed() && n.right.isRed() {
+		panic(errors.New(fmt.Sprintf("Right leaning red leaf found at depth %d", depth)))
+	}
+	if n.left.isRed() && n.right.isRed() {
+		panic(errors.New(fmt.Sprintf("Red child pair found at depth", depth)))
+	}
+	testReds(n.left, depth+1)
+	testReds(n.right, depth+1)
 }
