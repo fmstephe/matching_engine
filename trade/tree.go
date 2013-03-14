@@ -323,6 +323,9 @@ func repairToRoot(p, n, s *node) {
 				s.rotateRight()
 				p = p.rotateLeft()
 			}
+			p.black = !pRed
+			p.left.black = true
+			p.right.black = true
 			llrbToRoot(p)
 			return
 		}
