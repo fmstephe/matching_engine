@@ -11,6 +11,10 @@ type tree struct {
 	root *node
 }
 
+func (b *tree) String() string {
+	return b.root.String()
+}
+
 func (b *tree) push(in *node) {
 	if b.root == nil {
 		b.root = in
@@ -233,7 +237,7 @@ func (n *node) push(in *node) {
 		case in.val < n.val:
 			if n.left == nil {
 				in.toLeftOf(n)
-				llrbToRoot(n)
+				repairInsert(n)
 				return
 			} else {
 				n = n.left
@@ -241,7 +245,7 @@ func (n *node) push(in *node) {
 		case in.val > n.val:
 			if n.right == nil {
 				in.toRightOf(n)
-				llrbToRoot(n)
+				repairInsert(n)
 				return
 			} else {
 				n = n.right
@@ -285,74 +289,85 @@ func repairDetach(p, n, s, nn *node) {
 		nn.black = true
 		return
 	}
-	if s.isRed() {
-		// Perform a rotation to make sibling black
-		if p.left == s {
-			p.rotateRight()
-			s = p.left
-		} else {
-			p.rotateLeft()
-			s = p.right
-		}
-	}
-	repairToRoot(p, n, s)
+	repairToRoot(p, s)
 }
 
-func repairToRoot(p, n, s *node) {
+func repairToRoot(p, s *node) {
 	for p != nil {
 		if s == nil {
-			llrbToRoot(p)
 			return
+		}
+		if s.isRed() { // Perform a rotation to make sibling black
+			if p.left == s {
+				p.rotateRight()
+				s = p.left
+			} else {
+				p.rotateLeft()
+				s = p.right
+			}
 		}
 		pRed := p.isRed()
-		sRed := s.isRed()
 		slRed := s.left.isRed()
-		if !sRed && !slRed && pRed {
-			p.black = true
-			s.black = false
-			llrbToRoot(p)
-			return
-		}
-		if !sRed && !slRed && !pRed {
-			// Introduce black violation
-			s.black = false
-		} else if !sRed && slRed {
+		srRed := s.right.isRed()
+		if !slRed && !srRed {
+			if pRed { // Sibling's children are black and parent is red
+				p.black = true
+				s.black = false
+				return
+			} else { // Sibling's children and parent are black, makes a black violation
+				s.black = false
+			}
+		} else { // One of sibling's children is red
 			if p.left == s {
-				p = p.rotateRight()
+				if slRed {
+					p = p.rotateRight()
+				} else {
+					s.rotateLeft()
+					p = p.rotateRight()
+				}
 			} else {
-				s.rotateRight()
-				p = p.rotateLeft()
+				if srRed {
+					p = p.rotateLeft()
+				} else {
+					s.rotateRight()
+					p = p.rotateLeft()
+				}
 			}
 			p.black = !pRed
 			p.left.black = true
 			p.right.black = true
-			llrbToRoot(p)
 			return
 		}
-		p = llrb(p)
 		s = p.getSibling()
 		p = p.parent
 	}
 }
 
-func llrbToRoot(n *node) {
+func repairInsert(n *node) {
 	for n != nil {
-		n = llrb(n)
+		if n.left.isRed() && n.right.isRed() {
+			n.flip()
+		}
+		if n.left.isRed() {
+			if n.left.left.isRed() {
+				n = n.rotateRight()
+			}
+			if n.left.right.isRed() {
+				n.left.rotateLeft()
+				n = n.rotateRight()
+			}
+		}
+		if n.right.isRed() {
+			if n.right.right.isRed() {
+				n = n.rotateLeft()
+			}
+			if n.right.left.isRed() {
+				n.right.rotateRight()
+				n = n.rotateLeft()
+			}
+		}
 		n = n.parent
 	}
-}
-
-func llrb(n *node) *node {
-	if n.right.isRed() && !n.left.isRed() {
-		n = n.rotateLeft()
-	}
-	if n.left.isRed() && n.left.left.isRed() {
-		n = n.rotateRight()
-	}
-	if n.left.isRed() && n.right.isRed() {
-		n.flip()
-	}
-	return n
 }
 
 func (n *node) pop() {
@@ -482,12 +497,6 @@ func testReds(n *node, depth int) {
 	}
 	if n.isRed() && (n.left.isRed() || n.right.isRed()) && depth != 0 {
 		panic(errors.New(fmt.Sprintf("Red violation found at depth %d", depth)))
-	}
-	if !n.left.isRed() && n.right.isRed() {
-		panic(errors.New(fmt.Sprintf("Right leaning red leaf found at depth %d", depth)))
-	}
-	if n.left.isRed() && n.right.isRed() {
-		panic(errors.New(fmt.Sprintf("Red child pair found at depth", depth)))
 	}
 	testReds(n.left, depth+1)
 	testReds(n.right, depth+1)

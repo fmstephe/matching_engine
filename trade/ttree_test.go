@@ -10,6 +10,17 @@ type popperFun func(*testing.T, *tree, *tree, *prioq) (*Order, *Order, *Order)
 
 var ttreeOrderMaker = NewOrderMaker()
 
+func TestPush(t *testing.T) {
+	// buys
+	testPushAscDesc(t, 100, BUY)
+	// buys
+	testPushSimple(t, 1, 1, 1, BUY)
+	testPushSimple(t, 4, 1, 1, SELL)
+	testPushSimple(t, 100, 10, 20, BUY)
+	testPushSimple(t, 100, 100, 10000, SELL)
+	testPushSimple(t, 1000, 100, 10000, BUY)
+}
+
 func TestPushPopSimpleMin(t *testing.T) {
 	// buys
 	testPushPopSimple(t, 1, 1, 1, BUY, maxPopper)
@@ -68,6 +79,36 @@ func TestAddRemoveRandom(t *testing.T) {
 	testAddRemoveRandom(t, 100, 10, 20, SELL)
 	testAddRemoveRandom(t, 100, 100, 10000, SELL)
 	testAddRemoveRandom(t, 1000, 100, 10000, SELL)
+}
+
+func testPushAscDesc(t *testing.T, pushCount int, kind OrderKind) {
+	priceTree := &tree{}
+	guidTree := &tree{}
+	validate(t, priceTree, guidTree)
+	for i := 0; i < pushCount; i++ {
+		o := ttreeOrderMaker.MkPricedOrder(int64(i), kind)
+		priceTree.push(&o.priceNode)
+		guidTree.push(&o.guidNode)
+		validate(t, priceTree, guidTree)
+	}
+	for i := pushCount-1; i >= 0; i-- {
+		o := ttreeOrderMaker.MkPricedOrder(int64(i), kind)
+		priceTree.push(&o.priceNode)
+		guidTree.push(&o.guidNode)
+		validate(t, priceTree, guidTree)
+	}
+}
+
+func testPushSimple(t *testing.T, pushCount int, lowPrice, highPrice int64, kind OrderKind) {
+	priceTree := &tree{}
+	guidTree := &tree{}
+	validate(t, priceTree, guidTree)
+	for i := 0; i < pushCount; i++ {
+		o := ttreeOrderMaker.MkPricedOrder(ttreeOrderMaker.Between(lowPrice, highPrice), kind)
+		priceTree.push(&o.priceNode)
+		guidTree.push(&o.guidNode)
+		validate(t, priceTree, guidTree)
+	}
 }
 
 func testPushPopSimple(t *testing.T, pushCount int, lowPrice, highPrice int64, kind OrderKind, popper popperFun) {
