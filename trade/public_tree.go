@@ -50,31 +50,3 @@ func (m *MatchTrees) Cancel(o *Order) *Order {
 	}
 	return po
 }
-
-type PriceTree struct {
-	t tree
-}
-
-func (p *PriceTree) Push(o *Order) {
-	p.t.push(&o.priceNode)
-}
-
-func (p *PriceTree) Cancel(o *Order) *Order {
-	return p.t.cancel(o.Guid()).getOrder()
-}
-
-func (p *PriceTree) peekMax() *Order {
-	return p.t.peekMax().getOrder()
-}
-
-func (p *PriceTree) PopMax() *Order {
-	return p.t.popMax().getOrder()
-}
-
-func (p *PriceTree) PeekMin() *Order {
-	return p.t.peekMin().getOrder()
-}
-
-func (p *PriceTree) PopMin() *Order {
-	return p.t.popMin().getOrder()
-}

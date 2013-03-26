@@ -109,8 +109,8 @@ func (o *OrderMaker) RndTradeSet(size, depth int, low, high int64) ([]OrderData,
 		return nil, errors.New(fmt.Sprintf("Size (%d) must be greater than or equal to (%d)", size, depth))
 	}
 	orders := make([]OrderData, size*4)
-	sellTree := &PriceTree{}
-	buyTree := &PriceTree{}
+	sellTree := &priceTree{}
+	buyTree := &priceTree{}
 	idx := 0
 	for i := 0; i < size+depth; i++ {
 		if i < size {
@@ -138,4 +138,32 @@ func (o *OrderMaker) RndTradeSet(size, depth int, low, high int64) ([]OrderData,
 		}
 	}
 	return orders, nil
+}
+
+type priceTree struct {
+	t tree
+}
+
+func (p *priceTree) Push(o *Order) {
+	p.t.push(&o.priceNode)
+}
+
+func (p *priceTree) Cancel(o *Order) *Order {
+	return p.t.cancel(o.Guid()).getOrder()
+}
+
+func (p *priceTree) peekMax() *Order {
+	return p.t.peekMax().getOrder()
+}
+
+func (p *priceTree) PopMax() *Order {
+	return p.t.popMax().getOrder()
+}
+
+func (p *priceTree) PeekMin() *Order {
+	return p.t.peekMin().getOrder()
+}
+
+func (p *priceTree) PopMin() *Order {
+	return p.t.popMin().getOrder()
 }
