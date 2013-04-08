@@ -91,7 +91,7 @@ func testPushAscDesc(t *testing.T, pushCount int, kind OrderKind) {
 		guidTree.push(&o.guidNode)
 		validate(t, priceTree, guidTree)
 	}
-	for i := pushCount-1; i >= 0; i-- {
+	for i := pushCount - 1; i >= 0; i-- {
 		o := ttreeOrderMaker.MkPricedOrder(int64(i), kind)
 		priceTree.push(&o.priceNode)
 		guidTree.push(&o.guidNode)
@@ -229,10 +229,10 @@ func ensureFreed(t *testing.T, o *Order) {
 // Quick check to ensure the tree's internal structure is valid
 func validate(t *testing.T, priceTree, guidTree *tree) {
 	if err := validateRBT(priceTree); err != nil {
-		t.Errorf("%s",err.Error())
+		t.Errorf("%s", err.Error())
 	}
 	if err := validateRBT(guidTree); err != nil {
-		t.Errorf("%s",err.Error())
+		t.Errorf("%s", err.Error())
 	}
 	checkStructure(t, priceTree.root)
 	checkStructure(t, guidTree.root)

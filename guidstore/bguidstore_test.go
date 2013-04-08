@@ -43,13 +43,13 @@ func BenchmarkManyBlocks(b *testing.B) {
 func benchmarker(b *testing.B, randMax int64) {
 	b.StopTimer()
 	r := rand.New(rand.NewSource(1))
-	a := make([]int64, b.N * pushes)
+	a := make([]int64, b.N*pushes)
 	s := NewStore()
-	for i := 0; i < b.N * pushes; i++ {
+	for i := 0; i < b.N*pushes; i++ {
 		a[i] = r.Int63n(randMax)
 	}
 	b.StartTimer()
-	for i := 0; i < b.N * pushes; i++ {
+	for i := 0; i < b.N*pushes; i++ {
 		s.Push(a[i])
 	}
 }

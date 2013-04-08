@@ -1,15 +1,15 @@
 package guidstore
 
 import (
-	"strconv"
 	"bytes"
 	"errors"
 	"fmt"
+	"strconv"
 )
 
 const (
 	blockSize = 1024 * 1024 // 2^20
-	blockMask = blockSize-1
+	blockMask = blockSize - 1
 )
 
 type S struct {
@@ -33,13 +33,13 @@ func (s *S) Push(val int64) (added bool) {
 }
 
 type node struct {
-	black bool
-	left   *node
-	right  *node
-	parent *node
-	pp **node
+	black    bool
+	left     *node
+	right    *node
+	parent   *node
+	pp       **node
 	min, max int64
-	block [blockSize]bool
+	block    [blockSize]bool
 }
 
 func (n *node) String() string {
@@ -64,7 +64,6 @@ func (n *node) String() string {
 	b.WriteString(")")
 	return b.String()
 }
-
 
 func newNode(val int64) *node {
 	min := val &^ blockMask
