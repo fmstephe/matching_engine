@@ -9,13 +9,16 @@ type OrderKind int32
 type ResponseKind int32
 
 const (
+	// Orders
 	BUY           = OrderKind(1)
 	SELL          = OrderKind(2)
 	CANCEL        = OrderKind(3)
+	// Responses
 	PARTIAL       = ResponseKind(0)
 	FULL          = ResponseKind(1)
 	CANCELLED     = ResponseKind(2)
 	NOT_CANCELLED = ResponseKind(3)
+	// Constant price indicating a market price sell
 	MARKET_PRICE  = 0
 )
 
@@ -46,15 +49,15 @@ func (k ResponseKind) String() string {
 }
 
 func mkGuid(traderId, tradeId uint32) int64 {
-	return int64((uint64(traderId) << 32) | uint64(tradeId))
+	return (int64(traderId) << 32) | int64(tradeId)
 }
 
 func getTraderId(guid int64) uint32 {
-	return uint32(uint64(guid >> 32)) // untested
+	return uint32(guid >> 32)
 }
 
 func getTradeId(guid int64) uint32 {
-	return uint32(uint64(guid ^ int64(1)<<32)) // untested
+	return uint32(guid)
 }
 
 // For readable constructors
