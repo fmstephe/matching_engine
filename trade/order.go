@@ -10,16 +10,22 @@ type ResponseKind int32
 
 const (
 	// Orders
-	BUY           = OrderKind(1)
-	SELL          = OrderKind(2)
-	CANCEL        = OrderKind(3)
+	BUY    = OrderKind(iota)
+	SELL   = OrderKind(iota)
+	CANCEL = OrderKind(iota)
+)
+
+const (
 	// Responses
-	PARTIAL       = ResponseKind(0)
-	FULL          = ResponseKind(1)
-	CANCELLED     = ResponseKind(2)
-	NOT_CANCELLED = ResponseKind(3)
+	PARTIAL  = ResponseKind(iota)
+	FULL      = ResponseKind(iota)
+	CANCELLED     = ResponseKind(iota)
+	NOT_CANCELLED = ResponseKind(iota)
+)
+
+const (
 	// Constant price indicating a market price sell
-	MARKET_PRICE  = 0
+	MARKET_PRICE = 0
 )
 
 func (k OrderKind) String() string {
@@ -80,6 +86,7 @@ type OrderData struct {
 	Amount  uint32
 	StockId uint32
 	Kind    OrderKind
+	// I think we need a checksum here
 }
 
 func (od *OrderData) WriteBuy(costData CostData, tradeData TradeData) {
