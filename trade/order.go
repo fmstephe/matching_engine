@@ -17,8 +17,8 @@ const (
 
 const (
 	// Responses
-	PARTIAL  = ResponseKind(iota)
-	FULL      = ResponseKind(iota)
+	PARTIAL       = ResponseKind(iota)
+	FULL          = ResponseKind(iota)
 	CANCELLED     = ResponseKind(iota)
 	NOT_CANCELLED = ResponseKind(iota)
 )
