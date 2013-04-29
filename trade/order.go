@@ -1,8 +1,10 @@
 package trade
 
 import (
+	"errors"
 	"fmt"
 	"github.com/fmstephe/fstrconv"
+	"net"
 )
 
 type OrderKind int32
@@ -21,11 +23,17 @@ const (
 	FULL          = ResponseKind(iota)
 	CANCELLED     = ResponseKind(iota)
 	NOT_CANCELLED = ResponseKind(iota)
+	// ACK           = ResponseKind(iota) // Use this to allow clients to acknowledge message receipt
 )
 
 const (
 	// Constant price indicating a market price sell
 	MARKET_PRICE = 0
+)
+
+const (
+	SizeofOrderData = 36 //int(unsafe.Sizeof(OrderData{}))
+	SizeofResponse  = 36 //int(unsafe.Sizeof(Response{}))
 )
 
 func (k OrderKind) String() string {
@@ -58,11 +66,11 @@ func mkGuid(traderId, tradeId uint32) int64 {
 	return (int64(traderId) << 32) | int64(tradeId)
 }
 
-func getTraderId(guid int64) uint32 {
+func GetTraderId(guid int64) uint32 {
 	return uint32(guid >> 32)
 }
 
-func getTradeId(guid int64) uint32 {
+func GetTradeId(guid int64) uint32 {
 	return uint32(guid)
 }
 
@@ -82,10 +90,12 @@ type TradeData struct {
 // Flat description of an incoming order
 type OrderData struct {
 	Price   int64
-	Guid    int64
 	Amount  uint32
+	Guid    int64
 	StockId uint32
 	Kind    OrderKind
+	IP      [4]byte
+	Port    int32
 	// I think we need a checksum here
 }
 
@@ -109,6 +119,24 @@ func (od *OrderData) Write(costData CostData, tradeData TradeData, kind OrderKin
 	od.Kind = kind
 }
 
+func (od *OrderData) UDPAddr() *net.UDPAddr {
+	addr := &net.UDPAddr{}
+	addr.IP = net.IPv4(od.IP[0], od.IP[1], od.IP[2], od.IP[3])
+	addr.Port = int(od.Port)
+	return addr
+}
+
+func (od *OrderData) SetUDPAddr(addr *net.UDPAddr) error {
+	IP := addr.IP.To4()
+	if IP == nil {
+		return errors.New(fmt.Sprintf("IP address (%s) is not IPv4", addr.IP.String()))
+	}
+	od.IP[0], od.IP[1], od.IP[2], od.IP[3] = IP[0], IP[1], IP[2], IP[3]
+	od.Port = int32(addr.Port)
+	println(od.UDPAddr().String())
+	return nil
+}
+
 // Description of an order which can live inside a guid and price tree
 type Order struct {
 	priceNode node
@@ -116,6 +144,8 @@ type Order struct {
 	amount    uint32
 	stockId   uint32
 	kind      OrderKind
+	ip        [4]byte
+	port      int32
 	nextFree  *Order
 }
 
@@ -158,6 +188,8 @@ func (o *Order) CopyFrom(from *OrderData) {
 	o.stockId = from.StockId
 	o.kind = from.Kind
 	o.setup(from.Price, from.Guid)
+	o.ip = from.IP
+	o.port = from.Port
 }
 
 func (o *Order) Price() int64 {
@@ -169,11 +201,11 @@ func (o *Order) Guid() int64 {
 }
 
 func (o *Order) TraderId() uint32 {
-	return getTraderId(o.guidNode.val)
+	return GetTraderId(o.guidNode.val)
 }
 
 func (o *Order) TradeId() uint32 {
-	return getTradeId(o.guidNode.val)
+	return GetTradeId(o.guidNode.val)
 }
 
 func (o *Order) Amount() uint32 {
@@ -186,6 +218,14 @@ func (o *Order) ReduceAmount(s uint32) {
 
 func (o *Order) StockId() uint32 {
 	return o.stockId
+}
+
+func (o *Order) IP() [4]byte {
+	return o.ip
+}
+
+func (o *Order) Port() int32 {
+	return o.port
 }
 
 func (o *Order) Kind() OrderKind {
@@ -201,7 +241,8 @@ func (o *Order) String() string {
 	traderId := fstrconv.Itoa64Delim(int64(o.TraderId()), '-')
 	tradeId := fstrconv.Itoa64Delim(int64(o.TradeId()), '-')
 	stockId := fstrconv.Itoa64Delim(int64(o.StockId()), '-')
-	return fmt.Sprintf("%s, price %s, amount %s, trader %s, trade %s, stock %s", o.Kind().String(), price, amount, traderId, tradeId, stockId)
+	kind := o.kind
+	return fmt.Sprintf("%v, price %s, amount %s, trader %s, trade %s, stock %s", kind, price, amount, traderId, tradeId, stockId)
 }
 
 type Response struct {
@@ -211,6 +252,8 @@ type Response struct {
 	TraderId     uint32 // The trader-id of the trader to whom this response is directed
 	TradeId      uint32 // Links this trade back to a previously submitted Order
 	CounterParty uint32 // The trader-id of the other half of this trade
+	IP           [4]byte
+	Port         int32
 }
 
 func (r *Response) WriteTrade(kind ResponseKind, price int64, amount, traderId, tradeId, counterParty uint32) {
@@ -226,4 +269,11 @@ func (r *Response) WriteCancel(kind ResponseKind, traderId, tradeId uint32) {
 	r.Kind = kind
 	r.TraderId = traderId
 	r.TradeId = tradeId
+}
+
+func (r *Response) UDPAddr() *net.UDPAddr {
+	addr := &net.UDPAddr{}
+	addr.IP = net.IPv4(r.IP[0], r.IP[1], r.IP[2], r.IP[3])
+	addr.Port = int(r.Port)
+	return addr
 }
