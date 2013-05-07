@@ -139,7 +139,7 @@ func price(bPrice, sPrice int64) int64 {
 		return bPrice
 	}
 	d := bPrice - sPrice
-	return sPrice + (d >> 1)
+	return sPrice + (d / 2)
 }
 
 func completeTrade(rb *cbuf.Response, brk, srk trade.ResponseKind, b, s *trade.Order, price int64, amount uint32) {

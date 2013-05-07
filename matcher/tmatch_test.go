@@ -46,27 +46,27 @@ func verifyResponse(t *testing.T, rb *cbuf.Response, vals responseVals) {
 	}
 }
 
-func TestMidPoint(t *testing.T) {
-	midpoint(t, 1, 1, 1)
-	midpoint(t, 2, 1, 1)
-	midpoint(t, 3, 1, 2)
-	midpoint(t, 4, 1, 2)
-	midpoint(t, 5, 1, 3)
-	midpoint(t, 6, 1, 3)
-	midpoint(t, 20, 10, 15)
-	midpoint(t, 21, 10, 15)
-	midpoint(t, 22, 10, 16)
-	midpoint(t, 23, 10, 16)
-	midpoint(t, 24, 10, 17)
-	midpoint(t, 25, 10, 17)
-	midpoint(t, 26, 10, 18)
-	midpoint(t, 27, 10, 18)
-	midpoint(t, 28, 10, 19)
-	midpoint(t, 29, 10, 19)
-	midpoint(t, 30, 10, 20)
+func TestPrice(t *testing.T) {
+	testPrice(t, 1, 1, 1)
+	testPrice(t, 2, 1, 1)
+	testPrice(t, 3, 1, 2)
+	testPrice(t, 4, 1, 2)
+	testPrice(t, 5, 1, 3)
+	testPrice(t, 6, 1, 3)
+	testPrice(t, 20, 10, 15)
+	testPrice(t, 21, 10, 15)
+	testPrice(t, 22, 10, 16)
+	testPrice(t, 23, 10, 16)
+	testPrice(t, 24, 10, 17)
+	testPrice(t, 25, 10, 17)
+	testPrice(t, 26, 10, 18)
+	testPrice(t, 27, 10, 18)
+	testPrice(t, 28, 10, 19)
+	testPrice(t, 29, 10, 19)
+	testPrice(t, 30, 10, 20)
 }
 
-func midpoint(t *testing.T, bPrice, sPrice, expected int64) {
+func testPrice(t *testing.T, bPrice, sPrice, expected int64) {
 	result := price(bPrice, sPrice)
 	if result != expected {
 		t.Errorf("price(%d,%d) does not equal %d, got %d instead.", bPrice, sPrice, expected, result)
