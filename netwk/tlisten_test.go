@@ -3,38 +3,28 @@ package netwk
 import (
 	"bytes"
 	"encoding/binary"
+	"github.com/fmstephe/matching_engine/dispatch"
 	"github.com/fmstephe/matching_engine/trade"
 	"net"
 	"strconv"
 	"testing"
 )
 
-const matcherPort = "1200"
+const serverPort = "1200"
 const clientPort = "1201"
 
 type mockMatcher struct {
-	orderChan    chan *trade.OrderData
-	responseChan chan *trade.Response
-	listener     *Listener
-	responder    *Responder
+	submit chan interface{}
+	orders chan *trade.OrderData
 }
 
-func NewMockMatcher(port string) *mockMatcher {
-	orderChan := make(chan *trade.OrderData, 100)
-	responseChan := make(chan *trade.Response, 100)
-	listener, err := NewListener(port, orderChan)
-	if err != nil {
-		panic(err)
-	}
-	responder := NewResponder(responseChan)
-	return &mockMatcher{orderChan: orderChan, responseChan: responseChan, listener: listener, responder: responder}
+func NewMockMatcher(port string, submit chan interface{}, orders chan *trade.OrderData) *mockMatcher {
+	return &mockMatcher{orders: orders, submit: submit}
 }
 
 func (m *mockMatcher) run() {
-	go m.listener.Listen()
-	go m.responder.Respond()
 	for {
-		od := <-m.orderChan
+		od := <-m.orders
 		r := &trade.Response{}
 		r.Price = od.Price
 		r.Amount = od.Amount
@@ -43,22 +33,39 @@ func (m *mockMatcher) run() {
 		r.IP = od.IP
 		r.Port = od.Port
 		r.CounterParty = trade.GetTraderId(od.Guid)
-		m.responseChan <- r
+		m.submit <- r
 	}
 }
 
 func TestOrdersAndResponse(t *testing.T) {
-	matcher := NewMockMatcher(matcherPort)
-	go matcher.run()
+	setRunning()
 	read := readConn(clientPort)
-	write := writeConn(matcherPort)
+	write := writeConn(serverPort)
 	confirmOrder(t, read, write, 1, 2, 3, 4, 5)
 	confirmOrder(t, read, write, 6, 7, 8, 9, 10)
 	confirmOrder(t, read, write, 11, 12, 13, 14, 15)
 }
 
+func setRunning() {
+	submit := make(chan interface{}, 100)
+	orders := make(chan *trade.OrderData, 100)
+	responses := make(chan *trade.Response, 100)
+	listener, err := NewListener(serverPort, submit)
+	if err != nil {
+		panic(err)
+	}
+	responder := NewResponder(responses)
+	d := dispatch.New(submit, orders, responses)
+	d.SetLogging(false)
+	matcher := NewMockMatcher(serverPort, submit, orders)
+	go listener.Listen()
+	go responder.Respond()
+	go matcher.run()
+	go d.Run()
+}
+
 func writeConn(port string) *net.UDPConn {
-	addr, err := net.ResolveUDPAddr("udp", ":"+matcherPort)
+	addr, err := net.ResolveUDPAddr("udp", ":"+serverPort)
 	if err != nil {
 		panic(err)
 	}

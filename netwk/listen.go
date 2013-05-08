@@ -9,11 +9,11 @@ import (
 )
 
 type Listener struct {
-	conn      *net.UDPConn
-	orderChan chan *trade.OrderData
+	conn   *net.UDPConn
+	submit chan interface{}
 }
 
-func NewListener(port string, orderChan chan *trade.OrderData) (*Listener, error) {
+func NewListener(port string, submit chan interface{}) (*Listener, error) {
 	addr, err := net.ResolveUDPAddr("udp", ":"+port)
 	if err != nil {
 		return nil, err
@@ -22,7 +22,7 @@ func NewListener(port string, orderChan chan *trade.OrderData) (*Listener, error
 	if err != nil {
 		return nil, err
 	}
-	return &Listener{conn: conn, orderChan: orderChan}, nil
+	return &Listener{conn: conn, submit: submit}, nil
 }
 
 func (l *Listener) Listen() {
@@ -34,7 +34,7 @@ func (l *Listener) Listen() {
 			continue
 		}
 		if n != trade.SizeofOrderData {
-			println(fmt.Sprintf("Listener: Error incorrect number of bytes. Expecting %d, found %d in %v", trade.SizeofOrderData, n, s))
+			println(fmt.Sprintf("Listener: Error incorrect number of bytes. Expecting %d, found %d submit %v", trade.SizeofOrderData, n, s))
 			continue
 		}
 		od := &trade.OrderData{}
@@ -44,7 +44,6 @@ func (l *Listener) Listen() {
 			println("Listener - to []byte: ", err.Error())
 			continue
 		}
-		println(fmt.Sprintf("Listener - order data: %v", od)) // Temporary Logging
-		l.orderChan <- od
+		l.submit <- od
 	}
 }

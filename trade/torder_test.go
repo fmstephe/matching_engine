@@ -11,8 +11,8 @@ func TestGuidFuns(t *testing.T) {
 		traderId := r.Uint32()
 		tradeId := r.Uint32()
 		guid := mkGuid(traderId, tradeId)
-		cTraderId := getTraderId(guid)
-		cTradeId := getTradeId(guid)
+		cTraderId := GetTraderId(guid)
+		cTradeId := GetTradeId(guid)
 		if cTraderId != traderId {
 			t.Errorf("Expecting traderId '%s' found '%s'", traderId, cTraderId)
 		}
@@ -29,8 +29,8 @@ func TestGuidFunsWithBigNumbers(t *testing.T) {
 		traderId := uint32(-r.Int31())
 		tradeId := uint32(-r.Int31())
 		guid := mkGuid(traderId, tradeId)
-		cTraderId := getTraderId(guid)
-		cTradeId := getTradeId(guid)
+		cTraderId := GetTraderId(guid)
+		cTradeId := GetTradeId(guid)
 		if cTraderId != traderId {
 			t.Errorf("Expecting traderId '%s' found '%s'", traderId, cTraderId)
 		}

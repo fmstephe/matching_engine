@@ -19,7 +19,6 @@ func NewResponder(respChan chan *trade.Response) *Responder {
 func (r *Responder) Respond() {
 	for {
 		resp := <-r.respChan
-		println(fmt.Sprintf("Responder - response: %v", resp)) // Temporary logging
 		nbuf := &bytes.Buffer{}
 		err := binary.Write(nbuf, binary.BigEndian, resp)
 		if err != nil {
