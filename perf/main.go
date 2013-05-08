@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"github.com/fmstephe/fstrconv"
-	"github.com/fmstephe/matching_engine/cbuf"
 	"github.com/fmstephe/matching_engine/itch"
 	"github.com/fmstephe/matching_engine/matcher"
 	"github.com/fmstephe/matching_engine/trade"
@@ -32,15 +31,15 @@ func main() {
 	orders := getData()
 	orderCount := fstrconv.Itoa64Comma(int64(len(orders)))
 	println(orderCount, "Orders Built")
-	buffer := cbuf.New(len(orders))
-	m := matcher.NewMatcher(*delDelay*2, buffer)
+	output := make(chan *trade.Response, len(orders))
+	m := matcher.NewMatcher(*delDelay*2, output)
 	startProfile()
 	defer endProfile()
 	start := time.Now().UnixNano()
 	for i := range orders {
 		m.Submit(&orders[i])
 	}
-	println("Buffer Writes: ", buffer.Writes())
+	println("Buffer Writes: ", len(output))
 	total := time.Now().UnixNano() - start
 	println("Nanos\t", fstrconv.Itoa64Comma(total))
 	println("Micros\t", fstrconv.Itoa64Comma(total/1000))

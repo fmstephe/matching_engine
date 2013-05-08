@@ -6,7 +6,7 @@ import (
 )
 
 type dispatcher struct {
-	submit        chan interface{}
+	submit    chan interface{}
 	orders    chan *trade.OrderData
 	responses chan *trade.Response
 	log       bool

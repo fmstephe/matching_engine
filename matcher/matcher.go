@@ -2,19 +2,18 @@ package matcher
 
 import (
 	"fmt"
-	"github.com/fmstephe/matching_engine/cbuf"
 	"github.com/fmstephe/matching_engine/trade"
 )
 
 type M struct {
 	matchTrees trade.MatchTrees // No constructor required
 	slab       *trade.Slab
-	rb         *cbuf.Response
+	rc         chan *trade.Response
 }
 
-func NewMatcher(slabSize int, rb *cbuf.Response) *M {
+func NewMatcher(slabSize int, rc chan *trade.Response) *M {
 	slab := trade.NewSlab(slabSize)
-	return &M{slab: slab, rb: rb}
+	return &M{slab: slab, rc: rc}
 }
 
 func (m *M) Submit(od *trade.OrderData) {
@@ -50,10 +49,10 @@ func (m *M) addSell(s *trade.Order) {
 func (m *M) cancel(o *trade.Order) {
 	ro := m.matchTrees.Cancel(o)
 	if ro != nil {
-		completeCancel(m.rb, trade.CANCELLED, ro)
+		completeCancel(m.rc, trade.CANCELLED, ro)
 		m.slab.Free(ro)
 	} else {
-		completeCancel(m.rb, trade.NOT_CANCELLED, o)
+		completeCancel(m.rc, trade.NOT_CANCELLED, o)
 	}
 	m.slab.Free(o)
 }
@@ -70,21 +69,21 @@ func (m *M) fillableBuy(b *trade.Order) bool {
 				price := price(b.Price(), s.Price())
 				m.slab.Free(m.matchTrees.PopSell())
 				b.ReduceAmount(amount)
-				completeTrade(m.rb, trade.PARTIAL, trade.FULL, b, s, price, amount)
+				completeTrade(m.rc, trade.PARTIAL, trade.FULL, b, s, price, amount)
 				continue
 			}
 			if s.Amount() > b.Amount() {
 				amount := b.Amount()
 				price := price(b.Price(), s.Price())
 				s.ReduceAmount(amount)
-				completeTrade(m.rb, trade.FULL, trade.PARTIAL, b, s, price, amount)
+				completeTrade(m.rc, trade.FULL, trade.PARTIAL, b, s, price, amount)
 				m.slab.Free(b)
 				return true // The buy has been used up
 			}
 			if s.Amount() == b.Amount() {
 				amount := b.Amount()
 				price := price(b.Price(), s.Price())
-				completeTrade(m.rb, trade.FULL, trade.FULL, b, s, price, amount)
+				completeTrade(m.rc, trade.FULL, trade.FULL, b, s, price, amount)
 				m.slab.Free(m.matchTrees.PopSell())
 				m.slab.Free(b)
 				return true // The buy has been used up
@@ -107,7 +106,7 @@ func (m *M) fillableSell(s *trade.Order) bool {
 				amount := s.Amount()
 				price := price(b.Price(), s.Price())
 				b.ReduceAmount(amount)
-				completeTrade(m.rb, trade.PARTIAL, trade.FULL, b, s, price, amount)
+				completeTrade(m.rc, trade.PARTIAL, trade.FULL, b, s, price, amount)
 				m.slab.Free(s)
 				return true // The sell has been used up
 			}
@@ -115,14 +114,14 @@ func (m *M) fillableSell(s *trade.Order) bool {
 				amount := b.Amount()
 				price := price(b.Price(), s.Price())
 				s.ReduceAmount(amount)
-				completeTrade(m.rb, trade.PARTIAL, trade.FULL, b, s, price, amount)
+				completeTrade(m.rc, trade.PARTIAL, trade.FULL, b, s, price, amount)
 				m.slab.Free(m.matchTrees.PopBuy())
 				continue
 			}
 			if s.Amount() == b.Amount() {
 				amount := b.Amount()
 				price := price(b.Price(), s.Price())
-				completeTrade(m.rb, trade.FULL, trade.FULL, b, s, price, amount)
+				completeTrade(m.rc, trade.FULL, trade.FULL, b, s, price, amount)
 				m.slab.Free(m.matchTrees.PopBuy())
 				m.slab.Free(s)
 				return true // The sell has been used up
@@ -142,23 +141,17 @@ func price(bPrice, sPrice int64) int64 {
 	return sPrice + (d / 2)
 }
 
-func completeTrade(rb *cbuf.Response, brk, srk trade.ResponseKind, b, s *trade.Order, price int64, amount uint32) {
-	br, berr := rb.GetForWrite()
-	if berr != nil {
-		panic(berr.Error())
-	}
-	sr, serr := rb.GetForWrite()
-	if serr != nil {
-		panic(serr.Error())
-	}
+func completeTrade(rc chan *trade.Response, brk, srk trade.ResponseKind, b, s *trade.Order, price int64, amount uint32) {
+	br := &trade.Response{}
+	sr := &trade.Response{}
 	br.WriteTrade(brk, -price, amount, b.TraderId(), b.TradeId(), s.TraderId())
 	sr.WriteTrade(srk, price, amount, s.TraderId(), s.TradeId(), b.TraderId())
+	rc <- br
+	rc <- sr
 }
 
-func completeCancel(rb *cbuf.Response, rk trade.ResponseKind, d *trade.Order) {
-	r, err := rb.GetForWrite()
-	if err != nil {
-		panic(err.Error())
-	}
+func completeCancel(rc chan *trade.Response, rk trade.ResponseKind, d *trade.Order) {
+	r := &trade.Response{}
 	r.WriteCancel(rk, d.TraderId(), d.TradeId())
+	rc <- r
 }

@@ -1,20 +1,19 @@
 package matcher
 
 import (
-	"github.com/fmstephe/matching_engine/cbuf"
 	"github.com/fmstephe/matching_engine/trade"
 )
 
 type refmatcher struct {
 	buys  *prioq
 	sells *prioq
-	rb    *cbuf.Response
+	rc    chan *trade.Response
 }
 
-func newRefmatcher(lowPrice, highPrice int64, rb *cbuf.Response) *refmatcher {
+func newRefmatcher(lowPrice, highPrice int64, rc chan *trade.Response) *refmatcher {
 	buys := newPrioq(lowPrice, highPrice)
 	sells := newPrioq(lowPrice, highPrice)
-	return &refmatcher{buys: buys, sells: sells, rb: rb}
+	return &refmatcher{buys: buys, sells: sells, rc: rc}
 }
 
 func (m *refmatcher) submit(od *trade.OrderData) {
@@ -23,10 +22,10 @@ func (m *refmatcher) submit(od *trade.OrderData) {
 	if o.Kind() == trade.CANCEL {
 		co := m.pop(o)
 		if co != nil {
-			completeCancel(m.rb, trade.CANCELLED, co)
+			completeCancel(m.rc, trade.CANCELLED, co)
 		}
 		if co == nil {
-			completeCancel(m.rb, trade.NOT_CANCELLED, o)
+			completeCancel(m.rc, trade.NOT_CANCELLED, o)
 		}
 	} else {
 		m.push(o)
@@ -50,7 +49,7 @@ func (m *refmatcher) match() {
 			m.popBuy()
 			amount := s.Amount()
 			price := price(b.Price(), s.Price())
-			completeTrade(m.rb, trade.FULL, trade.FULL, b, s, price, amount)
+			completeTrade(m.rc, trade.FULL, trade.FULL, b, s, price, amount)
 		}
 		if s.Amount() > b.Amount() {
 			// pop buy
@@ -58,7 +57,7 @@ func (m *refmatcher) match() {
 			amount := b.Amount()
 			price := price(b.Price(), s.Price())
 			s.ReduceAmount(b.Amount())
-			completeTrade(m.rb, trade.FULL, trade.PARTIAL, b, s, price, amount)
+			completeTrade(m.rc, trade.FULL, trade.PARTIAL, b, s, price, amount)
 		}
 		if b.Amount() > s.Amount() {
 			// pop sell
@@ -66,7 +65,7 @@ func (m *refmatcher) match() {
 			amount := s.Amount()
 			price := price(b.Price(), s.Price())
 			b.ReduceAmount(s.Amount())
-			completeTrade(m.rb, trade.PARTIAL, trade.FULL, b, s, price, amount)
+			completeTrade(m.rc, trade.PARTIAL, trade.FULL, b, s, price, amount)
 		}
 	}
 }

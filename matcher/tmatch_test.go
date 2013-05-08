@@ -1,7 +1,6 @@
 package matcher
 
 import (
-	"github.com/fmstephe/matching_engine/cbuf"
 	"github.com/fmstephe/matching_engine/trade"
 	"testing"
 )
@@ -22,12 +21,8 @@ type responseVals struct {
 	counterParty uint32
 }
 
-func verifyResponse(t *testing.T, rb *cbuf.Response, vals responseVals) {
-	r, err := rb.GetForRead()
-	if err != nil {
-		t.Errorf(err.Error())
-		return
-	}
+func verifyResponse(t *testing.T, rc chan *trade.Response, vals responseVals) {
+	r := <-rc
 	price := vals.price
 	amount := vals.amount
 	tradeId := vals.tradeId
@@ -75,7 +70,7 @@ func testPrice(t *testing.T, bPrice, sPrice, expected int64) {
 
 // Basic test matches lonely buy/sell trade pair which match exactly
 func TestSimpleMatch(t *testing.T) {
-	output := cbuf.New(20)
+	output := make(chan *trade.Response, 20)
 	m := NewMatcher(100, output)
 	addLowBuys(m, 5)
 	addHighSells(m, 10)
@@ -98,7 +93,7 @@ func TestSimpleMatch(t *testing.T) {
 
 // Test matches one buy order to two separate sells
 func TestDoubleSellMatch(t *testing.T) {
-	output := cbuf.New(20)
+	output := make(chan *trade.Response, 20)
 	m := NewMatcher(100, output)
 	addLowBuys(m, 5)
 	addHighSells(m, 10)
@@ -130,7 +125,7 @@ func TestDoubleSellMatch(t *testing.T) {
 
 // Test matches two buy orders to one sell
 func TestDoubleBuyMatch(t *testing.T) {
-	output := cbuf.New(20)
+	output := make(chan *trade.Response, 20)
 	m := NewMatcher(100, output)
 	addLowBuys(m, 5)
 	addHighSells(m, 10)
@@ -160,7 +155,7 @@ func TestDoubleBuyMatch(t *testing.T) {
 
 // Test matches lonely buy/sell pair, with same quantity, uses the mid-price point for trade price
 func TestMidPrice(t *testing.T) {
-	output := cbuf.New(20)
+	output := make(chan *trade.Response, 20)
 	m := NewMatcher(100, output)
 	addLowBuys(m, 5)
 	addHighSells(m, 10)
@@ -182,7 +177,7 @@ func TestMidPrice(t *testing.T) {
 
 // Test matches lonely buy/sell pair, sell > quantity, and uses the mid-price point for trade price
 func TestMidPriceBigSell(t *testing.T) {
-	output := cbuf.New(20)
+	output := make(chan *trade.Response, 20)
 	m := NewMatcher(100, output)
 	addLowBuys(m, 5)
 	addHighSells(m, 10)
@@ -205,7 +200,7 @@ func TestMidPriceBigSell(t *testing.T) {
 
 // Test matches lonely buy/sell pair, buy > quantity, and uses the mid-price point for trade price
 func TestMidPriceBigBuy(t *testing.T) {
-	output := cbuf.New(20)
+	output := make(chan *trade.Response, 20)
 	m := NewMatcher(100, output)
 	addLowBuys(m, 5)
 	addHighSells(m, 10)
