@@ -9,16 +9,20 @@ import (
 )
 
 type Responder struct {
-	respChan chan *trade.Response
+	responses chan *trade.Response
 }
 
-func NewResponder(respChan chan *trade.Response) *Responder {
-	return &Responder{respChan: respChan}
+func NewResponder() *Responder {
+	return &Responder{}
 }
 
-func (r *Responder) Respond() {
+func (r *Responder) SetResponses(responses chan *trade.Response) {
+	r.responses = responses
+}
+
+func (r *Responder) Run() {
 	for {
-		resp := <-r.respChan
+		resp := <-r.responses
 		nbuf := &bytes.Buffer{}
 		err := binary.Write(nbuf, binary.BigEndian, resp)
 		if err != nil {

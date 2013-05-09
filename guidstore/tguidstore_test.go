@@ -10,7 +10,7 @@ func TestPushMany(t *testing.T) {
 	r := rand.New(rand.NewSource(1))
 	m := make(map[int64]bool)
 	s := NewStore()
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < 100; i++ {
 		v := r.Int63n(math.MaxInt64)
 		pushed := s.Push(v)
 		present := m[v]

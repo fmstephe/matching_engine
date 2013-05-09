@@ -3,7 +3,7 @@ package netwk
 import (
 	"bytes"
 	"encoding/binary"
-	"github.com/fmstephe/matching_engine/dispatch"
+	"github.com/fmstephe/matching_engine/coordinator"
 	"github.com/fmstephe/matching_engine/trade"
 	"net"
 	"strconv"
@@ -18,11 +18,15 @@ type mockMatcher struct {
 	orders chan *trade.OrderData
 }
 
-func NewMockMatcher(port string, submit chan interface{}, orders chan *trade.OrderData) *mockMatcher {
-	return &mockMatcher{orders: orders, submit: submit}
+func (m *mockMatcher) SetSubmit(submit chan interface{}) {
+	m.submit = submit
 }
 
-func (m *mockMatcher) run() {
+func (m *mockMatcher) SetOrders(orders chan *trade.OrderData) {
+	m.orders = orders
+}
+
+func (m *mockMatcher) Run() {
 	for {
 		od := <-m.orders
 		r := &trade.Response{}
@@ -47,21 +51,13 @@ func TestOrdersAndResponse(t *testing.T) {
 }
 
 func setRunning() {
-	submit := make(chan interface{}, 100)
-	orders := make(chan *trade.OrderData, 100)
-	responses := make(chan *trade.Response, 100)
-	listener, err := NewListener(serverPort, submit)
+	listener, err := NewListener(serverPort)
 	if err != nil {
 		panic(err)
 	}
-	responder := NewResponder(responses)
-	d := dispatch.New(submit, orders, responses)
-	d.SetLogging(false)
-	matcher := NewMockMatcher(serverPort, submit, orders)
-	go listener.Listen()
-	go responder.Respond()
-	go matcher.run()
-	go d.Run()
+	responder := NewResponder()
+	matcher := &mockMatcher{}
+	coordinator.Coordinate(listener, responder, matcher, false)
 }
 
 func writeConn(port string) *net.UDPConn {

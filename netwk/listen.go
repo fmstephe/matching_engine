@@ -13,7 +13,7 @@ type Listener struct {
 	submit chan interface{}
 }
 
-func NewListener(port string, submit chan interface{}) (*Listener, error) {
+func NewListener(port string) (*Listener, error) {
 	addr, err := net.ResolveUDPAddr("udp", ":"+port)
 	if err != nil {
 		return nil, err
@@ -22,10 +22,14 @@ func NewListener(port string, submit chan interface{}) (*Listener, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Listener{conn: conn, submit: submit}, nil
+	return &Listener{conn: conn}, nil
 }
 
-func (l *Listener) Listen() {
+func (l *Listener) SetSubmit(submit chan interface{}) {
+	l.submit = submit
+}
+
+func (l *Listener) Run() {
 	for {
 		s := make([]byte, trade.SizeofOrderData)
 		n, _, err := l.conn.ReadFromUDP(s)
