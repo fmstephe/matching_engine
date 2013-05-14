@@ -1,5 +1,11 @@
 package main
 
+func main() {
+	println("itchdebug not supported at this time.")
+}
+
+/*
+
 import (
 	"bufio"
 	"bytes"
@@ -7,8 +13,8 @@ import (
 	"fmt"
 	"github.com/fmstephe/fstrconv"
 	"github.com/fmstephe/matching_engine/matcher"
-	"github.com/fmstephe/matching_engine/prioq/limitheap"
 	"github.com/fmstephe/matching_engine/trade"
+	"github.com/fmstephe/matching_engine/itch"
 	"os"
 )
 
@@ -26,7 +32,7 @@ func main() {
 func loop() {
 	l := *line
 	for {
-		ir := NewItchReader(*filePath)
+		ir := itch.NewItchReader(*filePath)
 		defer func() {
 			if r := recover(); r != nil {
 				println(fmt.Sprintf("Panic at line %d", ir.LineCount()))
@@ -35,21 +41,23 @@ func loop() {
 			}
 		}()
 		in := bufio.NewReader(os.Stdin)
-		buysQ := limitheap.New(trade.BUY, 2000, 10000)
-		sellsQ := limitheap.New(trade.SELL, 2000, 10000)
-		buffer := matcher.NewResponseBuffer(2)
-		m := matcher.NewMatcher(buysQ, sellsQ, buffer)
+		submit := make(chan interface{}, 20)
+		orders := make(chan *trade.OrderData)
+		m := matcher.NewMatcher(1000)
+		m.SetSubmit(submit)
+		m.SetOrders(orders)
+		go m.Run()
 		//
 		var o *trade.Order
 		var err error
 		for {
 			o, _, err = ir.ReadOrder()
 			if err != nil {
-				println(err.Error())
-				return
+				panic(err)
 			}
-			if o != nil && (o.Kind == trade.BUY || o.Kind == trade.SELL || o.Kind == trade.CANCEL) {
-				m.Submit(o)
+			if o != nil && (o.Kind() == trade.BUY || o.Kind() == trade.SELL || o.Kind() == trade.CANCEL) {
+				orders<-o
+				clear(submit)
 			}
 			checkPrint(ir, o, m, l)
 			c := checkPause(in, ir, o, l)
@@ -117,3 +125,10 @@ func formatLimits(limits []*trade.SurveyLimit) string {
 	}
 	return b.String()
 }
+
+func drain(c chan interface{}) {
+	for len(c) > 0 {
+		<-c
+	}
+}
+*/
