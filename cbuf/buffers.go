@@ -1,3 +1,5 @@
+// Despite not being used, only half implemented and not not thread safe this package will be kept around because replacement queues for channels will probably have a very similar interface
+
 package cbuf
 
 import (

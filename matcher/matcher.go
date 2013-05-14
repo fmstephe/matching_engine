@@ -8,31 +8,45 @@ import (
 type M struct {
 	matchTrees trade.MatchTrees // No constructor required
 	slab       *trade.Slab
-	rc         chan *trade.Response
+	submit     chan interface{}
+	orders     chan *trade.OrderData
 }
 
-func NewMatcher(slabSize int, rc chan *trade.Response) *M {
+func NewMatcher(slabSize int) *M {
 	slab := trade.NewSlab(slabSize)
-	return &M{slab: slab, rc: rc}
+	return &M{slab: slab}
 }
 
-func (m *M) Submit(od *trade.OrderData) {
-	o := m.slab.Malloc()
-	o.CopyFrom(od)
-	switch o.Kind() {
-	case trade.BUY:
-		m.addBuy(o)
-	case trade.SELL:
-		m.addSell(o)
-	case trade.CANCEL:
-		m.cancel(o)
-	default:
-		panic(fmt.Sprintf("OrderKind %s not supported", o.Kind().String()))
+func (m *M) SetSubmit(submit chan interface{}) {
+	m.submit = submit
+}
+
+func (m *M) SetOrders(orders chan *trade.OrderData) {
+	m.orders = orders
+}
+
+func (m *M) Run() {
+	for {
+		od := <-m.orders
+		o := m.slab.Malloc()
+		o.CopyFrom(od)
+		switch o.Kind() {
+		case trade.BUY:
+			m.addBuy(o)
+		case trade.SELL:
+			m.addSell(o)
+		case trade.CANCEL:
+			m.cancel(o)
+		default:
+			// This should probably just be an message to m.submit
+			panic(fmt.Sprintf("OrderKind %s not supported", o.Kind().String()))
+		}
 	}
 }
 
 func (m *M) addBuy(b *trade.Order) {
 	if b.Price() == trade.MARKET_PRICE {
+		// This should probably just be a message to m.submit
 		panic("It is illegal to submit a buy at market price")
 	}
 	if !m.fillableBuy(b) {
@@ -49,10 +63,10 @@ func (m *M) addSell(s *trade.Order) {
 func (m *M) cancel(o *trade.Order) {
 	ro := m.matchTrees.Cancel(o)
 	if ro != nil {
-		completeCancel(m.rc, trade.CANCELLED, ro)
+		completeCancel(m.submit, trade.CANCELLED, ro)
 		m.slab.Free(ro)
 	} else {
-		completeCancel(m.rc, trade.NOT_CANCELLED, o)
+		completeCancel(m.submit, trade.NOT_CANCELLED, o)
 	}
 	m.slab.Free(o)
 }
@@ -69,21 +83,21 @@ func (m *M) fillableBuy(b *trade.Order) bool {
 				price := price(b.Price(), s.Price())
 				m.slab.Free(m.matchTrees.PopSell())
 				b.ReduceAmount(amount)
-				completeTrade(m.rc, trade.PARTIAL, trade.FULL, b, s, price, amount)
+				completeTrade(m.submit, trade.PARTIAL, trade.FULL, b, s, price, amount)
 				continue
 			}
 			if s.Amount() > b.Amount() {
 				amount := b.Amount()
 				price := price(b.Price(), s.Price())
 				s.ReduceAmount(amount)
-				completeTrade(m.rc, trade.FULL, trade.PARTIAL, b, s, price, amount)
+				completeTrade(m.submit, trade.FULL, trade.PARTIAL, b, s, price, amount)
 				m.slab.Free(b)
 				return true // The buy has been used up
 			}
 			if s.Amount() == b.Amount() {
 				amount := b.Amount()
 				price := price(b.Price(), s.Price())
-				completeTrade(m.rc, trade.FULL, trade.FULL, b, s, price, amount)
+				completeTrade(m.submit, trade.FULL, trade.FULL, b, s, price, amount)
 				m.slab.Free(m.matchTrees.PopSell())
 				m.slab.Free(b)
 				return true // The buy has been used up
@@ -106,7 +120,7 @@ func (m *M) fillableSell(s *trade.Order) bool {
 				amount := s.Amount()
 				price := price(b.Price(), s.Price())
 				b.ReduceAmount(amount)
-				completeTrade(m.rc, trade.PARTIAL, trade.FULL, b, s, price, amount)
+				completeTrade(m.submit, trade.PARTIAL, trade.FULL, b, s, price, amount)
 				m.slab.Free(s)
 				return true // The sell has been used up
 			}
@@ -114,14 +128,14 @@ func (m *M) fillableSell(s *trade.Order) bool {
 				amount := b.Amount()
 				price := price(b.Price(), s.Price())
 				s.ReduceAmount(amount)
-				completeTrade(m.rc, trade.PARTIAL, trade.FULL, b, s, price, amount)
+				completeTrade(m.submit, trade.PARTIAL, trade.FULL, b, s, price, amount)
 				m.slab.Free(m.matchTrees.PopBuy())
 				continue
 			}
 			if s.Amount() == b.Amount() {
 				amount := b.Amount()
 				price := price(b.Price(), s.Price())
-				completeTrade(m.rc, trade.FULL, trade.FULL, b, s, price, amount)
+				completeTrade(m.submit, trade.FULL, trade.FULL, b, s, price, amount)
 				m.slab.Free(m.matchTrees.PopBuy())
 				m.slab.Free(s)
 				return true // The sell has been used up
@@ -141,17 +155,17 @@ func price(bPrice, sPrice int64) int64 {
 	return sPrice + (d / 2)
 }
 
-func completeTrade(rc chan *trade.Response, brk, srk trade.ResponseKind, b, s *trade.Order, price int64, amount uint32) {
+func completeTrade(submit chan interface{}, brk, srk trade.ResponseKind, b, s *trade.Order, price int64, amount uint32) {
 	br := &trade.Response{}
 	sr := &trade.Response{}
 	br.WriteTrade(brk, -price, amount, b.TraderId(), b.TradeId(), s.TraderId())
 	sr.WriteTrade(srk, price, amount, s.TraderId(), s.TradeId(), b.TraderId())
-	rc <- br
-	rc <- sr
+	submit <- br
+	submit <- sr
 }
 
-func completeCancel(rc chan *trade.Response, rk trade.ResponseKind, d *trade.Order) {
+func completeCancel(submit chan interface{}, rk trade.ResponseKind, d *trade.Order) {
 	r := &trade.Response{}
 	r.WriteCancel(rk, d.TraderId(), d.TradeId())
-	rc <- r
+	submit <- r
 }

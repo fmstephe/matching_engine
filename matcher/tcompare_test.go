@@ -26,25 +26,31 @@ func TestCompareMatchers(t *testing.T) {
 }
 
 func compareMatchers(t *testing.T, orderPairs, depth int, lowPrice, highPrice int64) {
-	refrc := make(chan *trade.Response, orderPairs*2)
-	refm := newRefmatcher(lowPrice, highPrice, refrc)
-	rc := make(chan *trade.Response, orderPairs*2)
-	m := NewMatcher(orderPairs*2, rc)
-	orders, err := tcompareOrderMaker.RndTradeSet(orderPairs, depth, lowPrice, highPrice)
+	refsubmit := make(chan interface{}, orderPairs*2)
+	reforders := make(chan *trade.OrderData, 10)
+	refm := newRefmatcher(lowPrice, highPrice, refsubmit, reforders)
+	submit := make(chan interface{}, orderPairs*2)
+	orders := make(chan *trade.OrderData, 10)
+	m := NewMatcher(orderPairs * 2)
+	m.SetSubmit(submit)
+	m.SetOrders(orders)
+	testSet, err := tcompareOrderMaker.RndTradeSet(orderPairs, depth, lowPrice, highPrice)
+	go refm.Run()
+	go m.Run()
 	if err != nil {
 		panic(err.Error())
 	}
-	for i := 0; i < len(orders); i++ {
-		o := &orders[i]
-		refm.submit(o)
-		refm.submit(o)
-		m.Submit(o)
-		m.Submit(o)
-		checkBuffers(t, refrc, rc)
+	for i := 0; i < len(testSet); i++ {
+		o := &testSet[i]
+		reforders <- o
+		reforders <- o
+		orders <- o
+		orders <- o
+		checkBuffers(t, refsubmit, submit)
 	}
 }
 
-func checkBuffers(t *testing.T, refrc, rc chan *trade.Response) {
+func checkBuffers(t *testing.T, refrc, rc chan interface{}) {
 	refrs := drain(refrc)
 	rs := drain(rc)
 	if len(refrs) != len(rs) {
@@ -60,12 +66,12 @@ func checkBuffers(t *testing.T, refrc, rc chan *trade.Response) {
 	}
 }
 
-func drain(c chan *trade.Response) []*trade.Response {
+func drain(c chan interface{}) []*trade.Response {
 	rs := make([]*trade.Response, 0)
 	for {
 		select {
 		case r := <-c:
-			rs = append(rs, r)
+			rs = append(rs, r.(*trade.Response))
 		default:
 			return rs
 		}
