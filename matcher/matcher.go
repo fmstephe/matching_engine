@@ -3,17 +3,18 @@ package matcher
 import (
 	"fmt"
 	"github.com/fmstephe/matching_engine/trade"
+	"github.com/fmstephe/matching_engine/tree"
 )
 
 type M struct {
-	matchTrees trade.MatchTrees // No constructor required
-	slab       *trade.Slab
+	matchTrees tree.MatchTrees // No constructor required
+	slab       *tree.Slab
 	submit     chan interface{}
 	orders     chan *trade.OrderData
 }
 
 func NewMatcher(slabSize int) *M {
-	slab := trade.NewSlab(slabSize)
+	slab := tree.NewSlab(slabSize)
 	return &M{slab: slab}
 }
 
@@ -44,7 +45,7 @@ func (m *M) Run() {
 	}
 }
 
-func (m *M) addBuy(b *trade.Order) {
+func (m *M) addBuy(b *tree.Order) {
 	if b.Price() == trade.MARKET_PRICE {
 		// This should probably just be a message to m.submit
 		panic("It is illegal to submit a buy at market price")
@@ -54,13 +55,13 @@ func (m *M) addBuy(b *trade.Order) {
 	}
 }
 
-func (m *M) addSell(s *trade.Order) {
+func (m *M) addSell(s *tree.Order) {
 	if !m.fillableSell(s) {
 		m.matchTrees.PushSell(s)
 	}
 }
 
-func (m *M) cancel(o *trade.Order) {
+func (m *M) cancel(o *tree.Order) {
 	ro := m.matchTrees.Cancel(o)
 	if ro != nil {
 		completeCancel(m.submit, trade.CANCELLED, ro)
@@ -71,7 +72,7 @@ func (m *M) cancel(o *trade.Order) {
 	m.slab.Free(o)
 }
 
-func (m *M) fillableBuy(b *trade.Order) bool {
+func (m *M) fillableBuy(b *tree.Order) bool {
 	for {
 		s := m.matchTrees.PeekSell()
 		if s == nil {
@@ -109,7 +110,7 @@ func (m *M) fillableBuy(b *trade.Order) bool {
 	panic("Unreachable")
 }
 
-func (m *M) fillableSell(s *trade.Order) bool {
+func (m *M) fillableSell(s *tree.Order) bool {
 	for {
 		b := m.matchTrees.PeekBuy()
 		if b == nil {
@@ -155,7 +156,7 @@ func price(bPrice, sPrice int64) int64 {
 	return sPrice + (d / 2)
 }
 
-func completeTrade(submit chan interface{}, brk, srk trade.ResponseKind, b, s *trade.Order, price int64, amount uint32) {
+func completeTrade(submit chan interface{}, brk, srk trade.ResponseKind, b, s *tree.Order, price int64, amount uint32) {
 	br := &trade.Response{}
 	sr := &trade.Response{}
 	br.WriteTrade(brk, -price, amount, b.TraderId(), b.TradeId(), s.TraderId())
@@ -164,7 +165,7 @@ func completeTrade(submit chan interface{}, brk, srk trade.ResponseKind, b, s *t
 	submit <- sr
 }
 
-func completeCancel(submit chan interface{}, rk trade.ResponseKind, d *trade.Order) {
+func completeCancel(submit chan interface{}, rk trade.ResponseKind, d *tree.Order) {
 	r := &trade.Response{}
 	r.WriteCancel(rk, d.TraderId(), d.TradeId())
 	submit <- r

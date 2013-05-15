@@ -1,6 +1,7 @@
-package trade
+package tree
 
 import (
+	"github.com/fmstephe/matching_engine/trade"
 	"math/rand"
 	"testing"
 )
@@ -10,9 +11,9 @@ func TestGuidFuns(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		traderId := r.Uint32()
 		tradeId := r.Uint32()
-		guid := MkGuid(traderId, tradeId)
-		cTraderId := GetTraderId(guid)
-		cTradeId := GetTradeId(guid)
+		guid := trade.MkGuid(traderId, tradeId)
+		cTraderId := trade.GetTraderId(guid)
+		cTradeId := trade.GetTradeId(guid)
 		if cTraderId != traderId {
 			t.Errorf("Expecting traderId '%s' found '%s'", traderId, cTraderId)
 		}
@@ -28,9 +29,9 @@ func TestGuidFunsWithBigNumbers(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		traderId := uint32(-r.Int31())
 		tradeId := uint32(-r.Int31())
-		guid := MkGuid(traderId, tradeId)
-		cTraderId := GetTraderId(guid)
-		cTradeId := GetTradeId(guid)
+		guid := trade.MkGuid(traderId, tradeId)
+		cTraderId := trade.GetTraderId(guid)
+		cTradeId := trade.GetTradeId(guid)
 		if cTraderId != traderId {
 			t.Errorf("Expecting traderId '%s' found '%s'", traderId, cTraderId)
 		}

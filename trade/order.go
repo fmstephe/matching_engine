@@ -3,7 +3,6 @@ package trade
 import (
 	"errors"
 	"fmt"
-	"github.com/fmstephe/fstrconv"
 	"net"
 )
 
@@ -63,7 +62,7 @@ func (k ResponseKind) String() string {
 	panic("Uncreachable")
 }
 
-func mkGuid(traderId, tradeId uint32) int64 {
+func MkGuid(traderId, tradeId uint32) int64 {
 	return (int64(traderId) << 32) | int64(tradeId)
 }
 
@@ -108,13 +107,17 @@ func (od *OrderData) WriteSell(costData CostData, tradeData TradeData) {
 	od.Write(costData, tradeData, SELL)
 }
 
-func (od *OrderData) WriteCancel(o *Order) {
-	od.Write(CostData{}, TradeData{TraderId: o.TraderId(), TradeId: o.TradeId(), StockId: o.StockId()}, CANCEL)
+func (od *OrderData) WriteCancel(tradeData TradeData) {
+	od.Write(CostData{}, tradeData, CANCEL)
+}
+
+func (od *OrderData) WriteCancelFromOrder(o *OrderData) {
+	od.Write(CostData{}, TradeData{TraderId: GetTraderId(o.Guid), TradeId: GetTradeId(o.Guid), StockId: o.StockId}, CANCEL)
 }
 
 func (od *OrderData) Write(costData CostData, tradeData TradeData, kind OrderKind) {
 	od.Price = costData.Price
-	od.Guid = mkGuid(tradeData.TraderId, tradeData.TradeId)
+	od.Guid = MkGuid(tradeData.TraderId, tradeData.TradeId)
 	od.Amount = costData.Amount
 	od.StockId = tradeData.StockId
 	od.Kind = kind
@@ -136,114 +139,6 @@ func (od *OrderData) SetUDPAddr(addr *net.UDPAddr) error {
 	od.Port = int32(addr.Port)
 	println(od.UDPAddr().String())
 	return nil
-}
-
-// Description of an order which can live inside a guid and price tree
-type Order struct {
-	priceNode node
-	guidNode  node
-	amount    uint32
-	stockId   uint32
-	kind      OrderKind
-	ip        [4]byte
-	port      int32
-	nextFree  *Order
-}
-
-func NewBuy(costData CostData, tradeData TradeData) *Order {
-	return NewOrder(costData, tradeData, BUY)
-}
-
-func NewSell(costData CostData, tradeData TradeData) *Order {
-	return NewOrder(costData, tradeData, SELL)
-}
-
-func NewCancel(tradeData TradeData) *Order {
-	return NewOrder(CostData{}, tradeData, CANCEL)
-}
-
-func CancelOrder(o *Order) *Order {
-	return NewCancel(TradeData{TraderId: o.TraderId(), TradeId: o.TradeId(), StockId: o.StockId()})
-}
-
-func NewOrder(costData CostData, tradeData TradeData, orderKind OrderKind) *Order {
-	o := &Order{amount: costData.Amount, stockId: tradeData.StockId, kind: orderKind, priceNode: node{}}
-	guid := mkGuid(tradeData.TraderId, tradeData.TradeId)
-	o.setup(costData.Price, guid)
-	return o
-}
-
-func (o *Order) setup(price, guid int64) {
-	initNode(o, price, &o.priceNode, &o.guidNode)
-	initNode(o, guid, &o.guidNode, &o.priceNode)
-}
-
-func NewOrderFromData(od *OrderData) *Order {
-	o := &Order{}
-	o.CopyFrom(od)
-	return o
-}
-
-func (o *Order) CopyFrom(from *OrderData) {
-	o.amount = from.Amount
-	o.stockId = from.StockId
-	o.kind = from.Kind
-	o.setup(from.Price, from.Guid)
-	o.ip = from.IP
-	o.port = from.Port
-}
-
-func (o *Order) Price() int64 {
-	return o.priceNode.val
-}
-
-func (o *Order) Guid() int64 {
-	return o.guidNode.val
-}
-
-func (o *Order) TraderId() uint32 {
-	return GetTraderId(o.guidNode.val)
-}
-
-func (o *Order) TradeId() uint32 {
-	return GetTradeId(o.guidNode.val)
-}
-
-func (o *Order) Amount() uint32 {
-	return o.amount
-}
-
-func (o *Order) ReduceAmount(s uint32) {
-	o.amount -= s
-}
-
-func (o *Order) StockId() uint32 {
-	return o.stockId
-}
-
-func (o *Order) IP() [4]byte {
-	return o.ip
-}
-
-func (o *Order) Port() int32 {
-	return o.port
-}
-
-func (o *Order) Kind() OrderKind {
-	return o.kind
-}
-
-func (o *Order) String() string {
-	if o == nil {
-		return "<nil>"
-	}
-	price := fstrconv.Itoa64Delim(int64(o.Price()), ',')
-	amount := fstrconv.Itoa64Delim(int64(o.Amount()), ',')
-	traderId := fstrconv.Itoa64Delim(int64(o.TraderId()), '-')
-	tradeId := fstrconv.Itoa64Delim(int64(o.TradeId()), '-')
-	stockId := fstrconv.Itoa64Delim(int64(o.StockId()), '-')
-	kind := o.kind
-	return fmt.Sprintf("%v, price %s, amount %s, trader %s, trade %s, stock %s", kind, price, amount, traderId, tradeId, stockId)
 }
 
 type Response struct {

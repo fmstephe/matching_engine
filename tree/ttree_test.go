@@ -1,6 +1,7 @@
-package trade
+package tree
 
 import (
+	"github.com/fmstephe/matching_engine/trade"
 	"math/rand"
 	"testing"
 )
@@ -8,116 +9,120 @@ import (
 // A function signature allowing us to switch easily between min and max queues
 type popperFun func(*testing.T, *tree, *tree, *prioq) (*Order, *Order, *Order)
 
-var ttreeOrderMaker = NewOrderMaker()
+var ttreeOrderMaker = trade.NewOrderMaker()
 
 func TestPush(t *testing.T) {
 	// buys
-	testPushAscDesc(t, 100, BUY)
+	testPushAscDesc(t, 100, trade.BUY)
 	// buys
-	testPushSimple(t, 1, 1, 1, BUY)
-	testPushSimple(t, 4, 1, 1, SELL)
-	testPushSimple(t, 100, 10, 20, BUY)
-	testPushSimple(t, 100, 100, 10000, SELL)
-	testPushSimple(t, 1000, 100, 10000, BUY)
+	testPushSimple(t, 1, 1, 1, trade.BUY)
+	testPushSimple(t, 4, 1, 1, trade.SELL)
+	testPushSimple(t, 100, 10, 20, trade.BUY)
+	testPushSimple(t, 100, 100, 10000, trade.SELL)
+	testPushSimple(t, 1000, 100, 10000, trade.BUY)
 }
 
 func TestPushPopSimpleMin(t *testing.T) {
 	// buys
-	testPushPopSimple(t, 1, 1, 1, BUY, maxPopper)
-	testPushPopSimple(t, 4, 1, 1, BUY, maxPopper)
-	testPushPopSimple(t, 100, 10, 20, BUY, maxPopper)
-	testPushPopSimple(t, 100, 100, 10000, BUY, maxPopper)
-	testPushPopSimple(t, 1000, 100, 10000, BUY, maxPopper)
+	testPushPopSimple(t, 1, 1, 1, trade.BUY, maxPopper)
+	testPushPopSimple(t, 4, 1, 1, trade.BUY, maxPopper)
+	testPushPopSimple(t, 100, 10, 20, trade.BUY, maxPopper)
+	testPushPopSimple(t, 100, 100, 10000, trade.BUY, maxPopper)
+	testPushPopSimple(t, 1000, 100, 10000, trade.BUY, maxPopper)
 	// sells
-	testPushPopSimple(t, 1, 1, 1, SELL, minPopper)
-	testPushPopSimple(t, 100, 1, 1, SELL, minPopper)
-	testPushPopSimple(t, 100, 10, 20, SELL, minPopper)
-	testPushPopSimple(t, 100, 100, 10000, SELL, minPopper)
-	testPushPopSimple(t, 1000, 100, 10000, SELL, minPopper)
+	testPushPopSimple(t, 1, 1, 1, trade.SELL, minPopper)
+	testPushPopSimple(t, 100, 1, 1, trade.SELL, minPopper)
+	testPushPopSimple(t, 100, 10, 20, trade.SELL, minPopper)
+	testPushPopSimple(t, 100, 100, 10000, trade.SELL, minPopper)
+	testPushPopSimple(t, 1000, 100, 10000, trade.SELL, minPopper)
 }
 
 func TestRandomPushPop(t *testing.T) {
 	// buys
-	testPushPopRandom(t, 1, 1, 1, BUY, maxPopper)
-	testPushPopRandom(t, 100, 1, 1, BUY, maxPopper)
-	testPushPopRandom(t, 100, 10, 20, BUY, maxPopper)
-	testPushPopRandom(t, 100, 100, 10000, BUY, maxPopper)
-	testPushPopRandom(t, 1000, 100, 10000, BUY, maxPopper)
+	testPushPopRandom(t, 1, 1, 1, trade.BUY, maxPopper)
+	testPushPopRandom(t, 100, 1, 1, trade.BUY, maxPopper)
+	testPushPopRandom(t, 100, 10, 20, trade.BUY, maxPopper)
+	testPushPopRandom(t, 100, 100, 10000, trade.BUY, maxPopper)
+	testPushPopRandom(t, 1000, 100, 10000, trade.BUY, maxPopper)
 	// sells
-	testPushPopRandom(t, 1, 1, 1, SELL, minPopper)
-	testPushPopRandom(t, 100, 1, 1, SELL, minPopper)
-	testPushPopRandom(t, 100, 10, 20, SELL, minPopper)
-	testPushPopRandom(t, 100, 100, 10000, SELL, minPopper)
-	testPushPopRandom(t, 1000, 100, 10000, SELL, minPopper)
+	testPushPopRandom(t, 1, 1, 1, trade.SELL, minPopper)
+	testPushPopRandom(t, 100, 1, 1, trade.SELL, minPopper)
+	testPushPopRandom(t, 100, 10, 20, trade.SELL, minPopper)
+	testPushPopRandom(t, 100, 100, 10000, trade.SELL, minPopper)
+	testPushPopRandom(t, 1000, 100, 10000, trade.SELL, minPopper)
 }
 
 func TestAddRemoveSimple(t *testing.T) {
 	// Buys
-	testAddRemoveSimple(t, 1, 1, 1, BUY)
-	testAddRemoveSimple(t, 100, 1, 1, BUY)
-	testAddRemoveSimple(t, 100, 10, 20, BUY)
-	testAddRemoveSimple(t, 100, 100, 10000, BUY)
-	testAddRemoveSimple(t, 1000, 100, 10000, BUY)
+	testAddRemoveSimple(t, 1, 1, 1, trade.BUY)
+	testAddRemoveSimple(t, 100, 1, 1, trade.BUY)
+	testAddRemoveSimple(t, 100, 10, 20, trade.BUY)
+	testAddRemoveSimple(t, 100, 100, 10000, trade.BUY)
+	testAddRemoveSimple(t, 1000, 100, 10000, trade.BUY)
 	// Sells
-	testAddRemoveSimple(t, 1, 1, 1, SELL)
-	testAddRemoveSimple(t, 100, 1, 1, SELL)
-	testAddRemoveSimple(t, 100, 10, 20, SELL)
-	testAddRemoveSimple(t, 100, 100, 10000, SELL)
-	testAddRemoveSimple(t, 1000, 100, 10000, SELL)
+	testAddRemoveSimple(t, 1, 1, 1, trade.SELL)
+	testAddRemoveSimple(t, 100, 1, 1, trade.SELL)
+	testAddRemoveSimple(t, 100, 10, 20, trade.SELL)
+	testAddRemoveSimple(t, 100, 100, 10000, trade.SELL)
+	testAddRemoveSimple(t, 1000, 100, 10000, trade.SELL)
 }
 
 func TestAddRemoveRandom(t *testing.T) {
 	// Buys
-	testAddRemoveRandom(t, 1, 1, 1, BUY)
-	testAddRemoveRandom(t, 100, 1, 1, BUY)
-	testAddRemoveRandom(t, 100, 10, 20, BUY)
-	testAddRemoveRandom(t, 100, 100, 10000, BUY)
-	testAddRemoveRandom(t, 1000, 100, 10000, BUY)
+	testAddRemoveRandom(t, 1, 1, 1, trade.BUY)
+	testAddRemoveRandom(t, 100, 1, 1, trade.BUY)
+	testAddRemoveRandom(t, 100, 10, 20, trade.BUY)
+	testAddRemoveRandom(t, 100, 100, 10000, trade.BUY)
+	testAddRemoveRandom(t, 1000, 100, 10000, trade.BUY)
 	// Sells
-	testAddRemoveRandom(t, 1, 1, 1, SELL)
-	testAddRemoveRandom(t, 100, 1, 1, SELL)
-	testAddRemoveRandom(t, 100, 10, 20, SELL)
-	testAddRemoveRandom(t, 100, 100, 10000, SELL)
-	testAddRemoveRandom(t, 1000, 100, 10000, SELL)
+	testAddRemoveRandom(t, 1, 1, 1, trade.SELL)
+	testAddRemoveRandom(t, 100, 1, 1, trade.SELL)
+	testAddRemoveRandom(t, 100, 10, 20, trade.SELL)
+	testAddRemoveRandom(t, 100, 100, 10000, trade.SELL)
+	testAddRemoveRandom(t, 1000, 100, 10000, trade.SELL)
 }
 
-func testPushAscDesc(t *testing.T, pushCount int, kind OrderKind) {
+func testPushAscDesc(t *testing.T, pushCount int, kind trade.OrderKind) {
 	priceTree := &tree{}
 	guidTree := &tree{}
 	validate(t, priceTree, guidTree)
 	for i := 0; i < pushCount; i++ {
-		o := ttreeOrderMaker.MkPricedOrder(int64(i), kind)
+		o := &Order{}
+		o.CopyFrom(ttreeOrderMaker.MkPricedOrderData(int64(i), kind))
 		priceTree.push(&o.priceNode)
 		guidTree.push(&o.guidNode)
 		validate(t, priceTree, guidTree)
 	}
 	for i := pushCount - 1; i >= 0; i-- {
-		o := ttreeOrderMaker.MkPricedOrder(int64(i), kind)
+		o := &Order{}
+		o.CopyFrom(ttreeOrderMaker.MkPricedOrderData(int64(i), kind))
 		priceTree.push(&o.priceNode)
 		guidTree.push(&o.guidNode)
 		validate(t, priceTree, guidTree)
 	}
 }
 
-func testPushSimple(t *testing.T, pushCount int, lowPrice, highPrice int64, kind OrderKind) {
+func testPushSimple(t *testing.T, pushCount int, lowPrice, highPrice int64, kind trade.OrderKind) {
 	priceTree := &tree{}
 	guidTree := &tree{}
 	validate(t, priceTree, guidTree)
 	for i := 0; i < pushCount; i++ {
-		o := ttreeOrderMaker.MkPricedOrder(ttreeOrderMaker.Between(lowPrice, highPrice), kind)
+		o := &Order{}
+		o.CopyFrom(ttreeOrderMaker.MkPricedOrderData(ttreeOrderMaker.Between(lowPrice, highPrice), kind))
 		priceTree.push(&o.priceNode)
 		guidTree.push(&o.guidNode)
 		validate(t, priceTree, guidTree)
 	}
 }
 
-func testPushPopSimple(t *testing.T, pushCount int, lowPrice, highPrice int64, kind OrderKind, popper popperFun) {
+func testPushPopSimple(t *testing.T, pushCount int, lowPrice, highPrice int64, kind trade.OrderKind, popper popperFun) {
 	priceTree := &tree{}
 	guidTree := &tree{}
 	validate(t, priceTree, guidTree)
 	q := mkPrioq(pushCount, lowPrice, highPrice)
 	for i := 0; i < pushCount; i++ {
-		o := ttreeOrderMaker.MkPricedOrder(ttreeOrderMaker.Between(lowPrice, highPrice), kind)
+		o := &Order{}
+		o.CopyFrom(ttreeOrderMaker.MkPricedOrderData(ttreeOrderMaker.Between(lowPrice, highPrice), kind))
 		priceTree.push(&o.priceNode)
 		guidTree.push(&o.guidNode)
 		validate(t, priceTree, guidTree)
@@ -128,7 +133,7 @@ func testPushPopSimple(t *testing.T, pushCount int, lowPrice, highPrice int64, k
 	}
 }
 
-func testPushPopRandom(t *testing.T, pushCount int, lowPrice, highPrice int64, kind OrderKind, popper popperFun) {
+func testPushPopRandom(t *testing.T, pushCount int, lowPrice, highPrice int64, kind trade.OrderKind, popper popperFun) {
 	priceTree := &tree{}
 	guidTree := &tree{}
 	validate(t, priceTree, guidTree)
@@ -137,7 +142,8 @@ func testPushPopRandom(t *testing.T, pushCount int, lowPrice, highPrice int64, k
 	for i := 0; i < pushCount; {
 		n := r.Int()
 		if n%2 == 0 || priceTree.peekMin() == nil {
-			o := ttreeOrderMaker.MkPricedOrder(ttreeOrderMaker.Between(lowPrice, highPrice), kind)
+			o := &Order{}
+			o.CopyFrom(ttreeOrderMaker.MkPricedOrderData(ttreeOrderMaker.Between(lowPrice, highPrice), kind))
 			priceTree.push(&o.priceNode)
 			guidTree.push(&o.guidNode)
 			validate(t, priceTree, guidTree)
@@ -159,13 +165,14 @@ func testPushPopRandom(t *testing.T, pushCount int, lowPrice, highPrice int64, k
 	}
 }
 
-func testAddRemoveSimple(t *testing.T, pushCount int, lowPrice, highPrice int64, kind OrderKind) {
+func testAddRemoveSimple(t *testing.T, pushCount int, lowPrice, highPrice int64, kind trade.OrderKind) {
 	priceTree := &tree{}
 	guidTree := &tree{}
 	validate(t, priceTree, guidTree)
 	orderMap := make(map[int64]*Order)
 	for i := 0; i < pushCount; i++ {
-		o := ttreeOrderMaker.MkPricedOrder(ttreeOrderMaker.Between(lowPrice, highPrice), kind)
+		o := &Order{}
+		o.CopyFrom(ttreeOrderMaker.MkPricedOrderData(ttreeOrderMaker.Between(lowPrice, highPrice), kind))
 		priceTree.push(&o.priceNode)
 		guidTree.push(&o.guidNode)
 		validate(t, priceTree, guidTree)
@@ -174,7 +181,7 @@ func testAddRemoveSimple(t *testing.T, pushCount int, lowPrice, highPrice int64,
 	drainTree(t, priceTree, guidTree, orderMap)
 }
 
-func testAddRemoveRandom(t *testing.T, pushCount int, lowPrice, highPrice int64, kind OrderKind) {
+func testAddRemoveRandom(t *testing.T, pushCount int, lowPrice, highPrice int64, kind trade.OrderKind) {
 	priceTree := &tree{}
 	guidTree := &tree{}
 	validate(t, priceTree, guidTree)
@@ -183,7 +190,8 @@ func testAddRemoveRandom(t *testing.T, pushCount int, lowPrice, highPrice int64,
 	for i := 0; i < pushCount; {
 		n := r.Int()
 		if n%2 == 0 || guidTree.peekMin() == nil {
-			o := ttreeOrderMaker.MkPricedOrder(ttreeOrderMaker.Between(lowPrice, highPrice), kind)
+			o := &Order{}
+			o.CopyFrom(ttreeOrderMaker.MkPricedOrderData(ttreeOrderMaker.Between(lowPrice, highPrice), kind))
 			priceTree.push(&o.priceNode)
 			guidTree.push(&o.guidNode)
 			validate(t, priceTree, guidTree)

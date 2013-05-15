@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"github.com/fmstephe/fstrconv"
-	"github.com/fmstephe/matching_engine/bin/itch"
 	"github.com/fmstephe/matching_engine/matcher"
 	"github.com/fmstephe/matching_engine/trade"
 	"log"
@@ -84,21 +83,6 @@ func endProfile() {
 
 func getData() []trade.OrderData {
 	orders, err := orderMaker.RndTradeSet(*orderNum, *delDelay, 1000, 1500)
-	if err != nil {
-		panic(err.Error())
-	}
-	return orders
-	/*
-		if *filePath == "" {
-			return mkRandomData()
-		}
-		return getItchData()
-	*/
-}
-
-func getItchData() []*trade.Order {
-	ir := itch.NewItchReader(*filePath)
-	orders, err := ir.ReadAll()
 	if err != nil {
 		panic(err.Error())
 	}

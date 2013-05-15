@@ -39,20 +39,8 @@ func (o *OrderMaker) MkPricedBuyData(price int64) *OrderData {
 	return o.MkPricedOrderData(price, BUY)
 }
 
-func (o *OrderMaker) MkPricedBuy(price int64) *Order {
-	return NewOrderFromData(o.MkPricedBuyData(price))
-}
-
 func (o *OrderMaker) MkPricedSellData(price int64) *OrderData {
 	return o.MkPricedOrderData(price, SELL)
-}
-
-func (o *OrderMaker) MkPricedSell(price int64) *Order {
-	return o.MkPricedSell(price)
-}
-
-func (o *OrderMaker) MkPricedOrder(price int64, kind OrderKind) *Order {
-	return NewOrderFromData(o.MkPricedOrderData(price, kind))
 }
 
 func (o *OrderMaker) MkPricedOrderData(price int64, kind OrderKind) *OrderData {
@@ -109,61 +97,33 @@ func (o *OrderMaker) RndTradeSet(size, depth int, low, high int64) ([]OrderData,
 		return nil, errors.New(fmt.Sprintf("Size (%d) must be greater than or equal to (%d)", size, depth))
 	}
 	orders := make([]OrderData, size*4)
-	sellTree := &priceTree{}
-	buyTree := &priceTree{}
+	buys := make([]*OrderData, 0, size)
+	sells := make([]*OrderData, 0, size)
 	idx := 0
 	for i := 0; i < size+depth; i++ {
 		if i < size {
-			bd := &orders[idx]
+			b := &orders[idx]
 			idx++
-			o.writePricedOrderData(o.Between(low, high), BUY, bd)
-			if bd.Price == 0 {
-				bd.Price = 1 // TODO find a better place to put this logic
+			o.writePricedOrderData(o.Between(low, high), BUY, b)
+			buys = append(buys, b)
+			if b.Price == 0 {
+				b.Price = 1 // Buys can't have price of 0
 			}
-			buyTree.Push(NewOrderFromData(bd))
-			sd := &orders[idx]
+			s := &orders[idx]
 			idx++
-			o.writePricedOrderData(o.Between(low, high), SELL, sd)
-			sellTree.Push(NewOrderFromData(sd))
+			o.writePricedOrderData(o.Between(low, high), SELL, s)
+			sells = append(sells, s)
 		}
 		if i >= depth {
-			b := buyTree.PopMin()
-			cbd := &orders[idx]
+			b := buys[i-depth]
+			cb := &orders[idx]
 			idx++
-			cbd.WriteCancel(b)
-			s := sellTree.PopMax()
-			csd := &orders[idx]
+			cb.WriteCancelFromOrder(b)
+			s := sells[i-depth]
+			cs := &orders[idx]
 			idx++
-			csd.WriteCancel(s)
+			cs.WriteCancelFromOrder(s)
 		}
 	}
 	return orders, nil
-}
-
-type priceTree struct {
-	t tree
-}
-
-func (p *priceTree) Push(o *Order) {
-	p.t.push(&o.priceNode)
-}
-
-func (p *priceTree) Cancel(o *Order) *Order {
-	return p.t.cancel(o.Guid()).getOrder()
-}
-
-func (p *priceTree) peekMax() *Order {
-	return p.t.peekMax().getOrder()
-}
-
-func (p *priceTree) PopMax() *Order {
-	return p.t.popMax().getOrder()
-}
-
-func (p *priceTree) PeekMin() *Order {
-	return p.t.peekMin().getOrder()
-}
-
-func (p *priceTree) PopMin() *Order {
-	return p.t.popMin().getOrder()
 }
