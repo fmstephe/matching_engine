@@ -109,8 +109,8 @@ type node struct {
 	// Limit queue fields
 	next *node
 	prev *node
-	// Order
-	order *Order
+	// OrderNode
+	order *OrderNode
 	// This is the other node tying order to another tree
 	other *node
 }
@@ -138,14 +138,14 @@ func (n *node) String() string {
 	return b.String()
 }
 
-func initNode(o *Order, val int64, n, other *node) {
+func initNode(o *OrderNode, val int64, n, other *node) {
 	*n = node{val: val, order: o, other: other}
 	n.next = n
 	n.prev = n
 	n.black = false
 }
 
-func (n *node) getOrder() *Order {
+func (n *node) getOrderNode() *OrderNode {
 	if n != nil {
 		return n.order
 	}

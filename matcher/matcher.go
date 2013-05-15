@@ -10,7 +10,7 @@ type M struct {
 	matchTrees tree.MatchTrees // No constructor required
 	slab       *tree.Slab
 	submit     chan interface{}
-	orders     chan *trade.OrderData
+	orders     chan *trade.Order
 }
 
 func NewMatcher(slabSize int) *M {
@@ -22,7 +22,7 @@ func (m *M) SetSubmit(submit chan interface{}) {
 	m.submit = submit
 }
 
-func (m *M) SetOrders(orders chan *trade.OrderData) {
+func (m *M) SetOrderNodes(orders chan *trade.Order) {
 	m.orders = orders
 }
 
@@ -40,12 +40,12 @@ func (m *M) Run() {
 			m.cancel(o)
 		default:
 			// This should probably just be an message to m.submit
-			panic(fmt.Sprintf("OrderKind %s not supported", o.Kind().String()))
+			panic(fmt.Sprintf("OrderNodeKind %s not supported", o.Kind().String()))
 		}
 	}
 }
 
-func (m *M) addBuy(b *tree.Order) {
+func (m *M) addBuy(b *tree.OrderNode) {
 	if b.Price() == trade.MARKET_PRICE {
 		// This should probably just be a message to m.submit
 		panic("It is illegal to submit a buy at market price")
@@ -55,13 +55,13 @@ func (m *M) addBuy(b *tree.Order) {
 	}
 }
 
-func (m *M) addSell(s *tree.Order) {
+func (m *M) addSell(s *tree.OrderNode) {
 	if !m.fillableSell(s) {
 		m.matchTrees.PushSell(s)
 	}
 }
 
-func (m *M) cancel(o *tree.Order) {
+func (m *M) cancel(o *tree.OrderNode) {
 	ro := m.matchTrees.Cancel(o)
 	if ro != nil {
 		completeCancel(m.submit, trade.CANCELLED, ro)
@@ -72,7 +72,7 @@ func (m *M) cancel(o *tree.Order) {
 	m.slab.Free(o)
 }
 
-func (m *M) fillableBuy(b *tree.Order) bool {
+func (m *M) fillableBuy(b *tree.OrderNode) bool {
 	for {
 		s := m.matchTrees.PeekSell()
 		if s == nil {
@@ -110,7 +110,7 @@ func (m *M) fillableBuy(b *tree.Order) bool {
 	panic("Unreachable")
 }
 
-func (m *M) fillableSell(s *tree.Order) bool {
+func (m *M) fillableSell(s *tree.OrderNode) bool {
 	for {
 		b := m.matchTrees.PeekBuy()
 		if b == nil {
@@ -156,7 +156,7 @@ func price(bPrice, sPrice int64) int64 {
 	return sPrice + (d / 2)
 }
 
-func completeTrade(submit chan interface{}, brk, srk trade.ResponseKind, b, s *tree.Order, price int64, amount uint32) {
+func completeTrade(submit chan interface{}, brk, srk trade.ResponseKind, b, s *tree.OrderNode, price int64, amount uint32) {
 	br := &trade.Response{}
 	sr := &trade.Response{}
 	br.WriteTrade(brk, -price, amount, b.TraderId(), b.TradeId(), s.TraderId())
@@ -165,7 +165,7 @@ func completeTrade(submit chan interface{}, brk, srk trade.ResponseKind, b, s *t
 	submit <- sr
 }
 
-func completeCancel(submit chan interface{}, rk trade.ResponseKind, d *tree.Order) {
+func completeCancel(submit chan interface{}, rk trade.ResponseKind, d *tree.OrderNode) {
 	r := &trade.Response{}
 	r.WriteCancel(rk, d.TraderId(), d.TradeId())
 	submit <- r

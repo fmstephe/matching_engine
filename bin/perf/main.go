@@ -22,7 +22,7 @@ var (
 	orderNum   = flag.Int("o", 1000, "The number of orders to generate. Ignored if -f is provided")
 	delDelay   = flag.Int("d", 100, "The number of orders generated before we begin deleting existing orders")
 	perfRand   = rand.New(rand.NewSource(1))
-	orderMaker = trade.NewOrderMaker()
+	orderMaker = trade.NewOrderNodeMaker()
 )
 
 func main() {
@@ -34,13 +34,13 @@ func doPerf(log bool) {
 	orderData := getData()
 	orderCount := fstrconv.Itoa64Comma(int64(len(orderData)))
 	if log {
-		println(orderCount, "Orders Built")
+		println(orderCount, "OrderNodes Built")
 	}
 	submit := make(chan interface{}, len(orderData))
-	orders := make(chan *trade.OrderData)
+	orders := make(chan *trade.Order)
 	m := matcher.NewMatcher(*delDelay * 2)
 	m.SetSubmit(submit)
-	m.SetOrders(orders)
+	m.SetOrderNodes(orders)
 	go m.Run()
 	startProfile()
 	defer endProfile()
@@ -81,7 +81,7 @@ func endProfile() {
 	}
 }
 
-func getData() []trade.OrderData {
+func getData() []trade.Order {
 	orders, err := orderMaker.RndTradeSet(*orderNum, *delDelay, 1000, 1500)
 	if err != nil {
 		panic(err.Error())

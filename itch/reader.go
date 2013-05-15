@@ -30,7 +30,7 @@ func NewItchReader(fName string) *ItchReader {
 	return &ItchReader{lineCount: 1, minSell: math.MaxInt32, r: r}
 }
 
-func (i *ItchReader) ReadOrderData() (o *trade.OrderData, line string, err error) {
+func (i *ItchReader) ReadOrder() (o *trade.Order, line string, err error) {
 	i.lineCount++
 	for {
 		line, err = i.r.ReadString('\n')
@@ -41,7 +41,7 @@ func (i *ItchReader) ReadOrderData() (o *trade.OrderData, line string, err error
 			break
 		}
 	}
-	o, err = mkOrderData(line)
+	o, err = mkOrder(line)
 	if o != nil && o.Kind == trade.BUY && o.Price > i.maxBuy {
 		i.maxBuy = o.Price
 	}
@@ -51,11 +51,11 @@ func (i *ItchReader) ReadOrderData() (o *trade.OrderData, line string, err error
 	return
 }
 
-func (i *ItchReader) ReadAll() (orders []*trade.OrderData, err error) {
-	orders = make([]*trade.OrderData, 0)
-	var o *trade.OrderData
+func (i *ItchReader) ReadAll() (orders []*trade.Order, err error) {
+	orders = make([]*trade.Order, 0)
+	var o *trade.Order
 	for err == nil {
-		o, _, err = i.ReadOrderData()
+		o, _, err = i.ReadOrder()
 		if o != nil {
 			orders = append(orders, o)
 		}
@@ -78,7 +78,7 @@ func (i *ItchReader) MinSell() int64 {
 	return i.minSell
 }
 
-func mkOrderData(line string) (o *trade.OrderData, err error) {
+func mkOrder(line string) (o *trade.Order, err error) {
 	ss := strings.Split(line, " ")
 	var useful []string
 	for _, w := range ss {

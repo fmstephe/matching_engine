@@ -42,16 +42,16 @@ func loop() {
 		}()
 		in := bufio.NewReader(os.Stdin)
 		submit := make(chan interface{}, 20)
-		orders := make(chan *trade.OrderData)
+		orders := make(chan *trade.Order)
 		m := matcher.NewMatcher(1000)
 		m.SetSubmit(submit)
-		m.SetOrders(orders)
+		m.SetOrderNodes(orders)
 		go m.Run()
 		//
-		var o *trade.Order
+		var o *trade.OrderNode
 		var err error
 		for {
-			o, _, err = ir.ReadOrder()
+			o, _, err = ir.ReadOrderNode()
 			if err != nil {
 				panic(err)
 			}
@@ -69,7 +69,7 @@ func loop() {
 	}
 }
 
-func checkPause(in *bufio.Reader, ir *ItchReader, o *trade.Order, bLine uint) byte {
+func checkPause(in *bufio.Reader, ir *ItchReader, o *trade.OrderNode, bLine uint) byte {
 	if bLine > ir.LineCount() {
 		return 'z'
 	}
@@ -91,7 +91,7 @@ func pause(in *bufio.Reader) byte {
 	return c
 }
 
-func checkPrint(ir *ItchReader, o *trade.Order, m *matcher.M, bLine uint) {
+func checkPrint(ir *ItchReader, o *trade.OrderNode, m *matcher.M, bLine uint) {
 	if bLine > ir.LineCount() {
 		return
 	}
@@ -103,9 +103,9 @@ func checkPrint(ir *ItchReader, o *trade.Order, m *matcher.M, bLine uint) {
 	}
 }
 
-func printInfo(ir *ItchReader, o *trade.Order, m *matcher.M) {
+func printInfo(ir *ItchReader, o *trade.OrderNode, m *matcher.M) {
 	buys, sells, orders, executions := m.Survey()
-	println("Order       ", o.String())
+	println("OrderNode       ", o.String())
 	println("Line        ", ir.LineCount())
 	println("Max Buy     ", fstrconv.Itoa64Delim(int64(ir.MaxBuy()), ','))
 	println("Min Sell    ", fstrconv.Itoa64Delim(int64(ir.MinSell()), ','))

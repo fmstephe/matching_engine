@@ -10,7 +10,7 @@ type submitChan interface {
 }
 
 type orderChan interface {
-	SetOrders(chan *trade.OrderData)
+	SetOrderNodes(chan *trade.Order)
 }
 
 type responseChan interface {
@@ -39,13 +39,13 @@ type matcher interface {
 
 func Coordinate(l listener, r responder, m matcher, log bool) {
 	submit := make(chan interface{}, 100)
-	orders := make(chan *trade.OrderData, 100)
+	orders := make(chan *trade.Order, 100)
 	responses := make(chan *trade.Response, 100)
 	d := &dispatcher{submit: submit, orders: orders, responses: responses, log: log}
 	l.SetSubmit(submit)
 	r.SetResponses(responses)
 	m.SetSubmit(submit)
-	m.SetOrders(orders)
+	m.SetOrderNodes(orders)
 	go l.Run()
 	go r.Run()
 	go m.Run()
@@ -54,7 +54,7 @@ func Coordinate(l listener, r responder, m matcher, log bool) {
 
 type dispatcher struct {
 	submit    chan interface{}
-	orders    chan *trade.OrderData
+	orders    chan *trade.Order
 	responses chan *trade.Response
 	log       bool
 }
@@ -66,7 +66,7 @@ func (d *dispatcher) Run() {
 			println(fmt.Sprintf("%v", v))
 		}
 		switch v := v.(type) {
-		case *trade.OrderData:
+		case *trade.Order:
 			d.orders <- v
 		case *trade.Response:
 			d.responses <- v

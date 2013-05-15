@@ -6,47 +6,47 @@ import (
 	"github.com/fmstephe/matching_engine/trade"
 )
 
-// Description of an Order which can live inside a guid and price tree
-type Order struct {
+// Description of an OrderNode which can live inside a guid and price tree
+type OrderNode struct {
 	priceNode node
 	guidNode  node
 	amount    uint32
 	stockId   uint32
-	kind      trade.OrderKind
+	kind      trade.OrderNodeKind
 	ip        [4]byte
 	port      int32
-	nextFree  *Order
+	nextFree  *OrderNode
 }
 
-func newBuy(costData trade.CostData, tradeData trade.TradeData) *Order {
-	return newOrder(costData, tradeData, trade.BUY)
+func newBuy(costData trade.CostData, tradeData trade.TradeData) *OrderNode {
+	return newOrderNode(costData, tradeData, trade.BUY)
 }
 
-func newSell(costData trade.CostData, tradeData trade.TradeData) *Order {
-	return newOrder(costData, tradeData, trade.SELL)
+func newSell(costData trade.CostData, tradeData trade.TradeData) *OrderNode {
+	return newOrderNode(costData, tradeData, trade.SELL)
 }
 
-func newCancel(tradeData trade.TradeData) *Order {
-	return newOrder(trade.CostData{}, tradeData, trade.CANCEL)
+func newCancel(tradeData trade.TradeData) *OrderNode {
+	return newOrderNode(trade.CostData{}, tradeData, trade.CANCEL)
 }
 
-func cancelOrder(o *Order) *Order {
+func cancelOrderNode(o *OrderNode) *OrderNode {
 	return newCancel(trade.TradeData{TraderId: o.TraderId(), TradeId: o.TradeId(), StockId: o.StockId()})
 }
 
-func newOrder(costData trade.CostData, tradeData trade.TradeData, kind trade.OrderKind) *Order {
-	o := &Order{amount: costData.Amount, stockId: tradeData.StockId, kind: kind, priceNode: node{}}
+func newOrderNode(costData trade.CostData, tradeData trade.TradeData, kind trade.OrderNodeKind) *OrderNode {
+	o := &OrderNode{amount: costData.Amount, stockId: tradeData.StockId, kind: kind, priceNode: node{}}
 	guid := trade.MkGuid(tradeData.TraderId, tradeData.TradeId)
 	o.setup(costData.Price, guid)
 	return o
 }
 
-func (o *Order) setup(price, guid int64) {
+func (o *OrderNode) setup(price, guid int64) {
 	initNode(o, price, &o.priceNode, &o.guidNode)
 	initNode(o, guid, &o.guidNode, &o.priceNode)
 }
 
-func (o *Order) CopyFrom(from *trade.OrderData) {
+func (o *OrderNode) CopyFrom(from *trade.Order) {
 	o.amount = from.Amount
 	o.stockId = from.StockId
 	o.kind = from.Kind
@@ -55,47 +55,47 @@ func (o *Order) CopyFrom(from *trade.OrderData) {
 	o.port = from.Port
 }
 
-func (o *Order) Price() int64 {
+func (o *OrderNode) Price() int64 {
 	return o.priceNode.val
 }
 
-func (o *Order) Guid() int64 {
+func (o *OrderNode) Guid() int64 {
 	return o.guidNode.val
 }
 
-func (o *Order) TraderId() uint32 {
+func (o *OrderNode) TraderId() uint32 {
 	return trade.GetTraderId(o.guidNode.val)
 }
 
-func (o *Order) TradeId() uint32 {
+func (o *OrderNode) TradeId() uint32 {
 	return trade.GetTradeId(o.guidNode.val)
 }
 
-func (o *Order) Amount() uint32 {
+func (o *OrderNode) Amount() uint32 {
 	return o.amount
 }
 
-func (o *Order) ReduceAmount(s uint32) {
+func (o *OrderNode) ReduceAmount(s uint32) {
 	o.amount -= s
 }
 
-func (o *Order) StockId() uint32 {
+func (o *OrderNode) StockId() uint32 {
 	return o.stockId
 }
 
-func (o *Order) IP() [4]byte {
+func (o *OrderNode) IP() [4]byte {
 	return o.ip
 }
 
-func (o *Order) Port() int32 {
+func (o *OrderNode) Port() int32 {
 	return o.port
 }
 
-func (o *Order) Kind() trade.OrderKind {
+func (o *OrderNode) Kind() trade.OrderNodeKind {
 	return o.kind
 }
 
-func (o *Order) String() string {
+func (o *OrderNode) String() string {
 	if o == nil {
 		return "<nil>"
 	}

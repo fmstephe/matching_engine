@@ -31,17 +31,17 @@ func (l *Listener) SetSubmit(submit chan interface{}) {
 
 func (l *Listener) Run() {
 	for {
-		s := make([]byte, trade.SizeofOrderData)
+		s := make([]byte, trade.SizeofOrder)
 		n, _, err := l.conn.ReadFromUDP(s)
 		if err != nil {
 			println("Listener - UDP Read: ", err.Error())
 			continue
 		}
-		if n != trade.SizeofOrderData {
-			println(fmt.Sprintf("Listener: Error incorrect number of bytes. Expecting %d, found %d submit %v", trade.SizeofOrderData, n, s))
+		if n != trade.SizeofOrder {
+			println(fmt.Sprintf("Listener: Error incorrect number of bytes. Expecting %d, found %d submit %v", trade.SizeofOrder, n, s))
 			continue
 		}
-		od := &trade.OrderData{}
+		od := &trade.Order{}
 		buf := bytes.NewBuffer(s)
 		err = binary.Read(buf, binary.BigEndian, od)
 		if err != nil {

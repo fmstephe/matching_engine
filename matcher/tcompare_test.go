@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-var tcompareOrderMaker = trade.NewOrderMaker()
+var tcompareOrderNodeMaker = trade.NewOrderNodeMaker()
 
 func TestCompareMatchers(t *testing.T) {
 	compareMatchers(t, 100, 1, 1, 1)
@@ -27,14 +27,14 @@ func TestCompareMatchers(t *testing.T) {
 
 func compareMatchers(t *testing.T, orderPairs, depth int, lowPrice, highPrice int64) {
 	refsubmit := make(chan interface{}, orderPairs*2)
-	reforders := make(chan *trade.OrderData, 10)
+	reforders := make(chan *trade.Order, 10)
 	refm := newRefmatcher(lowPrice, highPrice, refsubmit, reforders)
 	submit := make(chan interface{}, orderPairs*2)
-	orders := make(chan *trade.OrderData, 10)
+	orders := make(chan *trade.Order, 10)
 	m := NewMatcher(orderPairs * 2)
 	m.SetSubmit(submit)
-	m.SetOrders(orders)
-	testSet, err := tcompareOrderMaker.RndTradeSet(orderPairs, depth, lowPrice, highPrice)
+	m.SetOrderNodes(orders)
+	testSet, err := tcompareOrderNodeMaker.RndTradeSet(orderPairs, depth, lowPrice, highPrice)
 	go refm.Run()
 	go m.Run()
 	if err != nil {

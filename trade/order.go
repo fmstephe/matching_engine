@@ -6,14 +6,14 @@ import (
 	"net"
 )
 
-type OrderKind int32
+type OrderNodeKind int32
 type ResponseKind int32
 
 const (
-	// Orders
-	BUY    = OrderKind(iota)
-	SELL   = OrderKind(iota)
-	CANCEL = OrderKind(iota)
+	// OrderNodes
+	BUY    = OrderNodeKind(iota)
+	SELL   = OrderNodeKind(iota)
+	CANCEL = OrderNodeKind(iota)
 )
 
 const (
@@ -32,11 +32,11 @@ const (
 )
 
 const (
-	SizeofOrderData = 36 //int(unsafe.Sizeof(OrderData{}))
-	SizeofResponse  = 36 //int(unsafe.Sizeof(Response{}))
+	SizeofOrder    = 36 //int(unsafe.Sizeof(Order{}))
+	SizeofResponse = 36 //int(unsafe.Sizeof(Response{}))
 )
 
-func (k OrderKind) String() string {
+func (k OrderNodeKind) String() string {
 	switch k {
 	case BUY:
 		return "BUY"
@@ -88,34 +88,34 @@ type TradeData struct {
 }
 
 // Flat description of an incoming order
-type OrderData struct {
+type Order struct {
 	Price   int64
 	Amount  uint32
 	Guid    int64
 	StockId uint32
-	Kind    OrderKind
+	Kind    OrderNodeKind
 	IP      [4]byte
 	Port    int32
 	// I think we need a checksum here
 }
 
-func (od *OrderData) WriteBuy(costData CostData, tradeData TradeData) {
+func (od *Order) WriteBuy(costData CostData, tradeData TradeData) {
 	od.Write(costData, tradeData, BUY)
 }
 
-func (od *OrderData) WriteSell(costData CostData, tradeData TradeData) {
+func (od *Order) WriteSell(costData CostData, tradeData TradeData) {
 	od.Write(costData, tradeData, SELL)
 }
 
-func (od *OrderData) WriteCancel(tradeData TradeData) {
+func (od *Order) WriteCancel(tradeData TradeData) {
 	od.Write(CostData{}, tradeData, CANCEL)
 }
 
-func (od *OrderData) WriteCancelFromOrder(o *OrderData) {
+func (od *Order) WriteCancelFromOrderNode(o *Order) {
 	od.Write(CostData{}, TradeData{TraderId: GetTraderId(o.Guid), TradeId: GetTradeId(o.Guid), StockId: o.StockId}, CANCEL)
 }
 
-func (od *OrderData) Write(costData CostData, tradeData TradeData, kind OrderKind) {
+func (od *Order) Write(costData CostData, tradeData TradeData, kind OrderNodeKind) {
 	od.Price = costData.Price
 	od.Guid = MkGuid(tradeData.TraderId, tradeData.TradeId)
 	od.Amount = costData.Amount
@@ -123,14 +123,14 @@ func (od *OrderData) Write(costData CostData, tradeData TradeData, kind OrderKin
 	od.Kind = kind
 }
 
-func (od *OrderData) UDPAddr() *net.UDPAddr {
+func (od *Order) UDPAddr() *net.UDPAddr {
 	addr := &net.UDPAddr{}
 	addr.IP = net.IPv4(od.IP[0], od.IP[1], od.IP[2], od.IP[3])
 	addr.Port = int(od.Port)
 	return addr
 }
 
-func (od *OrderData) SetUDPAddr(addr *net.UDPAddr) error {
+func (od *Order) SetUDPAddr(addr *net.UDPAddr) error {
 	IP := addr.IP.To4()
 	if IP == nil {
 		return errors.New(fmt.Sprintf("IP address (%s) is not IPv4", addr.IP.String()))
@@ -146,7 +146,7 @@ type Response struct {
 	Price        int64  // The actual trade price, will be negative if a purchase was made
 	Amount       uint32 // The number of units actually bought or sold
 	TraderId     uint32 // The trader-id of the trader to whom this response is directed
-	TradeId      uint32 // Links this trade back to a previously submitted Order
+	TradeId      uint32 // Links this trade back to a previously submitted OrderNode
 	CounterParty uint32 // The trader-id of the other half of this trade
 	IP           [4]byte
 	Port         int32

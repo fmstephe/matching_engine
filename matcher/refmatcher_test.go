@@ -9,10 +9,10 @@ type refmatcher struct {
 	buys   *prioq
 	sells  *prioq
 	submit chan interface{}
-	orders chan *trade.OrderData
+	orders chan *trade.Order
 }
 
-func newRefmatcher(lowPrice, highPrice int64, submit chan interface{}, orders chan *trade.OrderData) *refmatcher {
+func newRefmatcher(lowPrice, highPrice int64, submit chan interface{}, orders chan *trade.Order) *refmatcher {
 	buys := newPrioq(lowPrice, highPrice)
 	sells := newPrioq(lowPrice, highPrice)
 	return &refmatcher{buys: buys, sells: sells, submit: submit, orders: orders}
@@ -21,7 +21,7 @@ func newRefmatcher(lowPrice, highPrice int64, submit chan interface{}, orders ch
 func (m *refmatcher) Run() {
 	for {
 		od := <-m.orders
-		o := &tree.Order{}
+		o := &tree.OrderNode{}
 		o.CopyFrom(od)
 		if o.Kind() == trade.CANCEL {
 			co := m.pop(o)
@@ -79,7 +79,7 @@ func (m *refmatcher) Size() int {
 	return -1
 }
 
-func (m *refmatcher) push(o *tree.Order) {
+func (m *refmatcher) push(o *tree.OrderNode) {
 	if o.Kind() == trade.BUY {
 		m.buys.push(o)
 		return
@@ -91,23 +91,23 @@ func (m *refmatcher) push(o *tree.Order) {
 	panic("Unsupported trade kind pushed")
 }
 
-func (m *refmatcher) peekBuy() *tree.Order {
+func (m *refmatcher) peekBuy() *tree.OrderNode {
 	return m.buys.peekMax()
 }
 
-func (m *refmatcher) peekSell() *tree.Order {
+func (m *refmatcher) peekSell() *tree.OrderNode {
 	return m.sells.peekMin()
 }
 
-func (m *refmatcher) popBuy() *tree.Order {
+func (m *refmatcher) popBuy() *tree.OrderNode {
 	return m.buys.popMax()
 }
 
-func (m *refmatcher) popSell() *tree.Order {
+func (m *refmatcher) popSell() *tree.OrderNode {
 	return m.sells.popMin()
 }
 
-func (m *refmatcher) pop(o *tree.Order) *tree.Order {
+func (m *refmatcher) pop(o *tree.OrderNode) *tree.OrderNode {
 	guid := o.Guid()
 	ro := m.buys.remove(guid)
 	if ro == nil {
@@ -118,23 +118,23 @@ func (m *refmatcher) pop(o *tree.Order) *tree.Order {
 
 // An easy to build priority queue
 type prioq struct {
-	prios               [][]*tree.Order
+	prios               [][]*tree.OrderNode
 	lowPrice, highPrice int64
 }
 
 func newPrioq(lowPrice, highPrice int64) *prioq {
-	prios := make([][]*tree.Order, highPrice-lowPrice+1)
+	prios := make([][]*tree.OrderNode, highPrice-lowPrice+1)
 	return &prioq{prios: prios, lowPrice: lowPrice, highPrice: highPrice}
 }
 
-func (q *prioq) push(o *tree.Order) {
+func (q *prioq) push(o *tree.OrderNode) {
 	idx := o.Price() - q.lowPrice
 	prio := q.prios[idx]
 	prio = append(prio, o)
 	q.prios[idx] = prio
 }
 
-func (q *prioq) peekMax() *tree.Order {
+func (q *prioq) peekMax() *tree.OrderNode {
 	if len(q.prios) == 0 {
 		return nil
 	}
@@ -149,7 +149,7 @@ func (q *prioq) peekMax() *tree.Order {
 	return nil
 }
 
-func (q *prioq) popMax() *tree.Order {
+func (q *prioq) popMax() *tree.OrderNode {
 	if len(q.prios) == 0 {
 		return nil
 	}
@@ -164,7 +164,7 @@ func (q *prioq) popMax() *tree.Order {
 	return nil
 }
 
-func (q *prioq) peekMin() *tree.Order {
+func (q *prioq) peekMin() *tree.OrderNode {
 	if len(q.prios) == 0 {
 		return nil
 	}
@@ -179,7 +179,7 @@ func (q *prioq) peekMin() *tree.Order {
 	return nil
 }
 
-func (q *prioq) popMin() *tree.Order {
+func (q *prioq) popMin() *tree.OrderNode {
 	if len(q.prios) == 0 {
 		return nil
 	}
@@ -194,7 +194,7 @@ func (q *prioq) popMin() *tree.Order {
 	return nil
 }
 
-func (q *prioq) pop(price int) *tree.Order {
+func (q *prioq) pop(price int) *tree.OrderNode {
 	prio := q.prios[price]
 	o := prio[0]
 	prio = prio[1:]
@@ -202,7 +202,7 @@ func (q *prioq) pop(price int) *tree.Order {
 	return o
 }
 
-func (q *prioq) remove(guid int64) *tree.Order {
+func (q *prioq) remove(guid int64) *tree.OrderNode {
 	for i := range q.prios {
 		priceQ := q.prios[i]
 		for j := range priceQ {
