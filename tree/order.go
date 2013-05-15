@@ -12,38 +12,10 @@ type OrderNode struct {
 	guidNode  node
 	amount    uint32
 	stockId   uint32
-	kind      trade.OrderNodeKind
+	kind      trade.OrderKind
 	ip        [4]byte
 	port      int32
 	nextFree  *OrderNode
-}
-
-func newBuy(costData trade.CostData, tradeData trade.TradeData) *OrderNode {
-	return newOrderNode(costData, tradeData, trade.BUY)
-}
-
-func newSell(costData trade.CostData, tradeData trade.TradeData) *OrderNode {
-	return newOrderNode(costData, tradeData, trade.SELL)
-}
-
-func newCancel(tradeData trade.TradeData) *OrderNode {
-	return newOrderNode(trade.CostData{}, tradeData, trade.CANCEL)
-}
-
-func cancelOrderNode(o *OrderNode) *OrderNode {
-	return newCancel(trade.TradeData{TraderId: o.TraderId(), TradeId: o.TradeId(), StockId: o.StockId()})
-}
-
-func newOrderNode(costData trade.CostData, tradeData trade.TradeData, kind trade.OrderNodeKind) *OrderNode {
-	o := &OrderNode{amount: costData.Amount, stockId: tradeData.StockId, kind: kind, priceNode: node{}}
-	guid := trade.MkGuid(tradeData.TraderId, tradeData.TradeId)
-	o.setup(costData.Price, guid)
-	return o
-}
-
-func (o *OrderNode) setup(price, guid int64) {
-	initNode(o, price, &o.priceNode, &o.guidNode)
-	initNode(o, guid, &o.guidNode, &o.priceNode)
 }
 
 func (o *OrderNode) CopyFrom(from *trade.Order) {
@@ -53,6 +25,11 @@ func (o *OrderNode) CopyFrom(from *trade.Order) {
 	o.setup(from.Price, from.Guid)
 	o.ip = from.IP
 	o.port = from.Port
+}
+
+func (o *OrderNode) setup(price, guid int64) {
+	initNode(o, price, &o.priceNode, &o.guidNode)
+	initNode(o, guid, &o.guidNode, &o.priceNode)
 }
 
 func (o *OrderNode) Price() int64 {
@@ -91,7 +68,7 @@ func (o *OrderNode) Port() int32 {
 	return o.port
 }
 
-func (o *OrderNode) Kind() trade.OrderNodeKind {
+func (o *OrderNode) Kind() trade.OrderKind {
 	return o.kind
 }
 

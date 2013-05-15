@@ -40,7 +40,7 @@ func (m *M) Run() {
 			m.cancel(o)
 		default:
 			// This should probably just be an message to m.submit
-			panic(fmt.Sprintf("OrderNodeKind %s not supported", o.Kind().String()))
+			panic(fmt.Sprintf("OrderKind %s not supported", o.Kind().String()))
 		}
 	}
 }

@@ -6,14 +6,14 @@ import (
 	"net"
 )
 
-type OrderNodeKind int32
+type OrderKind int32
 type ResponseKind int32
 
 const (
 	// OrderNodes
-	BUY    = OrderNodeKind(iota)
-	SELL   = OrderNodeKind(iota)
-	CANCEL = OrderNodeKind(iota)
+	BUY    = OrderKind(iota)
+	SELL   = OrderKind(iota)
+	CANCEL = OrderKind(iota)
 )
 
 const (
@@ -36,7 +36,7 @@ const (
 	SizeofResponse = 36 //int(unsafe.Sizeof(Response{}))
 )
 
-func (k OrderNodeKind) String() string {
+func (k OrderKind) String() string {
 	switch k {
 	case BUY:
 		return "BUY"
@@ -93,7 +93,7 @@ type Order struct {
 	Amount  uint32
 	Guid    int64
 	StockId uint32
-	Kind    OrderNodeKind
+	Kind    OrderKind
 	IP      [4]byte
 	Port    int32
 	// I think we need a checksum here
@@ -115,7 +115,7 @@ func (od *Order) WriteCancelFromOrderNode(o *Order) {
 	od.Write(CostData{}, TradeData{TraderId: GetTraderId(o.Guid), TradeId: GetTradeId(o.Guid), StockId: o.StockId}, CANCEL)
 }
 
-func (od *Order) Write(costData CostData, tradeData TradeData, kind OrderNodeKind) {
+func (od *Order) Write(costData CostData, tradeData TradeData, kind OrderKind) {
 	od.Price = costData.Price
 	od.Guid = MkGuid(tradeData.TraderId, tradeData.TradeId)
 	od.Amount = costData.Amount

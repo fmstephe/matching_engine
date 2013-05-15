@@ -32,13 +32,13 @@ func (o *OrderNodeMaker) Between(lower, upper int64) int64 {
 	return o.r.Int63n(d) + lower
 }
 
-func (o *OrderNodeMaker) MkPricedOrder(price int64, kind OrderNodeKind) *Order {
+func (o *OrderNodeMaker) MkPricedOrder(price int64, kind OrderKind) *Order {
 	od := &Order{}
 	o.writePricedOrder(price, kind, od)
 	return od
 }
 
-func (o *OrderNodeMaker) writePricedOrder(price int64, kind OrderNodeKind, od *Order) {
+func (o *OrderNodeMaker) writePricedOrder(price int64, kind OrderKind, od *Order) {
 	costData := CostData{Price: price, Amount: 1}
 	tradeData := TradeData{TraderId: o.traderId, TradeId: 1, StockId: 1}
 	o.traderId++
@@ -71,7 +71,7 @@ func (o *OrderNodeMaker) MkSells(prices []int64) []Order {
 	return o.MkOrders(prices, SELL)
 }
 
-func (o *OrderNodeMaker) MkOrders(prices []int64, kind OrderNodeKind) []Order {
+func (o *OrderNodeMaker) MkOrders(prices []int64, kind OrderKind) []Order {
 	orders := make([]Order, len(prices))
 	for i, price := range prices {
 		costData := CostData{Price: price, Amount: 1}

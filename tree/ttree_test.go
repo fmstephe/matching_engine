@@ -82,7 +82,7 @@ func TestAddRemoveRandom(t *testing.T) {
 	testAddRemoveRandom(t, 1000, 100, 10000, trade.SELL)
 }
 
-func testPushAscDesc(t *testing.T, pushCount int, kind trade.OrderNodeKind) {
+func testPushAscDesc(t *testing.T, pushCount int, kind trade.OrderKind) {
 	priceTree := &tree{}
 	guidTree := &tree{}
 	validate(t, priceTree, guidTree)
@@ -102,7 +102,7 @@ func testPushAscDesc(t *testing.T, pushCount int, kind trade.OrderNodeKind) {
 	}
 }
 
-func testPushSimple(t *testing.T, pushCount int, lowPrice, highPrice int64, kind trade.OrderNodeKind) {
+func testPushSimple(t *testing.T, pushCount int, lowPrice, highPrice int64, kind trade.OrderKind) {
 	priceTree := &tree{}
 	guidTree := &tree{}
 	validate(t, priceTree, guidTree)
@@ -115,7 +115,7 @@ func testPushSimple(t *testing.T, pushCount int, lowPrice, highPrice int64, kind
 	}
 }
 
-func testPushPopSimple(t *testing.T, pushCount int, lowPrice, highPrice int64, kind trade.OrderNodeKind, popper popperFun) {
+func testPushPopSimple(t *testing.T, pushCount int, lowPrice, highPrice int64, kind trade.OrderKind, popper popperFun) {
 	priceTree := &tree{}
 	guidTree := &tree{}
 	validate(t, priceTree, guidTree)
@@ -133,7 +133,7 @@ func testPushPopSimple(t *testing.T, pushCount int, lowPrice, highPrice int64, k
 	}
 }
 
-func testPushPopRandom(t *testing.T, pushCount int, lowPrice, highPrice int64, kind trade.OrderNodeKind, popper popperFun) {
+func testPushPopRandom(t *testing.T, pushCount int, lowPrice, highPrice int64, kind trade.OrderKind, popper popperFun) {
 	priceTree := &tree{}
 	guidTree := &tree{}
 	validate(t, priceTree, guidTree)
@@ -165,7 +165,7 @@ func testPushPopRandom(t *testing.T, pushCount int, lowPrice, highPrice int64, k
 	}
 }
 
-func testAddRemoveSimple(t *testing.T, pushCount int, lowPrice, highPrice int64, kind trade.OrderNodeKind) {
+func testAddRemoveSimple(t *testing.T, pushCount int, lowPrice, highPrice int64, kind trade.OrderKind) {
 	priceTree := &tree{}
 	guidTree := &tree{}
 	validate(t, priceTree, guidTree)
@@ -181,7 +181,7 @@ func testAddRemoveSimple(t *testing.T, pushCount int, lowPrice, highPrice int64,
 	drainTree(t, priceTree, guidTree, orderMap)
 }
 
-func testAddRemoveRandom(t *testing.T, pushCount int, lowPrice, highPrice int64, kind trade.OrderNodeKind) {
+func testAddRemoveRandom(t *testing.T, pushCount int, lowPrice, highPrice int64, kind trade.OrderKind) {
 	priceTree := &tree{}
 	guidTree := &tree{}
 	validate(t, priceTree, guidTree)
