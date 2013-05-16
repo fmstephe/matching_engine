@@ -119,7 +119,7 @@ func testPushPopSimple(t *testing.T, pushCount int, lowPrice, highPrice int64, k
 	priceTree := &tree{}
 	guidTree := &tree{}
 	validate(t, priceTree, guidTree)
-	q := mkPrioq(pushCount, lowPrice, highPrice)
+	q := mkPrioq(lowPrice, highPrice)
 	for i := 0; i < pushCount; i++ {
 		o := &OrderNode{}
 		o.CopyFrom(ttreeOrderNodeMaker.MkPricedOrder(ttreeOrderNodeMaker.Between(lowPrice, highPrice), kind))
@@ -137,7 +137,7 @@ func testPushPopRandom(t *testing.T, pushCount int, lowPrice, highPrice int64, k
 	priceTree := &tree{}
 	guidTree := &tree{}
 	validate(t, priceTree, guidTree)
-	q := mkPrioq(pushCount, lowPrice, highPrice)
+	q := mkPrioq(lowPrice, highPrice)
 	r := rand.New(rand.NewSource(1))
 	for i := 0; i < pushCount; {
 		n := r.Int()
@@ -331,60 +331,4 @@ func minPopper(t *testing.T, priceTree, guidTree *tree, q *prioq) (peek, pop, ch
 	check = q.popMin()
 	ensureFreed(t, pop)
 	return
-}
-
-// An easy to build priority queue
-type prioq struct {
-	prios               [][]*OrderNode
-	lowPrice, highPrice int64
-}
-
-func mkPrioq(size int, lowPrice, highPrice int64) *prioq {
-	prios := make([][]*OrderNode, highPrice-lowPrice+1)
-	return &prioq{prios: prios, lowPrice: lowPrice, highPrice: highPrice}
-}
-
-func (q *prioq) push(o *OrderNode) {
-	idx := o.Price() - q.lowPrice
-	prio := q.prios[idx]
-	prio = append(prio, o)
-	q.prios[idx] = prio
-}
-
-func (q *prioq) popMax() *OrderNode {
-	if len(q.prios) == 0 {
-		return nil
-	}
-	for i := len(q.prios) - 1; i >= 0; i-- {
-		switch {
-		case len(q.prios[i]) > 0:
-			return q.pop(i)
-		default:
-			continue
-		}
-	}
-	return nil
-}
-
-func (q *prioq) popMin() *OrderNode {
-	if len(q.prios) == 0 {
-		return nil
-	}
-	for i := 0; i < len(q.prios); i++ {
-		switch {
-		case len(q.prios[i]) > 0:
-			return q.pop(i)
-		default:
-			continue
-		}
-	}
-	return nil
-}
-
-func (q *prioq) pop(i int) *OrderNode {
-	prio := q.prios[i]
-	o := prio[0]
-	prio = prio[1:]
-	q.prios[i] = prio
-	return o
 }
