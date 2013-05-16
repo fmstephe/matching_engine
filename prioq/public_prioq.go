@@ -1,49 +1,49 @@
-package tree
+package prioq
 
 import ()
 
-type MatchTrees struct {
-	buyTree  tree
-	sellTree tree
-	orders   tree
+type MatchQueues struct {
+	buyTree  rbtree
+	sellTree rbtree
+	orders   rbtree
 	size     int
 }
 
-func (m *MatchTrees) Size() int {
+func (m *MatchQueues) Size() int {
 	return m.size
 }
 
-func (m *MatchTrees) PushBuy(b *OrderNode) {
+func (m *MatchQueues) PushBuy(b *OrderNode) {
 	m.size++
 	m.buyTree.push(&b.priceNode)
 	m.orders.push(&b.guidNode)
 }
 
-func (m *MatchTrees) PushSell(s *OrderNode) {
+func (m *MatchQueues) PushSell(s *OrderNode) {
 	m.size++
 	m.sellTree.push(&s.priceNode)
 	m.orders.push(&s.guidNode)
 }
 
-func (m *MatchTrees) PeekBuy() *OrderNode {
+func (m *MatchQueues) PeekBuy() *OrderNode {
 	return m.buyTree.peekMax().getOrderNode()
 }
 
-func (m *MatchTrees) PeekSell() *OrderNode {
+func (m *MatchQueues) PeekSell() *OrderNode {
 	return m.sellTree.peekMin().getOrderNode()
 }
 
-func (m *MatchTrees) PopBuy() *OrderNode {
+func (m *MatchQueues) PopBuy() *OrderNode {
 	m.size--
 	return m.buyTree.popMax().getOrderNode()
 }
 
-func (m *MatchTrees) PopSell() *OrderNode {
+func (m *MatchQueues) PopSell() *OrderNode {
 	m.size--
 	return m.sellTree.popMin().getOrderNode()
 }
 
-func (m *MatchTrees) Cancel(o *OrderNode) *OrderNode {
+func (m *MatchQueues) Cancel(o *OrderNode) *OrderNode {
 	po := m.orders.cancel(o.Guid()).getOrderNode()
 	if po != nil {
 		m.size--

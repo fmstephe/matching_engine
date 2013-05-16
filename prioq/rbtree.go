@@ -1,4 +1,4 @@
-package tree
+package prioq
 
 import (
 	"bytes"
@@ -7,15 +7,15 @@ import (
 	"strconv"
 )
 
-type tree struct {
+type rbtree struct {
 	root *node
 }
 
-func (b *tree) String() string {
+func (b *rbtree) String() string {
 	return b.root.String()
 }
 
-func (b *tree) push(in *node) {
+func (b *rbtree) push(in *node) {
 	if b.root == nil {
 		b.root = in
 		in.pp = &b.root
@@ -24,7 +24,7 @@ func (b *tree) push(in *node) {
 	b.root.push(in)
 }
 
-func (b *tree) peekMin() *node {
+func (b *rbtree) peekMin() *node {
 	n := b.root
 	if n == nil {
 		return nil
@@ -35,17 +35,17 @@ func (b *tree) peekMin() *node {
 	return n
 }
 
-func (b *tree) popMin() *node {
+func (b *rbtree) popMin() *node {
 	if b.root != nil {
 		n := b.peekMin()
 		n.pop()
-		n.other.pop() // Clear complementary tree
+		n.other.pop() // Clear complementary rbtree
 		return n
 	}
 	return nil
 }
 
-func (b *tree) peekMax() *node {
+func (b *rbtree) peekMax() *node {
 	n := b.root
 	if n == nil {
 		return nil
@@ -56,17 +56,17 @@ func (b *tree) peekMax() *node {
 	return n
 }
 
-func (b *tree) popMax() *node {
+func (b *rbtree) popMax() *node {
 	if b.root != nil {
 		n := b.peekMax()
 		n.pop()
-		n.other.pop() // Clear complementary tree
+		n.other.pop() // Clear complementary rbtree
 		return n
 	}
 	return nil
 }
 
-func (b *tree) cancel(val int64) *node {
+func (b *rbtree) cancel(val int64) *node {
 	n := b.get(val)
 	if n == nil {
 		return nil
@@ -76,11 +76,11 @@ func (b *tree) cancel(val int64) *node {
 	return n
 }
 
-func (b *tree) Has(val int64) bool {
+func (b *rbtree) Has(val int64) bool {
 	return b.get(val) != nil
 }
 
-func (b *tree) get(val int64) *node {
+func (b *rbtree) get(val int64) *node {
 	n := b.root
 	for {
 		if n == nil {
@@ -111,7 +111,7 @@ type node struct {
 	prev *node
 	// OrderNode
 	order *OrderNode
-	// This is the other node tying order to another tree
+	// This is the other node tying order to another rbtree
 	other *node
 }
 
@@ -464,7 +464,7 @@ func (n *node) moveRedRight() {
 	}
 }
 
-func validateRBT(rbt *tree) (err error) {
+func validateRBT(rbt *rbtree) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = r.(error)
@@ -482,7 +482,7 @@ func blackBalance(n *node, depth int) int {
 	lb := blackBalance(n.left, depth+1)
 	rb := blackBalance(n.right, depth+1)
 	if lb != rb {
-		panic(errors.New(fmt.Sprintf("Unbalanced tree found at depth %d. Left: , %d Right: %d", depth, lb, rb)))
+		panic(errors.New(fmt.Sprintf("Unbalanced rbtree found at depth %d. Left: , %d Right: %d", depth, lb, rb)))
 	}
 	b := lb
 	if !n.isRed() {

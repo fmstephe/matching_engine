@@ -22,7 +22,7 @@ var (
 	orderNum   = flag.Int("o", 1000, "The number of orders to generate. Ignored if -f is provided")
 	delDelay   = flag.Int("d", 100, "The number of orders generated before we begin deleting existing orders")
 	perfRand   = rand.New(rand.NewSource(1))
-	orderMaker = trade.NewOrderNodeMaker()
+	orderMaker = trade.NewOrderMaker()
 )
 
 func main() {

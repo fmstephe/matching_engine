@@ -12,7 +12,7 @@ const (
 	trader3 = 3
 )
 
-var tmatchOrderNodeMaker = trade.NewOrderNodeMaker()
+var tmatchOrderNodeMaker = trade.NewOrderMaker()
 
 type responseVals struct {
 	price        int64

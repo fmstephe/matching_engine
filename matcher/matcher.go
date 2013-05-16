@@ -2,19 +2,19 @@ package matcher
 
 import (
 	"fmt"
+	"github.com/fmstephe/matching_engine/prioq"
 	"github.com/fmstephe/matching_engine/trade"
-	"github.com/fmstephe/matching_engine/tree"
 )
 
 type M struct {
-	matchTrees tree.MatchTrees // No constructor required
-	slab       *tree.Slab
-	submit     chan interface{}
-	orders     chan *trade.Order
+	matchQueues prioq.MatchQueues // No constructor required
+	slab        *prioq.Slab
+	submit      chan interface{}
+	orders      chan *trade.Order
 }
 
 func NewMatcher(slabSize int) *M {
-	slab := tree.NewSlab(slabSize)
+	slab := prioq.NewSlab(slabSize)
 	return &M{slab: slab}
 }
 
@@ -45,24 +45,24 @@ func (m *M) Run() {
 	}
 }
 
-func (m *M) addBuy(b *tree.OrderNode) {
+func (m *M) addBuy(b *prioq.OrderNode) {
 	if b.Price() == trade.MARKET_PRICE {
 		// This should probably just be a message to m.submit
 		panic("It is illegal to submit a buy at market price")
 	}
 	if !m.fillableBuy(b) {
-		m.matchTrees.PushBuy(b)
+		m.matchQueues.PushBuy(b)
 	}
 }
 
-func (m *M) addSell(s *tree.OrderNode) {
+func (m *M) addSell(s *prioq.OrderNode) {
 	if !m.fillableSell(s) {
-		m.matchTrees.PushSell(s)
+		m.matchQueues.PushSell(s)
 	}
 }
 
-func (m *M) cancel(o *tree.OrderNode) {
-	ro := m.matchTrees.Cancel(o)
+func (m *M) cancel(o *prioq.OrderNode) {
+	ro := m.matchQueues.Cancel(o)
 	if ro != nil {
 		completeCancel(m.submit, trade.CANCELLED, ro)
 		m.slab.Free(ro)
@@ -72,9 +72,9 @@ func (m *M) cancel(o *tree.OrderNode) {
 	m.slab.Free(o)
 }
 
-func (m *M) fillableBuy(b *tree.OrderNode) bool {
+func (m *M) fillableBuy(b *prioq.OrderNode) bool {
 	for {
-		s := m.matchTrees.PeekSell()
+		s := m.matchQueues.PeekSell()
 		if s == nil {
 			return false
 		}
@@ -82,7 +82,7 @@ func (m *M) fillableBuy(b *tree.OrderNode) bool {
 			if b.Amount() > s.Amount() {
 				amount := s.Amount()
 				price := price(b.Price(), s.Price())
-				m.slab.Free(m.matchTrees.PopSell())
+				m.slab.Free(m.matchQueues.PopSell())
 				b.ReduceAmount(amount)
 				completeTrade(m.submit, trade.PARTIAL, trade.FULL, b, s, price, amount)
 				continue
@@ -99,7 +99,7 @@ func (m *M) fillableBuy(b *tree.OrderNode) bool {
 				amount := b.Amount()
 				price := price(b.Price(), s.Price())
 				completeTrade(m.submit, trade.FULL, trade.FULL, b, s, price, amount)
-				m.slab.Free(m.matchTrees.PopSell())
+				m.slab.Free(m.matchQueues.PopSell())
 				m.slab.Free(b)
 				return true // The buy has been used up
 			}
@@ -110,9 +110,9 @@ func (m *M) fillableBuy(b *tree.OrderNode) bool {
 	panic("Unreachable")
 }
 
-func (m *M) fillableSell(s *tree.OrderNode) bool {
+func (m *M) fillableSell(s *prioq.OrderNode) bool {
 	for {
-		b := m.matchTrees.PeekBuy()
+		b := m.matchQueues.PeekBuy()
 		if b == nil {
 			return false
 		}
@@ -130,14 +130,14 @@ func (m *M) fillableSell(s *tree.OrderNode) bool {
 				price := price(b.Price(), s.Price())
 				s.ReduceAmount(amount)
 				completeTrade(m.submit, trade.PARTIAL, trade.FULL, b, s, price, amount)
-				m.slab.Free(m.matchTrees.PopBuy())
+				m.slab.Free(m.matchQueues.PopBuy())
 				continue
 			}
 			if s.Amount() == b.Amount() {
 				amount := b.Amount()
 				price := price(b.Price(), s.Price())
 				completeTrade(m.submit, trade.FULL, trade.FULL, b, s, price, amount)
-				m.slab.Free(m.matchTrees.PopBuy())
+				m.slab.Free(m.matchQueues.PopBuy())
 				m.slab.Free(s)
 				return true // The sell has been used up
 			}
@@ -156,7 +156,7 @@ func price(bPrice, sPrice int64) int64 {
 	return sPrice + (d / 2)
 }
 
-func completeTrade(submit chan interface{}, brk, srk trade.ResponseKind, b, s *tree.OrderNode, price int64, amount uint32) {
+func completeTrade(submit chan interface{}, brk, srk trade.ResponseKind, b, s *prioq.OrderNode, price int64, amount uint32) {
 	br := &trade.Response{}
 	sr := &trade.Response{}
 	br.WriteTrade(brk, -price, amount, b.TraderId(), b.TradeId(), s.TraderId())
@@ -165,7 +165,7 @@ func completeTrade(submit chan interface{}, brk, srk trade.ResponseKind, b, s *t
 	submit <- sr
 }
 
-func completeCancel(submit chan interface{}, rk trade.ResponseKind, d *tree.OrderNode) {
+func completeCancel(submit chan interface{}, rk trade.ResponseKind, d *prioq.OrderNode) {
 	r := &trade.Response{}
 	r.WriteCancel(rk, d.TraderId(), d.TradeId())
 	submit <- r

@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-var tcompareOrderNodeMaker = trade.NewOrderNodeMaker()
+var tcompareOrderNodeMaker = trade.NewOrderMaker()
 
 func TestCompareMatchers(t *testing.T) {
 	compareMatchers(t, 100, 1, 1, 1)

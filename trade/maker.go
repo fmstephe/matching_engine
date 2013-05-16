@@ -15,7 +15,7 @@ type OrderNodeMaker struct {
 	r        *rand.Rand
 }
 
-func NewOrderNodeMaker() *OrderNodeMaker {
+func NewOrderMaker() *OrderNodeMaker {
 	r := rand.New(rand.NewSource(1))
 	return &OrderNodeMaker{traderId: 0, r: r}
 }
