@@ -107,11 +107,11 @@ func (o *OrderNodeMaker) RndTradeSet(size, depth int, low, high int64) ([]Order,
 			b := buys[i-depth]
 			cb := &orders[idx]
 			idx++
-			cb.WriteCancelFromOrderNode(b)
+			cb.WriteCancelFromOrder(b)
 			s := sells[i-depth]
 			cs := &orders[idx]
 			idx++
-			cs.WriteCancelFromOrderNode(s)
+			cs.WriteCancelFromOrder(s)
 		}
 	}
 	return orders, nil

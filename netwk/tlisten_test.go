@@ -32,11 +32,11 @@ func (m *mockMatcher) Run() {
 		r := &trade.Response{}
 		r.Price = od.Price
 		r.Amount = od.Amount
-		r.TraderId = trade.GetTraderId(od.Guid)
-		r.TradeId = trade.GetTradeId(od.Guid)
+		r.TraderId = od.TraderId
+		r.TradeId = od.TradeId
 		r.IP = od.IP
 		r.Port = od.Port
-		r.CounterParty = trade.GetTraderId(od.Guid)
+		r.CounterParty = od.TraderId
 		m.submit <- r
 	}
 }
@@ -132,22 +132,19 @@ func validate(t *testing.T, od *trade.Order, r *trade.Response) {
 	if od.Amount != r.Amount {
 		t.Errorf("Amount mismatch, expecting %d, found %d", od.Amount, r.Amount)
 	}
-	if trade.GetTraderId(od.Guid) != r.TraderId {
-		t.Errorf("TraderId mismatch, expecting %d, found %d", trade.GetTraderId(od.Guid), r.TraderId)
+	if od.TraderId != r.TraderId {
+		t.Errorf("TraderId mismatch, expecting %d, found %d", od.TraderId, r.TraderId)
 	}
-	if trade.GetTradeId(od.Guid) != r.TradeId {
-		t.Errorf("TradeId mismatch, expecting %d, found %d", trade.GetTradeId(od.Guid), r.Price)
+	if od.TradeId != r.TradeId {
+		t.Errorf("TradeId mismatch, expecting %d, found %d", od.TradeId, r.Price)
 	}
-	if trade.GetTraderId(od.Guid) != r.CounterParty {
-		t.Errorf("Counterparty mismatch, expecting %d, found %d", trade.GetTraderId(od.Guid), r.CounterParty)
+	if od.TraderId != r.CounterParty {
+		t.Errorf("Counterparty mismatch, expecting %d, found %d", od.TraderId, r.CounterParty)
 	}
 	if od.IP != r.IP {
 		t.Errorf("IP mismatch, expecting %d, found %d", od.IP, r.IP)
 	}
 	if od.Port != r.Port {
 		t.Errorf("Port mismatch, expecting %d, found %d", od.Port, r.Port)
-	}
-	if trade.GetTraderId(od.Guid) != r.CounterParty {
-		t.Errorf("Counterparty mismatch, expecting %d, found %d", trade.GetTraderId(od.Guid), r.CounterParty)
 	}
 }

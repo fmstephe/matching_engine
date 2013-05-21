@@ -10,20 +10,20 @@ type OrderKind int32
 type ResponseKind int32
 
 const (
-	// OrderNodes
-	BUY    = OrderKind(iota)
-	SELL   = OrderKind(iota)
-	CANCEL = OrderKind(iota)
+	// Incoming messages
+	CLIENT_ACK = OrderKind(1) // Indicates the client has received a message from the matcher
+	BUY        = OrderKind(2)
+	SELL       = OrderKind(3)
+	CANCEL     = OrderKind(4)
 )
 
 const (
-	// Responses
-	//Received       = ResponseKind(iota)
-	PARTIAL       = ResponseKind(iota)
-	FULL          = ResponseKind(iota)
-	CANCELLED     = ResponseKind(iota)
-	NOT_CANCELLED = ResponseKind(iota)
-	// ACK           = ResponseKind(iota) // Use this to allow clients to acknowledge message receipt
+	// Outgoing messages
+	MATCHER_ACK   = ResponseKind(1) // Used to acknowledge a message back to the client
+	PARTIAL       = ResponseKind(2)
+	FULL          = ResponseKind(3)
+	CANCELLED     = ResponseKind(4)
+	NOT_CANCELLED = ResponseKind(5)
 )
 
 const (
@@ -32,12 +32,14 @@ const (
 )
 
 const (
-	SizeofOrder    = 36 //int(unsafe.Sizeof(Order{}))
-	SizeofResponse = 36 //int(unsafe.Sizeof(Response{}))
+	SizeofOrder    = 36
+	SizeofResponse = 36
 )
 
 func (k OrderKind) String() string {
 	switch k {
+	case CLIENT_ACK:
+		return "CLIENT_ACK"
 	case BUY:
 		return "BUY"
 	case SELL:
@@ -50,6 +52,8 @@ func (k OrderKind) String() string {
 
 func (k ResponseKind) String() string {
 	switch k {
+	case MATCHER_ACK:
+		return "MATCHER_ACK"
 	case PARTIAL:
 		return "PARTIAL"
 	case FULL:
@@ -60,18 +64,6 @@ func (k ResponseKind) String() string {
 		return "NOT_CANCELLED"
 	}
 	panic("Uncreachable")
-}
-
-func MkGuid(traderId, tradeId uint32) int64 {
-	return (int64(traderId) << 32) | int64(tradeId)
-}
-
-func GetTraderId(guid int64) uint32 {
-	return uint32(guid >> 32)
-}
-
-func GetTradeId(guid int64) uint32 {
-	return uint32(guid)
 }
 
 // For readable constructors
@@ -89,13 +81,14 @@ type TradeData struct {
 
 // Flat description of an incoming order
 type Order struct {
-	Price   int64
-	Amount  uint32
-	Guid    int64
-	StockId uint32
-	Kind    OrderKind
-	IP      [4]byte
-	Port    int32
+	Kind     OrderKind
+	Price    int64
+	Amount   uint32
+	TraderId uint32
+	TradeId  uint32
+	StockId  uint32
+	IP       [4]byte
+	Port     int32
 	// I think we need a checksum here
 }
 
@@ -111,13 +104,14 @@ func (od *Order) WriteCancel(tradeData TradeData) {
 	od.Write(CostData{}, tradeData, CANCEL)
 }
 
-func (od *Order) WriteCancelFromOrderNode(o *Order) {
-	od.Write(CostData{}, TradeData{TraderId: GetTraderId(o.Guid), TradeId: GetTradeId(o.Guid), StockId: o.StockId}, CANCEL)
+func (od *Order) WriteCancelFromOrder(o *Order) {
+	od.Write(CostData{}, TradeData{TraderId: o.TraderId, TradeId: o.TradeId, StockId: o.StockId}, CANCEL)
 }
 
 func (od *Order) Write(costData CostData, tradeData TradeData, kind OrderKind) {
 	od.Price = costData.Price
-	od.Guid = MkGuid(tradeData.TraderId, tradeData.TradeId)
+	od.TraderId = tradeData.TraderId
+	od.TradeId = tradeData.TradeId
 	od.Amount = costData.Amount
 	od.StockId = tradeData.StockId
 	od.Kind = kind

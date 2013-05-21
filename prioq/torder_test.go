@@ -1,4 +1,4 @@
-package trade
+package prioq
 
 import (
 	"math/rand"
@@ -10,9 +10,9 @@ func TestGuidFuns(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		traderId := r.Uint32()
 		tradeId := r.Uint32()
-		guid := MkGuid(traderId, tradeId)
-		cTraderId := GetTraderId(guid)
-		cTradeId := GetTradeId(guid)
+		guid := mkGuid(traderId, tradeId)
+		cTraderId := getTraderId(guid)
+		cTradeId := getTradeId(guid)
 		if cTraderId != traderId {
 			t.Errorf("Expecting traderId '%s' found '%s'", traderId, cTraderId)
 		}
@@ -28,9 +28,9 @@ func TestGuidFunsWithBigNumbers(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		traderId := uint32(-r.Int31())
 		tradeId := uint32(-r.Int31())
-		guid := MkGuid(traderId, tradeId)
-		cTraderId := GetTraderId(guid)
-		cTradeId := GetTradeId(guid)
+		guid := mkGuid(traderId, tradeId)
+		cTraderId := getTraderId(guid)
+		cTradeId := getTradeId(guid)
 		if cTraderId != traderId {
 			t.Errorf("Expecting traderId '%s' found '%s'", traderId, cTraderId)
 		}
