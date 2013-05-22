@@ -4,19 +4,8 @@ import (
 	"fmt"
 	"github.com/fmstephe/fstrconv"
 	"github.com/fmstephe/matching_engine/trade"
+	"github.com/fmstephe/matching_engine/guid"
 )
-
-func mkGuid(traderId, tradeId uint32) int64 {
-	return (int64(traderId) << 32) | int64(tradeId)
-}
-
-func getTraderId(guid int64) uint32 {
-	return uint32(guid >> 32)
-}
-
-func getTradeId(guid int64) uint32 {
-	return uint32(guid)
-}
 
 // Description of an OrderNode which can live inside a guid and price tree
 type OrderNode struct {
@@ -34,7 +23,7 @@ func (o *OrderNode) CopyFrom(from *trade.Order) {
 	o.amount = from.Amount
 	o.stockId = from.StockId
 	o.kind = from.Kind
-	o.setup(from.Price, mkGuid(from.TraderId, from.TradeId))
+	o.setup(from.Price, guid.MkGuid(from.TraderId, from.TradeId))
 	o.ip = from.IP
 	o.port = from.Port
 }
@@ -53,11 +42,11 @@ func (o *OrderNode) Guid() int64 {
 }
 
 func (o *OrderNode) TraderId() uint32 {
-	return getTraderId(o.guidNode.val)
+	return guid.GetTraderId(o.guidNode.val)
 }
 
 func (o *OrderNode) TradeId() uint32 {
-	return getTradeId(o.guidNode.val)
+	return guid.GetTradeId(o.guidNode.val)
 }
 
 func (o *OrderNode) Amount() uint32 {

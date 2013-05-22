@@ -1,4 +1,4 @@
-package guidstore
+package guid
 
 import (
 	"math"

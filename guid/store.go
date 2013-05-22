@@ -1,4 +1,4 @@
-package guidstore
+package guid
 
 import (
 	"bytes"
@@ -12,19 +12,19 @@ const (
 	blockMask = blockSize - 1
 )
 
-type S struct {
+type Store struct {
 	root *node
 }
 
-func NewStore() *S {
-	return &S{}
+func NewStore() *Store {
+	return &Store{}
 }
 
-func (s *S) String() string {
+func (s *Store) String() string {
 	return s.root.String()
 }
 
-func (s *S) Push(val int64) (added bool) {
+func (s *Store) Push(val int64) (added bool) {
 	if s.root == nil {
 		s.root = newNode(val)
 		s.root.pp = &s.root
@@ -144,25 +144,6 @@ func rebalance(n *node) {
 	}
 }
 
-/*
-Could be nice to use this
-func llrb(n *node) {
-	for n != nil {
-		if n.right.isRed() && !n.left.isRed() {
-			n = n.rotateLeft()
-		}
-		if n.left.isRed() && n.left.left.isRed() {
-			n = n.rotateRight()
-		}
-		if n.left.isRed() && n.right.isRed() {
-			n.flip()
-		} else {
-			n = n.parent
-		}
-	}
-}
-*/
-
 func (n *node) giveParent(nn *node) {
 	nn.parent = n.parent
 	nn.pp = n.pp
@@ -213,7 +194,7 @@ func (n *node) flip() {
 	n.right.black = !n.right.black
 }
 
-func validateRBT(s *S) (err error) {
+func validateRBT(s *Store) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = r.(error)
