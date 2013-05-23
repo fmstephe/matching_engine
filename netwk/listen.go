@@ -4,13 +4,15 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"github.com/fmstephe/matching_engine/guid"
 	"github.com/fmstephe/matching_engine/trade"
 	"net"
 )
 
 type Listener struct {
-	conn   *net.UDPConn
-	submit chan interface{}
+	conn      *net.UDPConn
+	guidstore *guid.Store
+	submit    chan interface{}
 }
 
 func NewListener(port string) (*Listener, error) {
@@ -22,7 +24,7 @@ func NewListener(port string) (*Listener, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Listener{conn: conn}, nil
+	return &Listener{conn: conn, guidstore: guid.NewStore()}, nil
 }
 
 func (l *Listener) SetSubmit(submit chan interface{}) {
@@ -41,13 +43,21 @@ func (l *Listener) Run() {
 			println(fmt.Sprintf("Listener: Error incorrect number of bytes. Expecting %d, found %d submit %v", trade.SizeofOrder, n, s))
 			continue
 		}
-		od := &trade.Order{}
+		o := &trade.Order{}
 		buf := bytes.NewBuffer(s)
-		err = binary.Read(buf, binary.BigEndian, od)
+		err = binary.Read(buf, binary.BigEndian, o)
 		if err != nil {
 			println("Listener - to []byte: ", err.Error())
 			continue
 		}
-		l.submit <- od
+		r := &trade.Response{}
+		r.WriteAck(o)
+		l.submit <- r
+		if l.guidstore.Push(guid.MkGuid(o.TraderId, o.TradeId)) {
+			l.submit <- o
+		}
+		if o.Kind == trade.SHUTDOWN {
+			return
+		}
 	}
 }

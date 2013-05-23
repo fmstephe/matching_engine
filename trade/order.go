@@ -6,24 +6,22 @@ import (
 	"net"
 )
 
-type OrderKind int32
-type ResponseKind int32
+type MsgKind int32
 
 const (
+	ILLEGAL = MsgKind(0)
 	// Incoming messages
-	CLIENT_ACK = OrderKind(1) // Indicates the client has received a message from the matcher
-	BUY        = OrderKind(2)
-	SELL       = OrderKind(3)
-	CANCEL     = OrderKind(4)
-)
-
-const (
+	CLIENT_ACK = MsgKind(1) // Indicates the client has received a message from the matcher
+	BUY        = MsgKind(2)
+	SELL       = MsgKind(3)
+	CANCEL     = MsgKind(4)
+	SHUTDOWN   = MsgKind(5)
 	// Outgoing messages
-	MATCHER_ACK   = ResponseKind(1) // Used to acknowledge a message back to the client
-	PARTIAL       = ResponseKind(2)
-	FULL          = ResponseKind(3)
-	CANCELLED     = ResponseKind(4)
-	NOT_CANCELLED = ResponseKind(5)
+	MATCHER_ACK   = MsgKind(6) // Used to acknowledge a message back to the client
+	PARTIAL       = MsgKind(7)
+	FULL          = MsgKind(8)
+	CANCELLED     = MsgKind(9)
+	NOT_CANCELLED = MsgKind(10)
 )
 
 const (
@@ -36,8 +34,10 @@ const (
 	SizeofResponse = 36
 )
 
-func (k OrderKind) String() string {
+func (k MsgKind) String() string {
 	switch k {
+	case ILLEGAL:
+		return "ILLEGAL"
 	case CLIENT_ACK:
 		return "CLIENT_ACK"
 	case BUY:
@@ -46,12 +46,8 @@ func (k OrderKind) String() string {
 		return "SELL"
 	case CANCEL:
 		return "CANCEL"
-	}
-	panic("Unreachable")
-}
-
-func (k ResponseKind) String() string {
-	switch k {
+	case SHUTDOWN:
+		return "SHUTDOWN"
 	case MATCHER_ACK:
 		return "MATCHER_ACK"
 	case PARTIAL:
@@ -81,7 +77,7 @@ type TradeData struct {
 
 // Flat description of an incoming order
 type Order struct {
-	Kind     OrderKind
+	Kind     MsgKind
 	Price    int64
 	Amount   uint32
 	TraderId uint32
@@ -92,51 +88,55 @@ type Order struct {
 	// I think we need a checksum here
 }
 
-func (od *Order) WriteBuy(costData CostData, tradeData TradeData) {
-	od.Write(costData, tradeData, BUY)
+func (o *Order) WriteBuy(costData CostData, tradeData TradeData) {
+	o.Write(costData, tradeData, BUY)
 }
 
-func (od *Order) WriteSell(costData CostData, tradeData TradeData) {
-	od.Write(costData, tradeData, SELL)
+func (o *Order) WriteSell(costData CostData, tradeData TradeData) {
+	o.Write(costData, tradeData, SELL)
 }
 
-func (od *Order) WriteCancel(tradeData TradeData) {
-	od.Write(CostData{}, tradeData, CANCEL)
+func (o *Order) WriteCancel(tradeData TradeData) {
+	o.Write(CostData{}, tradeData, CANCEL)
 }
 
-func (od *Order) WriteCancelFromOrder(o *Order) {
-	od.Write(CostData{}, TradeData{TraderId: o.TraderId, TradeId: o.TradeId, StockId: o.StockId}, CANCEL)
+func (o *Order) WriteCancelFromOrder(oo *Order) {
+	o.Write(CostData{}, TradeData{TraderId: oo.TraderId, TradeId: oo.TradeId, StockId: oo.StockId}, CANCEL)
 }
 
-func (od *Order) Write(costData CostData, tradeData TradeData, kind OrderKind) {
-	od.Price = costData.Price
-	od.TraderId = tradeData.TraderId
-	od.TradeId = tradeData.TradeId
-	od.Amount = costData.Amount
-	od.StockId = tradeData.StockId
-	od.Kind = kind
+func (o *Order) WriteShutdown() {
+	o.Write(CostData{}, TradeData{}, SHUTDOWN)
 }
 
-func (od *Order) UDPAddr() *net.UDPAddr {
+func (o *Order) Write(costData CostData, tradeData TradeData, kind MsgKind) {
+	o.Price = costData.Price
+	o.TraderId = tradeData.TraderId
+	o.TradeId = tradeData.TradeId
+	o.Amount = costData.Amount
+	o.StockId = tradeData.StockId
+	o.Kind = kind
+}
+
+func (o *Order) UDPAddr() *net.UDPAddr {
 	addr := &net.UDPAddr{}
-	addr.IP = net.IPv4(od.IP[0], od.IP[1], od.IP[2], od.IP[3])
-	addr.Port = int(od.Port)
+	addr.IP = net.IPv4(o.IP[0], o.IP[1], o.IP[2], o.IP[3])
+	addr.Port = int(o.Port)
 	return addr
 }
 
-func (od *Order) SetUDPAddr(addr *net.UDPAddr) error {
+func (o *Order) SetUDPAddr(addr *net.UDPAddr) error {
 	IP := addr.IP.To4()
 	if IP == nil {
 		return errors.New(fmt.Sprintf("IP address (%s) is not IPv4", addr.IP.String()))
 	}
-	od.IP[0], od.IP[1], od.IP[2], od.IP[3] = IP[0], IP[1], IP[2], IP[3]
-	od.Port = int32(addr.Port)
-	println(od.UDPAddr().String())
+	o.IP[0], o.IP[1], o.IP[2], o.IP[3] = IP[0], IP[1], IP[2], IP[3]
+	o.Port = int32(addr.Port)
+	println(o.UDPAddr().String())
 	return nil
 }
 
 type Response struct {
-	Kind         ResponseKind
+	Kind         MsgKind
 	Price        int64  // The actual trade price, will be negative if a purchase was made
 	Amount       uint32 // The number of units actually bought or sold
 	TraderId     uint32 // The trader-id of the trader to whom this response is directed
@@ -146,7 +146,7 @@ type Response struct {
 	Port         int32
 }
 
-func (r *Response) WriteTrade(kind ResponseKind, price int64, amount, traderId, tradeId, counterParty uint32) {
+func (r *Response) WriteTrade(kind MsgKind, price int64, amount, traderId, tradeId, counterParty uint32) {
 	r.Kind = kind
 	r.Price = price
 	r.Amount = amount
@@ -155,10 +155,25 @@ func (r *Response) WriteTrade(kind ResponseKind, price int64, amount, traderId, 
 	r.CounterParty = counterParty
 }
 
-func (r *Response) WriteCancel(kind ResponseKind, traderId, tradeId uint32) {
+func (r *Response) WriteCancel(kind MsgKind, traderId, tradeId uint32) {
 	r.Kind = kind
 	r.TraderId = traderId
 	r.TradeId = tradeId
+}
+
+func (r *Response) WriteAck(o *Order) {
+	r.Kind = MATCHER_ACK
+	r.Price = o.Price
+	r.Amount = o.Amount
+	r.TraderId = o.TraderId
+	r.TradeId = o.TradeId
+	r.CounterParty = 0
+	r.IP = o.IP
+	r.Port = o.Port
+}
+
+func (r *Response) WriteShutdown() {
+	r.Kind = SHUTDOWN
 }
 
 func (r *Response) UDPAddr() *net.UDPAddr {

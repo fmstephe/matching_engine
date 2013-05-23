@@ -62,14 +62,20 @@ type dispatcher struct {
 func (d *dispatcher) Run() {
 	for {
 		v := <-d.submit
-		if d.log {
-			println(fmt.Sprintf("%v", v))
-		}
 		switch v := v.(type) {
 		case *trade.Order:
+			if d.log {
+				println(fmt.Sprintf("Order - %v", v))
+			}
 			d.orders <- v
 		case *trade.Response:
+			if d.log {
+				println(fmt.Sprintf("Response - %v", v))
+			}
 			d.responses <- v
+			if v.Kind == trade.SHUTDOWN {
+				return
+			}
 		default:
 			panic(fmt.Sprintf("Unkown object received: %v", v))
 		}

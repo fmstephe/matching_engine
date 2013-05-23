@@ -3,8 +3,8 @@ package prioq
 import (
 	"fmt"
 	"github.com/fmstephe/fstrconv"
-	"github.com/fmstephe/matching_engine/trade"
 	"github.com/fmstephe/matching_engine/guid"
+	"github.com/fmstephe/matching_engine/trade"
 )
 
 // Description of an OrderNode which can live inside a guid and price tree
@@ -13,7 +13,7 @@ type OrderNode struct {
 	guidNode  node
 	amount    uint32
 	stockId   uint32
-	kind      trade.OrderKind
+	kind      trade.MsgKind
 	ip        [4]byte
 	port      int32
 	nextFree  *OrderNode
@@ -69,7 +69,7 @@ func (o *OrderNode) Port() int32 {
 	return o.port
 }
 
-func (o *OrderNode) Kind() trade.OrderKind {
+func (o *OrderNode) Kind() trade.MsgKind {
 	return o.kind
 }
 

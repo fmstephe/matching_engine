@@ -28,19 +28,25 @@ func (m *M) SetOrderNodes(orders chan *trade.Order) {
 
 func (m *M) Run() {
 	for {
-		od := <-m.orders
-		o := m.slab.Malloc()
-		o.CopyFrom(od)
-		switch o.Kind() {
+		o := <-m.orders
+		if o.Kind == trade.SHUTDOWN {
+			r := &trade.Response{}
+			r.WriteShutdown()
+			m.submit <- r
+			return
+		}
+		on := m.slab.Malloc()
+		on.CopyFrom(o)
+		switch on.Kind() {
 		case trade.BUY:
-			m.addBuy(o)
+			m.addBuy(on)
 		case trade.SELL:
-			m.addSell(o)
+			m.addSell(on)
 		case trade.CANCEL:
-			m.cancel(o)
+			m.cancel(on)
 		default:
 			// This should probably just be an message to m.submit
-			panic(fmt.Sprintf("OrderKind %s not supported", o.Kind().String()))
+			panic(fmt.Sprintf("MsgKind %v not supported", on.Kind()))
 		}
 	}
 }
@@ -156,7 +162,7 @@ func price(bPrice, sPrice int64) int64 {
 	return sPrice + (d / 2)
 }
 
-func completeTrade(submit chan interface{}, brk, srk trade.ResponseKind, b, s *prioq.OrderNode, price int64, amount uint32) {
+func completeTrade(submit chan interface{}, brk, srk trade.MsgKind, b, s *prioq.OrderNode, price int64, amount uint32) {
 	br := &trade.Response{}
 	sr := &trade.Response{}
 	br.WriteTrade(brk, -price, amount, b.TraderId(), b.TradeId(), s.TraderId())
@@ -165,7 +171,7 @@ func completeTrade(submit chan interface{}, brk, srk trade.ResponseKind, b, s *p
 	submit <- sr
 }
 
-func completeCancel(submit chan interface{}, rk trade.ResponseKind, d *prioq.OrderNode) {
+func completeCancel(submit chan interface{}, rk trade.MsgKind, d *prioq.OrderNode) {
 	r := &trade.Response{}
 	r.WriteCancel(rk, d.TraderId(), d.TradeId())
 	submit <- r
