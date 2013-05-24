@@ -9,7 +9,7 @@ import (
 type MsgKind int32
 
 const (
-	ILLEGAL = MsgKind(0)
+	ILLEGAL = MsgKind(0) // 0 is never a valid kind
 	// Incoming messages
 	CLIENT_ACK = MsgKind(1) // Indicates the client has received a message from the matcher
 	BUY        = MsgKind(2)
@@ -22,6 +22,8 @@ const (
 	FULL          = MsgKind(8)
 	CANCELLED     = MsgKind(9)
 	NOT_CANCELLED = MsgKind(10)
+	// Error message
+	ERROR = MsgKind(11) // TODO error messages are currently unused
 )
 
 const (
