@@ -10,6 +10,12 @@ import (
 	"testing"
 )
 
+// NB: There are a number of problems with these tests which are currently being ignored
+// 1: Because we are communicating via UDP messages could arrive out of order, in practice they don't travelling via localhost
+// 2: The messages are currently not being acked, which means that responses may be resent - which would confuse response checking
+//    The reason this doesn't impact the tests right now is that the resend rate is so slow that the test is complete and the system
+//    shut down before unacked messages are resent, this is pretty delicate
+
 var localhost = [4]byte{127, 0, 0, 1}
 
 type mockMatcher struct {
@@ -50,7 +56,7 @@ func TestOrdersAndResponse(t *testing.T) {
 	confirmNewOrder(t, read, write, &trade.Order{trade.BUY, 1, 2, 3, 4, 5, localhost, int32(clientPort)})
 	confirmNewOrder(t, read, write, &trade.Order{trade.BUY, 6, 7, 8, 9, 10, localhost, int32(clientPort)})
 	confirmNewOrder(t, read, write, &trade.Order{trade.BUY, 11, 12, 13, 14, 15, localhost, int32(clientPort)})
-	shutdown(t, read, write, localhost, int32(clientPort))
+	shutdownSystem(t, read, write, localhost, int32(clientPort))
 }
 
 func TestDuplicateOrders(t *testing.T) {
@@ -61,7 +67,7 @@ func TestDuplicateOrders(t *testing.T) {
 	write := writeConn(serverPort)
 	confirmNewOrder(t, read, write, &trade.Order{trade.BUY, 1, 2, 3, 4, 5, localhost, int32(clientPort)})
 	confirmDupOrder(t, read, write, &trade.Order{trade.BUY, 1, 2, 3, 4, 5, localhost, int32(clientPort)})
-	shutdown(t, read, write, localhost, int32(clientPort))
+	shutdownSystem(t, read, write, localhost, int32(clientPort))
 }
 
 func setRunning(serverPort int) {
@@ -124,7 +130,7 @@ func confirmDupOrder(t *testing.T, read, write *net.UDPConn, o *trade.Order) {
 	validate(t, o, ack, true)
 }
 
-func shutdown(t *testing.T, read, write *net.UDPConn, ip [4]byte, port int32) {
+func shutdownSystem(t *testing.T, read, write *net.UDPConn, ip [4]byte, port int32) {
 	o := &trade.Order{}
 	o.WriteShutdown()
 	o.IP = ip

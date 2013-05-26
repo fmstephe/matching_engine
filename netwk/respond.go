@@ -7,15 +7,18 @@ import (
 	"fmt"
 	"github.com/fmstephe/matching_engine/trade"
 	"net"
+	"time"
 )
+
+const RESEND_MILLIS = time.Duration(1) * time.Second
 
 type Responder struct {
 	responses chan *trade.Response
-	resend    []*trade.Response
+	unacked   []*trade.Response
 }
 
 func NewResponder() *Responder {
-	return &Responder{}
+	return &Responder{unacked: make([]*trade.Response, 0, 100)}
 }
 
 func (r *Responder) SetResponses(responses chan *trade.Response) {
@@ -23,17 +26,48 @@ func (r *Responder) SetResponses(responses chan *trade.Response) {
 }
 
 func (r *Responder) Run() {
+	defer shutdown()
+	t := time.NewTimer(RESEND_MILLIS)
 	for {
 		select {
 		case resp := <-r.responses:
-			err := r.write(resp)
-			if err != nil {
-				println("Responder - ", err.Error())
-			}
 			if resp.Kind == trade.SHUTDOWN {
 				return
 			}
+			r.manageAcks(resp)
+			err := r.write(resp)
+			if err != nil {
+				// TODO this should be a message sent back to the coordinator
+				println("Responder - ", err.Error())
+			}
+		case <-t.C:
+			r.resend()
+			t = time.NewTimer(RESEND_MILLIS)
 		}
+	}
+}
+
+func (r *Responder) manageAcks(resp *trade.Response) {
+	unacked := r.unacked
+	if resp.Kind == trade.CLIENT_ACK {
+		for i, uResp := range unacked {
+			if resp.TraderId == uResp.TraderId && resp.TradeId == uResp.TradeId {
+				unacked[i] = unacked[len(unacked)-1]
+				unacked = unacked[:len(unacked)-1]
+				// Corner cases?
+			}
+		}
+	}
+	if resp.Kind == trade.BUY || resp.Kind == trade.SELL || resp.Kind == trade.CANCEL {
+		// TODO this is wrong, we shouldn't be sending BUY, SELL or CANCEL messages
+		unacked = append(unacked, resp)
+	}
+	r.unacked = unacked
+}
+
+func (r *Responder) resend() {
+	for _, resp := range r.unacked {
+		r.write(resp)
 	}
 }
 
@@ -55,4 +89,7 @@ func (r *Responder) write(resp *trade.Response) error {
 		return errors.New(fmt.Sprintf("Insufficient bytes written. Expecting %d, found %d", trade.SizeofResponse, n))
 	}
 	return nil
+}
+
+func shutdown() {
 }

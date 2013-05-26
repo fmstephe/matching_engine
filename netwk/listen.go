@@ -32,6 +32,7 @@ func (l *Listener) SetSubmit(submit chan interface{}) {
 }
 
 func (l *Listener) Run() {
+	defer l.conn.Close()
 	for {
 		s := make([]byte, trade.SizeofOrder)
 		n, _, err := l.conn.ReadFromUDP(s)
