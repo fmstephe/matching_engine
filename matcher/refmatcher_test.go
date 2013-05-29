@@ -1,17 +1,17 @@
 package matcher
 
 import (
+	"github.com/fmstephe/matching_engine/msg"
 	"github.com/fmstephe/matching_engine/prioq"
-	"github.com/fmstephe/matching_engine/trade"
 )
 
 type refmatcher struct {
 	matchQueues *prioq.RefMatchQueues
-	submit      chan interface{}
-	orders      chan *trade.Order
+	submit      chan *msg.Message
+	orders      chan *msg.Message
 }
 
-func newRefmatcher(lowPrice, highPrice int64, submit chan interface{}, orders chan *trade.Order) *refmatcher {
+func newRefmatcher(lowPrice, highPrice int64, submit chan *msg.Message, orders chan *msg.Message) *refmatcher {
 	matchQueues := prioq.NewRefMatchQueues(lowPrice, highPrice)
 	return &refmatcher{matchQueues: matchQueues, submit: submit, orders: orders}
 }
@@ -21,13 +21,13 @@ func (m *refmatcher) Run() {
 		od := <-m.orders
 		o := &prioq.OrderNode{}
 		o.CopyFrom(od)
-		if o.Kind() == trade.CANCEL {
+		if o.Kind() == msg.CANCEL {
 			co := m.matchQueues.Cancel(o)
 			if co != nil {
-				completeCancel(m.submit, trade.CANCELLED, co)
+				completeCancelled(m.submit, co)
 			}
 			if co == nil {
-				completeCancel(m.submit, trade.NOT_CANCELLED, o)
+				completeNotCancelled(m.submit, o)
 			}
 		} else {
 			m.push(o)
@@ -37,11 +37,11 @@ func (m *refmatcher) Run() {
 }
 
 func (m *refmatcher) push(o *prioq.OrderNode) {
-	if o.Kind() == trade.BUY {
+	if o.Kind() == msg.BUY {
 		m.matchQueues.PushBuy(o)
 		return
 	}
-	if o.Kind() == trade.SELL {
+	if o.Kind() == msg.SELL {
 		m.matchQueues.PushSell(o)
 		return
 	}
@@ -64,7 +64,7 @@ func (m *refmatcher) match() {
 			m.matchQueues.PopBuy()
 			amount := s.Amount()
 			price := price(b.Price(), s.Price())
-			completeTrade(m.submit, trade.FULL, trade.FULL, b, s, price, amount)
+			completeTrade(m.submit, msg.FULL, msg.FULL, b, s, price, amount)
 		}
 		if s.Amount() > b.Amount() {
 			// pop buy
@@ -72,7 +72,7 @@ func (m *refmatcher) match() {
 			amount := b.Amount()
 			price := price(b.Price(), s.Price())
 			s.ReduceAmount(b.Amount())
-			completeTrade(m.submit, trade.FULL, trade.PARTIAL, b, s, price, amount)
+			completeTrade(m.submit, msg.FULL, msg.PARTIAL, b, s, price, amount)
 		}
 		if b.Amount() > s.Amount() {
 			// pop sell
@@ -80,7 +80,7 @@ func (m *refmatcher) match() {
 			amount := s.Amount()
 			price := price(b.Price(), s.Price())
 			b.ReduceAmount(s.Amount())
-			completeTrade(m.submit, trade.PARTIAL, trade.FULL, b, s, price, amount)
+			completeTrade(m.submit, msg.PARTIAL, msg.FULL, b, s, price, amount)
 		}
 	}
 }

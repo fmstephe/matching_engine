@@ -1,0 +1,118 @@
+package msg
+
+import (
+	"errors"
+	"fmt"
+	"math/rand"
+)
+
+var (
+	stockId = uint32(1)
+)
+
+type MessageMaker struct {
+	traderId uint32
+	r        *rand.Rand
+}
+
+func NewMessageMaker() *MessageMaker {
+	r := rand.New(rand.NewSource(1))
+	return &MessageMaker{traderId: 0, r: r}
+}
+
+func (mm *MessageMaker) Seed(seed int64) {
+	mm.r.Seed(seed)
+}
+
+func (mm *MessageMaker) Between(lower, upper int64) int64 {
+	if lower == upper {
+		return lower
+	}
+	d := upper - lower
+	return mm.r.Int63n(d) + lower
+}
+
+func (mm *MessageMaker) MkPricedMessage(price int64, kind MsgKind) *Message {
+	m := &Message{}
+	mm.writePricedMessage(price, kind, m)
+	return m
+}
+
+func (mm *MessageMaker) writePricedMessage(price int64, kind MsgKind, m *Message) {
+	costData := CostData{Price: price, Amount: 1}
+	tradeData := TradeData{TraderId: mm.traderId, TradeId: 1, StockId: 1}
+	mm.traderId++
+	m.Write(costData, tradeData, NetData{}, kind)
+}
+
+func (mm *MessageMaker) ValRangePyramid(n int, low, high int64) []int64 {
+	seq := (high - low) / 4
+	vals := make([]int64, n)
+	for i := 0; i < n; i++ {
+		val := mm.Between(0, seq) + mm.Between(0, seq) + mm.Between(0, seq) + mm.Between(0, seq)
+		vals[i] = int64(val) + low
+	}
+	return vals
+}
+
+func (mm *MessageMaker) ValRangeFlat(n int, low, high int64) []int64 {
+	vals := make([]int64, n)
+	for i := 0; i < n; i++ {
+		vals[i] = mm.Between(low, high)
+	}
+	return vals
+}
+
+func (mm *MessageMaker) MkBuys(prices []int64) []Message {
+	return mm.MkMessages(prices, BUY)
+}
+
+func (mm *MessageMaker) MkSells(prices []int64) []Message {
+	return mm.MkMessages(prices, SELL)
+}
+
+func (mm *MessageMaker) MkMessages(prices []int64, kind MsgKind) []Message {
+	msgs := make([]Message, len(prices))
+	for i, price := range prices {
+		costData := CostData{Price: price, Amount: 1}
+		tradeData := TradeData{TraderId: uint32(i), TradeId: uint32(i), StockId: stockId}
+		msgs[i].Write(costData, tradeData, NetData{}, kind)
+	}
+	return msgs
+}
+
+func (mm *MessageMaker) RndTradeSet(size, depth int, low, high int64) ([]Message, error) {
+	if depth > size {
+		return nil, errors.New(fmt.Sprintf("Size (%d) must be greater than or equal to (%d)", size, depth))
+	}
+	orders := make([]Message, size*4)
+	buys := make([]*Message, 0, size)
+	sells := make([]*Message, 0, size)
+	idx := 0
+	for i := 0; i < size+depth; i++ {
+		if i < size {
+			b := &orders[idx]
+			idx++
+			mm.writePricedMessage(mm.Between(low, high), BUY, b)
+			buys = append(buys, b)
+			if b.Price == 0 {
+				b.Price = 1 // Buys can't have price of 0
+			}
+			s := &orders[idx]
+			idx++
+			mm.writePricedMessage(mm.Between(low, high), SELL, s)
+			sells = append(sells, s)
+		}
+		if i >= depth {
+			b := buys[i-depth]
+			cb := &orders[idx]
+			idx++
+			cb.WriteCancelFor(b)
+			s := sells[i-depth]
+			cs := &orders[idx]
+			idx++
+			cs.WriteCancelFor(s)
+		}
+	}
+	return orders, nil
+}

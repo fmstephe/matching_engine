@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/fmstephe/fstrconv"
 	"github.com/fmstephe/matching_engine/guid"
-	"github.com/fmstephe/matching_engine/trade"
+	"github.com/fmstephe/matching_engine/msg"
 )
 
 // Description of an OrderNode which can live inside a guid and price tree
@@ -13,13 +13,13 @@ type OrderNode struct {
 	guidNode  node
 	amount    uint32
 	stockId   uint32
-	kind      trade.MsgKind
+	kind      msg.MsgKind
 	ip        [4]byte
 	port      int32
 	nextFree  *OrderNode
 }
 
-func (o *OrderNode) CopyFrom(from *trade.Order) {
+func (o *OrderNode) CopyFrom(from *msg.Message) {
 	o.amount = from.Amount
 	o.stockId = from.StockId
 	o.kind = from.Kind
@@ -69,7 +69,7 @@ func (o *OrderNode) Port() int32 {
 	return o.port
 }
 
-func (o *OrderNode) Kind() trade.MsgKind {
+func (o *OrderNode) Kind() msg.MsgKind {
 	return o.kind
 }
 

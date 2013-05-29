@@ -2,19 +2,19 @@ package coordinator
 
 import (
 	"fmt"
-	"github.com/fmstephe/matching_engine/trade"
+	"github.com/fmstephe/matching_engine/msg"
 )
 
 type submitChan interface {
-	SetSubmit(chan interface{})
+	SetSubmit(chan *msg.Message)
 }
 
 type orderChan interface {
-	SetOrderNodes(chan *trade.Order)
+	SetOrders(chan *msg.Message)
 }
 
 type responseChan interface {
-	SetResponses(chan *trade.Response)
+	SetResponses(chan *msg.Message)
 }
 
 type runner interface {
@@ -38,14 +38,14 @@ type matcher interface {
 }
 
 func Coordinate(l listener, r responder, m matcher, log bool) {
-	submit := make(chan interface{}, 100)
-	orders := make(chan *trade.Order, 100)
-	responses := make(chan *trade.Response, 100)
+	submit := make(chan *msg.Message, 100)
+	orders := make(chan *msg.Message, 100)
+	responses := make(chan *msg.Message, 100)
 	d := &dispatcher{submit: submit, orders: orders, responses: responses, log: log}
 	l.SetSubmit(submit)
 	r.SetResponses(responses)
 	m.SetSubmit(submit)
-	m.SetOrderNodes(orders)
+	m.SetOrders(orders)
 	go l.Run()
 	go r.Run()
 	go m.Run()
@@ -53,31 +53,28 @@ func Coordinate(l listener, r responder, m matcher, log bool) {
 }
 
 type dispatcher struct {
-	submit    chan interface{}
-	orders    chan *trade.Order
-	responses chan *trade.Response
+	submit    chan *msg.Message
+	orders    chan *msg.Message
+	responses chan *msg.Message
 	log       bool
 }
 
 func (d *dispatcher) Run() {
 	for {
-		v := <-d.submit
-		switch v := v.(type) {
-		case *trade.Order:
-			if d.log {
-				println(fmt.Sprintf("Order - %v", v))
-			}
-			d.orders <- v
-		case *trade.Response:
-			if d.log {
-				println(fmt.Sprintf("Response - %v", v))
-			}
-			d.responses <- v
-			if v.Kind == trade.SHUTDOWN {
-				return
-			}
+		m := <-d.submit
+		if d.log {
+			println(fmt.Sprintf("Message - %v", m))
+		}
+		switch {
+		case m.Kind.IsOrder():
+			d.orders <- m
+		case m.Kind.IsResponse():
+			d.responses <- m
+		case m.Kind == msg.SHUTDOWN:
+			d.responses <- m
+			return
 		default:
-			panic(fmt.Sprintf("Unkown object received: %v", v))
+			panic(fmt.Sprintf("Unkown object received: %v", m))
 		}
 	}
 }

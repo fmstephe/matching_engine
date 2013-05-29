@@ -2,7 +2,7 @@ package itch
 
 import (
 	"bufio"
-	"github.com/fmstephe/matching_engine/trade"
+	"github.com/fmstephe/matching_engine/msg"
 	"io"
 	"math"
 	"os"
@@ -30,7 +30,7 @@ func NewItchReader(fName string) *ItchReader {
 	return &ItchReader{lineCount: 1, minSell: math.MaxInt32, r: r}
 }
 
-func (i *ItchReader) ReadOrder() (o *trade.Order, line string, err error) {
+func (i *ItchReader) ReadMessage() (o *msg.Message, line string, err error) {
 	i.lineCount++
 	for {
 		line, err = i.r.ReadString('\n')
@@ -41,21 +41,21 @@ func (i *ItchReader) ReadOrder() (o *trade.Order, line string, err error) {
 			break
 		}
 	}
-	o, err = mkOrder(line)
-	if o != nil && o.Kind == trade.BUY && o.Price > i.maxBuy {
+	o, err = mkMessage(line)
+	if o != nil && o.Kind == msg.BUY && o.Price > i.maxBuy {
 		i.maxBuy = o.Price
 	}
-	if o != nil && o.Kind == trade.SELL && o.Price < i.minSell {
+	if o != nil && o.Kind == msg.SELL && o.Price < i.minSell {
 		i.minSell = o.Price
 	}
 	return
 }
 
-func (i *ItchReader) ReadAll() (orders []*trade.Order, err error) {
-	orders = make([]*trade.Order, 0)
-	var o *trade.Order
+func (i *ItchReader) ReadAll() (orders []*msg.Message, err error) {
+	orders = make([]*msg.Message, 0)
+	var o *msg.Message
 	for err == nil {
-		o, _, err = i.ReadOrder()
+		o, _, err = i.ReadMessage()
 		if o != nil {
 			orders = append(orders, o)
 		}
@@ -78,7 +78,7 @@ func (i *ItchReader) MinSell() int64 {
 	return i.minSell
 }
 
-func mkOrder(line string) (o *trade.Order, err error) {
+func mkMessage(line string) (o *msg.Message, err error) {
 	ss := strings.Split(line, " ")
 	var useful []string
 	for _, w := range ss {
@@ -92,13 +92,13 @@ func mkOrder(line string) (o *trade.Order, err error) {
 	}
 	switch useful[3] {
 	case "B":
-		o.WriteBuy(cd, td)
+		o.WriteBuy(cd, td, msg.NetData{})
 		return
 	case "S":
-		o.WriteSell(cd, td)
+		o.WriteSell(cd, td, msg.NetData{})
 		return
 	case "D":
-		o.WriteCancel(td)
+		o.WriteCancel(td, msg.NetData{})
 		return
 	default:
 		return
@@ -106,7 +106,7 @@ func mkOrder(line string) (o *trade.Order, err error) {
 	panic("Unreachable")
 }
 
-func mkData(useful []string) (cd trade.CostData, td trade.TradeData, err error) {
+func mkData(useful []string) (cd msg.CostData, td msg.TradeData, err error) {
 	//      print("ID: ", useful[2], " Type: ", useful[3], " Price: ",  useful[4], " Amount: ", useful[5])
 	//      println()
 	var price, amount, traderId, tradeId int
@@ -117,7 +117,7 @@ func mkData(useful []string) (cd trade.CostData, td trade.TradeData, err error) 
 	if err != nil {
 		return
 	}
-	cd = trade.CostData{Price: int64(price), Amount: uint32(amount)}
-	td = trade.TradeData{TraderId: uint32(traderId), TradeId: uint32(tradeId), StockId: uint32(1)}
+	cd = msg.CostData{Price: int64(price), Amount: uint32(amount)}
+	td = msg.TradeData{TraderId: uint32(traderId), TradeId: uint32(tradeId), StockId: uint32(1)}
 	return
 }

@@ -5,14 +5,14 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/fmstephe/matching_engine/guid"
-	"github.com/fmstephe/matching_engine/trade"
+	"github.com/fmstephe/matching_engine/msg"
 	"net"
 )
 
 type Listener struct {
 	conn      *net.UDPConn
 	guidstore *guid.Store
-	submit    chan interface{}
+	submit    chan *msg.Message
 }
 
 func NewListener(port string) (*Listener, error) {
@@ -27,37 +27,37 @@ func NewListener(port string) (*Listener, error) {
 	return &Listener{conn: conn, guidstore: guid.NewStore()}, nil
 }
 
-func (l *Listener) SetSubmit(submit chan interface{}) {
+func (l *Listener) SetSubmit(submit chan *msg.Message) {
 	l.submit = submit
 }
 
 func (l *Listener) Run() {
 	defer l.conn.Close()
 	for {
-		s := make([]byte, trade.SizeofOrder)
+		s := make([]byte, msg.SizeofMessage)
 		n, _, err := l.conn.ReadFromUDP(s)
 		if err != nil {
 			println("Listener - UDP Read: ", err.Error())
 			continue
 		}
-		if n != trade.SizeofOrder {
-			println(fmt.Sprintf("Listener: Error incorrect number of bytes. Expecting %d, found %d submit %v", trade.SizeofOrder, n, s))
+		if n != msg.SizeofMessage {
+			println(fmt.Sprintf("Listener: Error incorrect number of bytes. Expecting %d, found %d submit %v", msg.SizeofMessage, n, s))
 			continue
 		}
-		o := &trade.Order{}
+		o := &msg.Message{}
 		buf := bytes.NewBuffer(s)
 		err = binary.Read(buf, binary.BigEndian, o)
 		if err != nil {
 			println("Listener - to []byte: ", err.Error())
 			continue
 		}
-		r := &trade.Response{}
-		r.WriteAck(o)
+		r := &msg.Message{}
+		r.WriteMatcherAck(o)
 		l.submit <- r
 		if l.guidstore.Push(guid.MkGuid(o.TraderId, o.TradeId)) {
 			l.submit <- o
 		}
-		if o.Kind == trade.SHUTDOWN {
+		if o.Kind == msg.SHUTDOWN {
 			return
 		}
 	}

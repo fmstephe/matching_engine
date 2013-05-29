@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/fmstephe/matching_engine/trade"
+	"github.com/fmstephe/matching_engine/msg"
 	"net"
 	"time"
 )
@@ -13,15 +13,15 @@ import (
 const RESEND_MILLIS = time.Duration(1) * time.Second
 
 type Responder struct {
-	responses chan *trade.Response
-	unacked   []*trade.Response
+	responses chan *msg.Message
+	unacked   []*msg.Message
 }
 
 func NewResponder() *Responder {
-	return &Responder{unacked: make([]*trade.Response, 0, 100)}
+	return &Responder{unacked: make([]*msg.Message, 0, 100)}
 }
 
-func (r *Responder) SetResponses(responses chan *trade.Response) {
+func (r *Responder) SetResponses(responses chan *msg.Message) {
 	r.responses = responses
 }
 
@@ -31,7 +31,7 @@ func (r *Responder) Run() {
 	for {
 		select {
 		case resp := <-r.responses:
-			if resp.Kind == trade.SHUTDOWN {
+			if resp.Kind == msg.SHUTDOWN {
 				return
 			}
 			r.manageAcks(resp)
@@ -47,9 +47,9 @@ func (r *Responder) Run() {
 	}
 }
 
-func (r *Responder) manageAcks(resp *trade.Response) {
+func (r *Responder) manageAcks(resp *msg.Message) {
 	unacked := r.unacked
-	if resp.Kind == trade.CLIENT_ACK {
+	if resp.Kind == msg.CLIENT_ACK {
 		for i, uResp := range unacked {
 			if resp.TraderId == uResp.TraderId && resp.TradeId == uResp.TradeId {
 				unacked[i] = unacked[len(unacked)-1]
@@ -58,7 +58,7 @@ func (r *Responder) manageAcks(resp *trade.Response) {
 			}
 		}
 	}
-	if resp.Kind == trade.BUY || resp.Kind == trade.SELL || resp.Kind == trade.CANCEL {
+	if resp.Kind == msg.BUY || resp.Kind == msg.SELL || resp.Kind == msg.CANCEL {
 		// TODO this is wrong, we shouldn't be sending BUY, SELL or CANCEL messages
 		unacked = append(unacked, resp)
 	}
@@ -71,7 +71,7 @@ func (r *Responder) resend() {
 	}
 }
 
-func (r *Responder) write(resp *trade.Response) error {
+func (r *Responder) write(resp *msg.Message) error {
 	nbuf := &bytes.Buffer{}
 	err := binary.Write(nbuf, binary.BigEndian, resp)
 	if err != nil {
@@ -85,8 +85,8 @@ func (r *Responder) write(resp *trade.Response) error {
 	if err != nil {
 		return err
 	}
-	if n != trade.SizeofResponse {
-		return errors.New(fmt.Sprintf("Insufficient bytes written. Expecting %d, found %d", trade.SizeofResponse, n))
+	if n != msg.SizeofMessage {
+		return errors.New(fmt.Sprintf("Insufficient bytes written. Expecting %d, found %d", msg.SizeofMessage, n))
 	}
 	return nil
 }

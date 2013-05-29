@@ -1,11 +1,11 @@
 package matcher
 
 import (
-	"github.com/fmstephe/matching_engine/trade"
+	"github.com/fmstephe/matching_engine/msg"
 	"testing"
 )
 
-var tcompareOrderNodeMaker = trade.NewOrderMaker()
+var cmprMaker = msg.NewMessageMaker()
 
 func TestCompareMatchers(t *testing.T) {
 	compareMatchers(t, 100, 1, 1, 1)
@@ -26,15 +26,15 @@ func TestCompareMatchers(t *testing.T) {
 }
 
 func compareMatchers(t *testing.T, orderPairs, depth int, lowPrice, highPrice int64) {
-	refsubmit := make(chan interface{}, orderPairs*2)
-	reforders := make(chan *trade.Order, 10)
+	refsubmit := make(chan *msg.Message, orderPairs*2)
+	reforders := make(chan *msg.Message, 10)
 	refm := newRefmatcher(lowPrice, highPrice, refsubmit, reforders)
-	submit := make(chan interface{}, orderPairs*2)
-	orders := make(chan *trade.Order, 10)
+	submit := make(chan *msg.Message, orderPairs*2)
+	orders := make(chan *msg.Message, 10)
 	m := NewMatcher(orderPairs * 2)
 	m.SetSubmit(submit)
-	m.SetOrderNodes(orders)
-	testSet, err := tcompareOrderNodeMaker.RndTradeSet(orderPairs, depth, lowPrice, highPrice)
+	m.SetOrders(orders)
+	testSet, err := cmprMaker.RndTradeSet(orderPairs, depth, lowPrice, highPrice)
 	go refm.Run()
 	go m.Run()
 	if err != nil {
@@ -50,7 +50,7 @@ func compareMatchers(t *testing.T, orderPairs, depth int, lowPrice, highPrice in
 	}
 }
 
-func checkBuffers(t *testing.T, refrc, rc chan interface{}) {
+func checkBuffers(t *testing.T, refrc, rc chan *msg.Message) {
 	refrs := drain(refrc)
 	rs := drain(rc)
 	if len(refrs) != len(rs) {
@@ -66,12 +66,12 @@ func checkBuffers(t *testing.T, refrc, rc chan interface{}) {
 	}
 }
 
-func drain(c chan interface{}) []*trade.Response {
-	rs := make([]*trade.Response, 0)
+func drain(c chan *msg.Message) []*msg.Message {
+	rs := make([]*msg.Message, 0)
 	for {
 		select {
 		case r := <-c:
-			rs = append(rs, r.(*trade.Response))
+			rs = append(rs, r)
 		default:
 			return rs
 		}

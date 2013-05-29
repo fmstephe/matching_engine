@@ -13,7 +13,7 @@ import (
 	"fmt"
 	"github.com/fmstephe/fstrconv"
 	"github.com/fmstephe/matching_engine/matcher"
-	"github.com/fmstephe/matching_engine/trade"
+	"github.com/fmstephe/matching_engine/msg"
 	"github.com/fmstephe/matching_engine/itch"
 	"os"
 )
@@ -42,20 +42,20 @@ func loop() {
 		}()
 		in := bufio.NewReader(os.Stdin)
 		submit := make(chan interface{}, 20)
-		orders := make(chan *trade.Order)
+		orders := make(chan *msg.Message)
 		m := matcher.NewMatcher(1000)
 		m.SetSubmit(submit)
-		m.SetOrderNodes(orders)
+		m.SetOrders(orders)
 		go m.Run()
 		//
-		var o *trade.OrderNode
+		var o *msg.OrderNode
 		var err error
 		for {
 			o, _, err = ir.ReadOrderNode()
 			if err != nil {
 				panic(err)
 			}
-			if o != nil && (o.Kind() == trade.BUY || o.Kind() == trade.SELL || o.Kind() == trade.CANCEL) {
+			if o != nil && (o.Kind() == msg.BUY || o.Kind() == msg.SELL || o.Kind() == msg.CANCEL) {
 				orders<-o
 				clear(submit)
 			}
@@ -69,7 +69,7 @@ func loop() {
 	}
 }
 
-func checkPause(in *bufio.Reader, ir *ItchReader, o *trade.OrderNode, bLine uint) byte {
+func checkPause(in *bufio.Reader, ir *ItchReader, o *msg.OrderNode, bLine uint) byte {
 	if bLine > ir.LineCount() {
 		return 'z'
 	}
@@ -91,7 +91,7 @@ func pause(in *bufio.Reader) byte {
 	return c
 }
 
-func checkPrint(ir *ItchReader, o *trade.OrderNode, m *matcher.M, bLine uint) {
+func checkPrint(ir *ItchReader, o *msg.OrderNode, m *matcher.M, bLine uint) {
 	if bLine > ir.LineCount() {
 		return
 	}
@@ -103,7 +103,7 @@ func checkPrint(ir *ItchReader, o *trade.OrderNode, m *matcher.M, bLine uint) {
 	}
 }
 
-func printInfo(ir *ItchReader, o *trade.OrderNode, m *matcher.M) {
+func printInfo(ir *ItchReader, o *msg.OrderNode, m *matcher.M) {
 	buys, sells, orders, executions := m.Survey()
 	println("OrderNode       ", o.String())
 	println("Line        ", ir.LineCount())
@@ -117,7 +117,7 @@ func printInfo(ir *ItchReader, o *trade.OrderNode, m *matcher.M) {
 	println()
 }
 
-func formatLimits(limits []*trade.SurveyLimit) string {
+func formatLimits(limits []*msg.SurveyLimit) string {
 	var b bytes.Buffer
 	for _, l := range limits {
 		b.WriteString(fmt.Sprintf("(%s, %s)", fstrconv.Itoa64Delim(int64(l.Price), ','), fstrconv.Itoa64Delim(int64(l.Size), ',')))

@@ -4,7 +4,7 @@ import (
 	"flag"
 	"github.com/fmstephe/fstrconv"
 	"github.com/fmstephe/matching_engine/matcher"
-	"github.com/fmstephe/matching_engine/trade"
+	"github.com/fmstephe/matching_engine/msg"
 	"log"
 	"math/rand"
 	"os"
@@ -22,7 +22,7 @@ var (
 	orderNum   = flag.Int("o", 1000, "The number of orders to generate. Ignored if -f is provided")
 	delDelay   = flag.Int("d", 100, "The number of orders generated before we begin deleting existing orders")
 	perfRand   = rand.New(rand.NewSource(1))
-	orderMaker = trade.NewOrderMaker()
+	orderMaker = msg.NewMessageMaker()
 )
 
 func main() {
@@ -36,11 +36,11 @@ func doPerf(log bool) {
 	if log {
 		println(orderCount, "OrderNodes Built")
 	}
-	submit := make(chan interface{}, len(orderData))
-	orders := make(chan *trade.Order)
+	submit := make(chan *msg.Message, len(orderData))
+	orders := make(chan *msg.Message)
 	m := matcher.NewMatcher(*delDelay * 2)
 	m.SetSubmit(submit)
-	m.SetOrderNodes(orders)
+	m.SetOrders(orders)
 	go m.Run()
 	startProfile()
 	defer endProfile()
@@ -81,7 +81,7 @@ func endProfile() {
 	}
 }
 
-func getData() []trade.Order {
+func getData() []msg.Message {
 	orders, err := orderMaker.RndTradeSet(*orderNum, *delDelay, 1000, 1500)
 	if err != nil {
 		panic(err.Error())

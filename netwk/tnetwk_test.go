@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"github.com/fmstephe/matching_engine/coordinator"
-	"github.com/fmstephe/matching_engine/trade"
+	"github.com/fmstephe/matching_engine/msg"
 	"net"
 	"strconv"
 	"testing"
@@ -19,43 +19,43 @@ import (
 var localhost = [4]byte{127, 0, 0, 1}
 
 type mockMatcher struct {
-	submit chan interface{}
-	orders chan *trade.Order
+	submit chan *msg.Message
+	orders chan *msg.Message
 }
 
-func (m *mockMatcher) SetSubmit(submit chan interface{}) {
+func (m *mockMatcher) SetSubmit(submit chan *msg.Message) {
 	m.submit = submit
 }
 
-func (m *mockMatcher) SetOrderNodes(orders chan *trade.Order) {
+func (m *mockMatcher) SetOrders(orders chan *msg.Message) {
 	m.orders = orders
 }
 
 func (m *mockMatcher) Run() {
 	for {
 		o := <-m.orders
-		r := &trade.Response{}
-		r.Kind = o.Kind
+		r := &msg.Message{}
+		r.Kind = msg.FULL
 		r.Price = o.Price
 		r.Amount = o.Amount
 		r.TraderId = o.TraderId
 		r.TradeId = o.TradeId
 		r.IP = o.IP
 		r.Port = o.Port
-		r.CounterParty = o.TraderId
+		r.StockId = o.StockId
 		m.submit <- r
 	}
 }
 
-func TestOrdersAndResponse(t *testing.T) {
+func TestOrdersAndResponses(t *testing.T) {
 	serverPort := 1201
 	clientPort := 1202
 	setRunning(serverPort)
 	read := readConn(clientPort)
 	write := writeConn(serverPort)
-	confirmNewOrder(t, read, write, &trade.Order{trade.BUY, 1, 2, 3, 4, 5, localhost, int32(clientPort)})
-	confirmNewOrder(t, read, write, &trade.Order{trade.BUY, 6, 7, 8, 9, 10, localhost, int32(clientPort)})
-	confirmNewOrder(t, read, write, &trade.Order{trade.BUY, 11, 12, 13, 14, 15, localhost, int32(clientPort)})
+	confirmNewMessage(t, read, write, &msg.Message{msg.BUY, 1, 2, 3, 4, 5, localhost, int32(clientPort)})
+	confirmNewMessage(t, read, write, &msg.Message{msg.BUY, 6, 7, 8, 9, 10, localhost, int32(clientPort)})
+	confirmNewMessage(t, read, write, &msg.Message{msg.BUY, 11, 12, 13, 14, 15, localhost, int32(clientPort)})
 	shutdownSystem(t, read, write, localhost, int32(clientPort))
 }
 
@@ -65,8 +65,8 @@ func TestDuplicateOrders(t *testing.T) {
 	setRunning(serverPort)
 	read := readConn(clientPort)
 	write := writeConn(serverPort)
-	confirmNewOrder(t, read, write, &trade.Order{trade.BUY, 1, 2, 3, 4, 5, localhost, int32(clientPort)})
-	confirmDupOrder(t, read, write, &trade.Order{trade.BUY, 1, 2, 3, 4, 5, localhost, int32(clientPort)})
+	confirmNewMessage(t, read, write, &msg.Message{msg.BUY, 1, 2, 3, 4, 5, localhost, int32(clientPort)})
+	confirmDupMessage(t, read, write, &msg.Message{msg.BUY, 1, 2, 3, 4, 5, localhost, int32(clientPort)})
 	shutdownSystem(t, read, write, localhost, int32(clientPort))
 }
 
@@ -104,15 +104,15 @@ func readConn(port int) *net.UDPConn {
 	return conn
 }
 
-func confirmNewOrder(t *testing.T, read, write *net.UDPConn, o *trade.Order) {
-	sendOrder(t, write, o)
-	ack, err := receiveResponse(t, read)
+func confirmNewMessage(t *testing.T, read, write *net.UDPConn, o *msg.Message) {
+	sendMessage(t, write, o)
+	ack, err := receiveMessage(t, read)
 	if err != nil {
 		t.Error(err.Error())
 		return
 	}
 	validate(t, o, ack, true)
-	r, err := receiveResponse(t, read)
+	r, err := receiveMessage(t, read)
 	if err != nil {
 		t.Error(err.Error())
 		return
@@ -120,9 +120,9 @@ func confirmNewOrder(t *testing.T, read, write *net.UDPConn, o *trade.Order) {
 	validate(t, o, r, false)
 }
 
-func confirmDupOrder(t *testing.T, read, write *net.UDPConn, o *trade.Order) {
-	sendOrder(t, write, o)
-	ack, err := receiveResponse(t, read)
+func confirmDupMessage(t *testing.T, read, write *net.UDPConn, o *msg.Message) {
+	sendMessage(t, write, o)
+	ack, err := receiveMessage(t, read)
 	if err != nil {
 		t.Error(err.Error())
 		return
@@ -131,12 +131,12 @@ func confirmDupOrder(t *testing.T, read, write *net.UDPConn, o *trade.Order) {
 }
 
 func shutdownSystem(t *testing.T, read, write *net.UDPConn, ip [4]byte, port int32) {
-	o := &trade.Order{}
+	o := &msg.Message{}
 	o.WriteShutdown()
 	o.IP = ip
 	o.Port = port
-	sendOrder(t, write, o)
-	ack, err := receiveResponse(t, read)
+	sendMessage(t, write, o)
+	ack, err := receiveMessage(t, read)
 	if err != nil {
 		t.Error(err.Error())
 		return
@@ -144,53 +144,50 @@ func shutdownSystem(t *testing.T, read, write *net.UDPConn, ip [4]byte, port int
 	validate(t, o, ack, true)
 }
 
-func sendOrder(t *testing.T, write *net.UDPConn, o *trade.Order) {
+func sendMessage(t *testing.T, write *net.UDPConn, o *msg.Message) {
 	buf := bytes.NewBuffer(make([]byte, 0))
 	binary.Write(buf, binary.BigEndian, o)
 	write.Write(buf.Bytes())
 }
 
-func receiveResponse(t *testing.T, read *net.UDPConn) (*trade.Response, error) {
-	s := make([]byte, trade.SizeofResponse)
+func receiveMessage(t *testing.T, read *net.UDPConn) (*msg.Message, error) {
+	s := make([]byte, msg.SizeofMessage)
 	_, _, err := read.ReadFromUDP(s)
 	if err != nil {
 		return nil, err
 	}
 	buf := bytes.NewBuffer(s)
-	r := &trade.Response{}
+	r := &msg.Message{}
 	binary.Read(buf, binary.BigEndian, r)
 	return r, nil
 }
 
-func validate(t *testing.T, o *trade.Order, r *trade.Response, isAck bool) {
-	if isAck && r.Kind != trade.MATCHER_ACK {
-		t.Errorf("Expecting %v kind response, found %v", trade.MATCHER_ACK, r.Kind)
+func validate(t *testing.T, order *msg.Message, resp *msg.Message, isAck bool) {
+	if isAck && resp.Kind != msg.MATCHER_ACK {
+		t.Errorf("Expecting %v kind response, found %v", msg.MATCHER_ACK, resp.Kind)
 	}
-	if !isAck && r.Kind != o.Kind {
-		t.Errorf("Expecting %v kind response, found %v", trade.FULL, r.Kind)
+	if !isAck && resp.Kind != msg.FULL {
+		t.Errorf("Expecting %v kind response, found %v", msg.FULL, resp.Kind)
 	}
-	if o.Price != r.Price {
-		t.Errorf("Price mismatch, expecting %d, found %d", o.Price, r.Price)
+	if order.Price != resp.Price {
+		t.Errorf("Price mismatch, expecting %d, found %d", order.Price, resp.Price)
 	}
-	if o.Amount != r.Amount {
-		t.Errorf("Amount mismatch, expecting %d, found %d", o.Amount, r.Amount)
+	if order.Amount != resp.Amount {
+		t.Errorf("Amount mismatch, expecting %d, found %d", order.Amount, resp.Amount)
 	}
-	if o.TraderId != r.TraderId {
-		t.Errorf("TraderId mismatch, expecting %d, found %d", o.TraderId, r.TraderId)
+	if order.TraderId != resp.TraderId {
+		t.Errorf("TraderId mismatch, expecting %d, found %d", order.TraderId, resp.TraderId)
 	}
-	if o.TradeId != r.TradeId {
-		t.Errorf("TradeId mismatch, expecting %d, found %d", o.TradeId, r.Price)
+	if order.TradeId != resp.TradeId {
+		t.Errorf("TradeId mismatch, expecting %d, found %d", order.TradeId, resp.Price)
 	}
-	if !isAck && o.TraderId != r.CounterParty {
-		t.Errorf("Counterparty mismatch, expecting %d, found %d", o.TraderId, r.CounterParty)
+	if order.StockId != resp.StockId {
+		t.Errorf("Counterparty mismatch, expecting %d, found %d", order.StockId, resp.StockId)
 	}
-	if isAck && r.CounterParty != 0 {
-		t.Errorf("Counterparty should be zero because this is an MATCHER_ACK message actual value %d", r.CounterParty)
+	if order.IP != resp.IP {
+		t.Errorf("IP mismatch, expecting %d, found %d", order.IP, resp.IP)
 	}
-	if o.IP != r.IP {
-		t.Errorf("IP mismatch, expecting %d, found %d", o.IP, r.IP)
-	}
-	if o.Port != r.Port {
-		t.Errorf("Port mismatch, expecting %d, found %d", o.Port, r.Port)
+	if order.Port != resp.Port {
+		t.Errorf("Port mismatch, expecting %d, found %d", order.Port, resp.Port)
 	}
 }

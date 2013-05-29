@@ -4,27 +4,27 @@ package cbuf
 
 import (
 	"errors"
-	"github.com/fmstephe/matching_engine/trade"
+	"github.com/fmstephe/matching_engine/msg"
 )
 
-var WriteErr = errors.New("Cannot write to cbuf.Response")
-var ReadErr = errors.New("Cannot read from cbuf.Response")
+var WriteErr = errors.New("Cannot write to cbuf.Message")
+var ReadErr = errors.New("Cannot read from cbuf.Message")
 
-type Response struct {
+type Message struct {
 	sizeMask    int
 	read, write int
-	responses   []trade.Response
+	responses   []msg.Message
 }
 
-func New(size int) *Response {
+func New(size int) *Message {
 	realSize := 2
 	for realSize < size {
 		realSize *= 2
 	}
-	return &Response{sizeMask: realSize - 1, responses: make([]trade.Response, realSize, realSize)}
+	return &Message{sizeMask: realSize - 1, responses: make([]msg.Message, realSize, realSize)}
 }
 
-func (rb *Response) GetForWrite() (*trade.Response, error) {
+func (rb *Message) GetForWrite() (*msg.Message, error) {
 	w := rb.write & rb.sizeMask
 	r := rb.read & rb.sizeMask
 	if rb.write != rb.read && w == r {
@@ -35,7 +35,7 @@ func (rb *Response) GetForWrite() (*trade.Response, error) {
 	return resp, nil
 }
 
-func (rb *Response) GetForRead() (*trade.Response, error) {
+func (rb *Message) GetForRead() (*msg.Message, error) {
 	if rb.read == rb.write {
 		return nil, ReadErr
 	}
@@ -45,18 +45,18 @@ func (rb *Response) GetForRead() (*trade.Response, error) {
 	return resp, nil
 }
 
-func (rb *Response) Clear() {
+func (rb *Message) Clear() {
 	for i := 0; i < len(rb.responses); i++ {
-		rb.responses[i] = trade.Response{}
+		rb.responses[i] = msg.Message{}
 	}
 	rb.read = 0
 	rb.write = 0
 }
 
-func (rv *Response) Reads() int {
+func (rv *Message) Reads() int {
 	return rv.read
 }
 
-func (rv *Response) Writes() int {
+func (rv *Message) Writes() int {
 	return rv.write
 }
