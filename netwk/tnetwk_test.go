@@ -31,10 +31,12 @@ func (m *mockMatcher) SetOrders(orders chan *msg.Message) {
 	m.orders = orders
 }
 
+// TODO this should be replaced with the real matcher - this is just duplicating some complex protocols
 func (m *mockMatcher) Run() {
 	for {
 		o := <-m.orders
 		r := &msg.Message{}
+		r.Route = msg.RESPONSE
 		r.Kind = msg.FULL
 		r.Price = o.Price
 		r.Amount = o.Amount
@@ -53,9 +55,9 @@ func TestOrdersAndResponses(t *testing.T) {
 	setRunning(serverPort)
 	read := readConn(clientPort)
 	write := writeConn(serverPort)
-	confirmNewMessage(t, read, write, &msg.Message{msg.BUY, 1, 2, 3, 4, 5, localhost, int32(clientPort)})
-	confirmNewMessage(t, read, write, &msg.Message{msg.BUY, 6, 7, 8, 9, 10, localhost, int32(clientPort)})
-	confirmNewMessage(t, read, write, &msg.Message{msg.BUY, 11, 12, 13, 14, 15, localhost, int32(clientPort)})
+	confirmNewMessage(t, read, write, &msg.Message{msg.ORDER, msg.BUY, 1, 2, 3, 4, 5, localhost, int32(clientPort)})
+	confirmNewMessage(t, read, write, &msg.Message{msg.ORDER, msg.BUY, 6, 7, 8, 9, 10, localhost, int32(clientPort)})
+	confirmNewMessage(t, read, write, &msg.Message{msg.ORDER, msg.BUY, 11, 12, 13, 14, 15, localhost, int32(clientPort)})
 	shutdownSystem(t, read, write, localhost, int32(clientPort))
 }
 
@@ -65,8 +67,8 @@ func TestDuplicateOrders(t *testing.T) {
 	setRunning(serverPort)
 	read := readConn(clientPort)
 	write := writeConn(serverPort)
-	confirmNewMessage(t, read, write, &msg.Message{msg.BUY, 1, 2, 3, 4, 5, localhost, int32(clientPort)})
-	confirmDupMessage(t, read, write, &msg.Message{msg.BUY, 1, 2, 3, 4, 5, localhost, int32(clientPort)})
+	confirmNewMessage(t, read, write, &msg.Message{msg.ORDER, msg.BUY, 1, 2, 3, 4, 5, localhost, int32(clientPort)})
+	confirmDupMessage(t, read, write, &msg.Message{msg.ORDER, msg.BUY, 1, 2, 3, 4, 5, localhost, int32(clientPort)})
 	shutdownSystem(t, read, write, localhost, int32(clientPort))
 }
 
@@ -162,9 +164,13 @@ func receiveMessage(t *testing.T, read *net.UDPConn) (*msg.Message, error) {
 	return r, nil
 }
 
+// TODO review this method to ensure it still makes sense
 func validate(t *testing.T, order *msg.Message, resp *msg.Message, isAck bool) {
-	if isAck && resp.Kind != msg.MATCHER_ACK {
-		t.Errorf("Expecting %v kind response, found %v", msg.MATCHER_ACK, resp.Kind)
+	if isAck && resp.Route != msg.SERVER_ACK {
+		t.Errorf("Expecting %v route in response, found %v", msg.RESPONSE, resp.Route)
+	}
+	if isAck && resp.Kind != order.Kind {
+		t.Errorf("Expecting %v kind response, found %v", order.Kind, resp.Kind)
 	}
 	if !isAck && resp.Kind != msg.FULL {
 		t.Errorf("Expecting %v kind response, found %v", msg.FULL, resp.Kind)

@@ -63,18 +63,18 @@ func (d *dispatcher) Run() {
 	for {
 		m := <-d.submit
 		if d.log {
-			println(fmt.Sprintf("Message - %v", m))
+			println(fmt.Sprintf("Dispatcher - %v", m))
 		}
 		switch {
-		case m.Kind.IsOrder():
+		case m.Route == msg.ORDER:
 			d.orders <- m
-		case m.Kind.IsResponse():
+		case m.Route == msg.RESPONSE, m.Route == msg.SERVER_ACK:
 			d.responses <- m
-		case m.Kind == msg.SHUTDOWN:
+		case m.Route == msg.SHUTDOWN:
 			d.responses <- m
 			return
 		default:
-			panic(fmt.Sprintf("Unkown object received: %v", m))
+			panic(fmt.Sprintf("Dispatcher - Unkown object: %v", m))
 		}
 	}
 }

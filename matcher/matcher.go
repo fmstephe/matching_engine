@@ -29,7 +29,7 @@ func (m *M) SetOrders(orders chan *msg.Message) {
 func (m *M) Run() {
 	for {
 		o := <-m.orders
-		if o.Kind == msg.SHUTDOWN {
+		if o.Route == msg.SHUTDOWN {
 			r := &msg.Message{}
 			r.WriteShutdown()
 			m.submit <- r
@@ -165,8 +165,8 @@ func price(bPrice, sPrice int64) int64 {
 func completeTrade(submit chan *msg.Message, brk, srk msg.MsgKind, b, s *prioq.OrderNode, price int64, amount uint32) {
 	br := &msg.Message{}
 	sr := &msg.Message{}
-	br.WriteMatch(-price, amount, b.TraderId(), b.TradeId(), b.StockId(), b.IP(), b.Port(), brk)
-	sr.WriteMatch(price, amount, s.TraderId(), s.TradeId(), b.StockId(), b.IP(), b.Port(), srk)
+	br.WriteResponse(-price, amount, b.TraderId(), b.TradeId(), b.StockId(), b.IP(), b.Port(), brk)
+	sr.WriteResponse(price, amount, s.TraderId(), s.TradeId(), b.StockId(), b.IP(), b.Port(), srk)
 	submit <- br
 	submit <- sr
 }

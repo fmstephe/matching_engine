@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-const RESEND_MILLIS = time.Duration(1) * time.Second
+const RESEND_MILLIS = time.Duration(100) * time.Second
 
 type Responder struct {
 	responses chan *msg.Message
@@ -31,7 +31,7 @@ func (r *Responder) Run() {
 	for {
 		select {
 		case resp := <-r.responses:
-			if resp.Kind == msg.SHUTDOWN {
+			if resp.Route == msg.SHUTDOWN {
 				return
 			}
 			r.manageAcks(resp)
@@ -49,7 +49,7 @@ func (r *Responder) Run() {
 
 func (r *Responder) manageAcks(resp *msg.Message) {
 	unacked := r.unacked
-	if resp.Kind == msg.CLIENT_ACK {
+	if resp.Route == msg.CLIENT_ACK {
 		for i, uResp := range unacked {
 			if resp.TraderId == uResp.TraderId && resp.TradeId == uResp.TradeId {
 				unacked[i] = unacked[len(unacked)-1]
@@ -58,8 +58,7 @@ func (r *Responder) manageAcks(resp *msg.Message) {
 			}
 		}
 	}
-	if resp.Kind == msg.BUY || resp.Kind == msg.SELL || resp.Kind == msg.CANCEL {
-		// TODO this is wrong, we shouldn't be sending BUY, SELL or CANCEL messages
+	if resp.Route == msg.ORDER {
 		unacked = append(unacked, resp)
 	}
 	r.unacked = unacked

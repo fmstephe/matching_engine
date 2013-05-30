@@ -88,14 +88,14 @@ func testPushAscDesc(t *testing.T, pushCount int, kind msg.MsgKind) {
 	validate(t, priceTree, guidTree)
 	for i := 0; i < pushCount; i++ {
 		o := &OrderNode{}
-		o.CopyFrom(orderMaker.MkPricedMessage(int64(i), kind))
+		o.CopyFrom(orderMaker.MkPricedOrder(int64(i), kind))
 		priceTree.push(&o.priceNode)
 		guidTree.push(&o.guidNode)
 		validate(t, priceTree, guidTree)
 	}
 	for i := pushCount - 1; i >= 0; i-- {
 		o := &OrderNode{}
-		o.CopyFrom(orderMaker.MkPricedMessage(int64(i), kind))
+		o.CopyFrom(orderMaker.MkPricedOrder(int64(i), kind))
 		priceTree.push(&o.priceNode)
 		guidTree.push(&o.guidNode)
 		validate(t, priceTree, guidTree)
@@ -108,7 +108,7 @@ func testPushSimple(t *testing.T, pushCount int, lowPrice, highPrice int64, kind
 	validate(t, priceTree, guidTree)
 	for i := 0; i < pushCount; i++ {
 		o := &OrderNode{}
-		o.CopyFrom(orderMaker.MkPricedMessage(orderMaker.Between(lowPrice, highPrice), kind))
+		o.CopyFrom(orderMaker.MkPricedOrder(orderMaker.Between(lowPrice, highPrice), kind))
 		priceTree.push(&o.priceNode)
 		guidTree.push(&o.guidNode)
 		validate(t, priceTree, guidTree)
@@ -122,7 +122,7 @@ func testPushPopSimple(t *testing.T, pushCount int, lowPrice, highPrice int64, k
 	q := mkPrioq(lowPrice, highPrice)
 	for i := 0; i < pushCount; i++ {
 		o := &OrderNode{}
-		o.CopyFrom(orderMaker.MkPricedMessage(orderMaker.Between(lowPrice, highPrice), kind))
+		o.CopyFrom(orderMaker.MkPricedOrder(orderMaker.Between(lowPrice, highPrice), kind))
 		priceTree.push(&o.priceNode)
 		guidTree.push(&o.guidNode)
 		validate(t, priceTree, guidTree)
@@ -143,7 +143,7 @@ func testPushPopRandom(t *testing.T, pushCount int, lowPrice, highPrice int64, k
 		n := r.Int()
 		if n%2 == 0 || priceTree.peekMin() == nil {
 			o := &OrderNode{}
-			o.CopyFrom(orderMaker.MkPricedMessage(orderMaker.Between(lowPrice, highPrice), kind))
+			o.CopyFrom(orderMaker.MkPricedOrder(orderMaker.Between(lowPrice, highPrice), kind))
 			priceTree.push(&o.priceNode)
 			guidTree.push(&o.guidNode)
 			validate(t, priceTree, guidTree)
@@ -172,7 +172,7 @@ func testAddRemoveSimple(t *testing.T, pushCount int, lowPrice, highPrice int64,
 	orderMap := make(map[int64]*OrderNode)
 	for i := 0; i < pushCount; i++ {
 		o := &OrderNode{}
-		o.CopyFrom(orderMaker.MkPricedMessage(orderMaker.Between(lowPrice, highPrice), kind))
+		o.CopyFrom(orderMaker.MkPricedOrder(orderMaker.Between(lowPrice, highPrice), kind))
 		priceTree.push(&o.priceNode)
 		guidTree.push(&o.guidNode)
 		validate(t, priceTree, guidTree)
@@ -191,7 +191,7 @@ func testAddRemoveRandom(t *testing.T, pushCount int, lowPrice, highPrice int64,
 		n := r.Int()
 		if n%2 == 0 || guidTree.peekMin() == nil {
 			o := &OrderNode{}
-			o.CopyFrom(orderMaker.MkPricedMessage(orderMaker.Between(lowPrice, highPrice), kind))
+			o.CopyFrom(orderMaker.MkPricedOrder(orderMaker.Between(lowPrice, highPrice), kind))
 			priceTree.push(&o.priceNode)
 			guidTree.push(&o.guidNode)
 			validate(t, priceTree, guidTree)

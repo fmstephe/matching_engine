@@ -6,59 +6,66 @@ import (
 	"net"
 )
 
+type MsgRoute int32
+
+const (
+	NO_ROUTE = MsgRoute(0)
+	// Incoming
+	ORDER      = MsgRoute(1)
+	CLIENT_ACK = MsgRoute(2)
+	SHUTDOWN   = MsgRoute(3)
+	// Outgoing
+	RESPONSE   = MsgRoute(4)
+	SERVER_ACK = MsgRoute(5)
+	// Internal
+	ERROR = MsgRoute(6)
+)
+
+func (r MsgRoute) String() string {
+	switch r {
+	case NO_ROUTE:
+		return "NO_ROUTE"
+	case ORDER:
+		return "ORDER"
+	case CLIENT_ACK:
+		return "CLIENT_ACK"
+	case SHUTDOWN:
+		return "SHUTDOWN"
+	case RESPONSE:
+		return "RESPONSE"
+	case SERVER_ACK:
+		return "SERVER_ACK"
+	case ERROR:
+		return "ERROR"
+	}
+	panic("Uncreachable")
+}
+
 type MsgKind int32
 
 const (
-	ILLEGAL = MsgKind(0) // 0 is never a valid kind
+	NO_KIND = MsgKind(0)
 	// Incoming messages
-	CLIENT_ACK = MsgKind(1) // Indicates the client has received a message from the matcher, NOT CURRENTLY USED
-	BUY        = MsgKind(2)
-	SELL       = MsgKind(3)
-	CANCEL     = MsgKind(4)
-	SHUTDOWN   = MsgKind(5)
+	BUY    = MsgKind(1)
+	SELL   = MsgKind(2)
+	CANCEL = MsgKind(3)
 	// Outgoing messages
-	MATCHER_ACK   = MsgKind(6) // Used to acknowledge a message back to the client
-	PARTIAL       = MsgKind(7)
-	FULL          = MsgKind(8)
-	CANCELLED     = MsgKind(9)
-	NOT_CANCELLED = MsgKind(10)
-	// Error message
-	ERROR = MsgKind(11) // TODO error messages are currently unused
+	PARTIAL       = MsgKind(4)
+	FULL          = MsgKind(5)
+	CANCELLED     = MsgKind(6)
+	NOT_CANCELLED = MsgKind(7)
 )
-
-const (
-	// Constant price indicating a market price sell
-	MARKET_PRICE = 0
-)
-
-const (
-	SizeofMessage = 36
-)
-
-func (k MsgKind) IsOrder() bool {
-	return k == BUY || k == SELL || k == CANCEL
-}
-
-func (k MsgKind) IsResponse() bool {
-	return k == PARTIAL || k == FULL || k == CANCELLED || k == NOT_CANCELLED || k == MATCHER_ACK
-}
 
 func (k MsgKind) String() string {
 	switch k {
-	case ILLEGAL:
-		return "ILLEGAL"
-	case CLIENT_ACK:
-		return "CLIENT_ACK"
+	case NO_KIND:
+		return "NO_KIND"
 	case BUY:
 		return "BUY"
 	case SELL:
 		return "SELL"
 	case CANCEL:
 		return "CANCEL"
-	case SHUTDOWN:
-		return "SHUTDOWN"
-	case MATCHER_ACK:
-		return "MATCHER_ACK"
 	case PARTIAL:
 		return "PARTIAL"
 	case FULL:
@@ -70,6 +77,15 @@ func (k MsgKind) String() string {
 	}
 	panic("Uncreachable")
 }
+
+const (
+	// Constant price indicating a market price sell
+	MARKET_PRICE = 0
+)
+
+const (
+	SizeofMessage = 40
+)
 
 // For readable constructors
 type CostData struct {
@@ -92,6 +108,7 @@ type NetData struct {
 
 // Flat description of an incoming message
 type Message struct {
+	Route    MsgRoute
 	Kind     MsgKind
 	Price    int64
 	Amount   uint32
@@ -104,46 +121,48 @@ type Message struct {
 }
 
 func (m *Message) WriteBuy(costData CostData, tradeData TradeData, netData NetData) {
-	m.Write(costData, tradeData, netData, BUY)
+	m.Write(costData, tradeData, netData, ORDER, BUY)
 }
 
 func (m *Message) WriteSell(costData CostData, tradeData TradeData, netData NetData) {
-	m.Write(costData, tradeData, netData, SELL)
+	m.Write(costData, tradeData, netData, ORDER, SELL)
 }
 
 func (m *Message) WriteCancel(tradeData TradeData, netData NetData) {
-	m.Write(CostData{}, tradeData, netData, CANCEL)
+	m.Write(CostData{}, tradeData, netData, ORDER, CANCEL)
 }
 
 func (m *Message) WriteCancelFor(om *Message) {
 	*m = *om
+	m.Route = ORDER
 	m.Kind = CANCEL
 }
 
 func (m *Message) WriteShutdown() {
-	m.Write(CostData{}, TradeData{}, NetData{}, SHUTDOWN)
+	m.Write(CostData{}, TradeData{}, NetData{}, SHUTDOWN, NO_KIND)
 }
 
-func (m *Message) WriteMatcherAck(om *Message) {
+func (m *Message) WriteServerAck(om *Message) {
 	*m = *om
-	m.Kind = MATCHER_ACK
+	m.Route = SERVER_ACK
 }
 
 func (m *Message) WriteClientAck(om *Message) {
 	*m = *om
-	m.Kind = CLIENT_ACK
+	m.Route = CLIENT_ACK
 }
 
 func (m *Message) WriteCancelled(costData CostData, tradeData TradeData, netData NetData) {
-	m.Write(costData, tradeData, netData, CANCELLED)
+	m.Write(costData, tradeData, netData, RESPONSE, CANCELLED)
 }
 
 func (m *Message) WriteNotCancelled(costData CostData, tradeData TradeData, netData NetData) {
-	m.Write(costData, tradeData, netData, NOT_CANCELLED)
+	m.Write(costData, tradeData, netData, RESPONSE, NOT_CANCELLED)
 }
 
 // This function is used to cover PARTIAL and FULL messages
-func (m *Message) WriteMatch(price int64, amount, traderId, tradeId, stockId uint32, ip [4]byte, port int32, kind MsgKind) {
+func (m *Message) WriteResponse(price int64, amount, traderId, tradeId, stockId uint32, ip [4]byte, port int32, kind MsgKind) {
+	m.Route = RESPONSE
 	m.Kind = kind
 	m.Price = price
 	m.Amount = amount
@@ -154,7 +173,8 @@ func (m *Message) WriteMatch(price int64, amount, traderId, tradeId, stockId uin
 	m.Port = port
 }
 
-func (m *Message) Write(costData CostData, tradeData TradeData, netData NetData, kind MsgKind) {
+func (m *Message) Write(costData CostData, tradeData TradeData, netData NetData, route MsgRoute, kind MsgKind) {
+	m.Route = route
 	m.Kind = kind
 	m.Price = costData.Price
 	m.TraderId = tradeData.TraderId

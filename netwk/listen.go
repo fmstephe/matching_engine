@@ -52,12 +52,12 @@ func (l *Listener) Run() {
 			continue
 		}
 		r := &msg.Message{}
-		r.WriteMatcherAck(o)
+		r.WriteServerAck(o) // TODO this is inapproppriate - the matcher itself should ack an order
 		l.submit <- r
 		if l.guidstore.Push(guid.MkGuid(o.TraderId, o.TradeId)) {
 			l.submit <- o
 		}
-		if o.Kind == msg.SHUTDOWN {
+		if o.Route == msg.SHUTDOWN {
 			return
 		}
 	}

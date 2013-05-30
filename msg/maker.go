@@ -32,17 +32,17 @@ func (mm *MessageMaker) Between(lower, upper int64) int64 {
 	return mm.r.Int63n(d) + lower
 }
 
-func (mm *MessageMaker) MkPricedMessage(price int64, kind MsgKind) *Message {
+func (mm *MessageMaker) MkPricedOrder(price int64, kind MsgKind) *Message {
 	m := &Message{}
-	mm.writePricedMessage(price, kind, m)
+	mm.writePricedOrder(price, kind, m)
 	return m
 }
 
-func (mm *MessageMaker) writePricedMessage(price int64, kind MsgKind, m *Message) {
+func (mm *MessageMaker) writePricedOrder(price int64, kind MsgKind, m *Message) {
 	costData := CostData{Price: price, Amount: 1}
 	tradeData := TradeData{TraderId: mm.traderId, TradeId: 1, StockId: 1}
 	mm.traderId++
-	m.Write(costData, tradeData, NetData{}, kind)
+	m.Write(costData, tradeData, NetData{}, ORDER, kind)
 }
 
 func (mm *MessageMaker) ValRangePyramid(n int, low, high int64) []int64 {
@@ -64,19 +64,19 @@ func (mm *MessageMaker) ValRangeFlat(n int, low, high int64) []int64 {
 }
 
 func (mm *MessageMaker) MkBuys(prices []int64) []Message {
-	return mm.MkMessages(prices, BUY)
+	return mm.MkOrders(prices, BUY)
 }
 
 func (mm *MessageMaker) MkSells(prices []int64) []Message {
-	return mm.MkMessages(prices, SELL)
+	return mm.MkOrders(prices, SELL)
 }
 
-func (mm *MessageMaker) MkMessages(prices []int64, kind MsgKind) []Message {
+func (mm *MessageMaker) MkOrders(prices []int64, kind MsgKind) []Message {
 	msgs := make([]Message, len(prices))
 	for i, price := range prices {
 		costData := CostData{Price: price, Amount: 1}
 		tradeData := TradeData{TraderId: uint32(i), TradeId: uint32(i), StockId: stockId}
-		msgs[i].Write(costData, tradeData, NetData{}, kind)
+		msgs[i].Write(costData, tradeData, NetData{}, ORDER, kind)
 	}
 	return msgs
 }
@@ -93,14 +93,14 @@ func (mm *MessageMaker) RndTradeSet(size, depth int, low, high int64) ([]Message
 		if i < size {
 			b := &orders[idx]
 			idx++
-			mm.writePricedMessage(mm.Between(low, high), BUY, b)
+			mm.writePricedOrder(mm.Between(low, high), BUY, b)
 			buys = append(buys, b)
 			if b.Price == 0 {
 				b.Price = 1 // Buys can't have price of 0
 			}
 			s := &orders[idx]
 			idx++
-			mm.writePricedMessage(mm.Between(low, high), SELL, s)
+			mm.writePricedOrder(mm.Between(low, high), SELL, s)
 			sells = append(sells, s)
 		}
 		if i >= depth {
