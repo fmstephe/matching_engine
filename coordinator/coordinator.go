@@ -70,9 +70,11 @@ func (d *dispatcher) Run() {
 			d.orders <- m
 		case m.Route == msg.RESPONSE, m.Route == msg.SERVER_ACK:
 			d.responses <- m
-		case m.Route == msg.SHUTDOWN:
+		case m.Route == msg.COMMAND:
 			d.responses <- m
-			return
+			if m.Kind == msg.SHUTDOWN {
+				return
+			}
 		default:
 			panic(fmt.Sprintf("Dispatcher - Unkown object: %v", m))
 		}

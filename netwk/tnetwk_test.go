@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"github.com/fmstephe/matching_engine/coordinator"
+	"github.com/fmstephe/matching_engine/matcher"
 	"github.com/fmstephe/matching_engine/msg"
 	"net"
 	"strconv"
@@ -31,33 +32,18 @@ func (m *mockMatcher) SetOrders(orders chan *msg.Message) {
 	m.orders = orders
 }
 
-// TODO this should be replaced with the real matcher - this is just duplicating some complex protocols
-func (m *mockMatcher) Run() {
-	for {
-		o := <-m.orders
-		r := &msg.Message{}
-		r.Route = msg.RESPONSE
-		r.Kind = msg.FULL
-		r.Price = o.Price
-		r.Amount = o.Amount
-		r.TraderId = o.TraderId
-		r.TradeId = o.TradeId
-		r.IP = o.IP
-		r.Port = o.Port
-		r.StockId = o.StockId
-		m.submit <- r
-	}
-}
-
-func TestOrdersAndResponses(t *testing.T) {
+func TestOrdersAndAck(t *testing.T) {
 	serverPort := 1201
 	clientPort := 1202
 	setRunning(serverPort)
 	read := readConn(clientPort)
 	write := writeConn(serverPort)
-	confirmNewMessage(t, read, write, &msg.Message{msg.ORDER, msg.BUY, 1, 2, 3, 4, 5, localhost, int32(clientPort)})
-	confirmNewMessage(t, read, write, &msg.Message{msg.ORDER, msg.BUY, 6, 7, 8, 9, 10, localhost, int32(clientPort)})
-	confirmNewMessage(t, read, write, &msg.Message{msg.ORDER, msg.BUY, 11, 12, 13, 14, 15, localhost, int32(clientPort)})
+	send(t, write, &msg.Message{msg.ORDER, msg.BUY, 1, 2, 3, 4, 5, localhost, int32(clientPort)})
+	expect(t, read, msg.SERVER_ACK, msg.BUY)
+	send(t, write, &msg.Message{msg.ORDER, msg.BUY, 6, 7, 8, 9, 10, localhost, int32(clientPort)})
+	expect(t, read, msg.SERVER_ACK, msg.BUY)
+	send(t, write, &msg.Message{msg.ORDER, msg.BUY, 11, 12, 13, 14, 15, localhost, int32(clientPort)})
+	expect(t, read, msg.SERVER_ACK, msg.BUY)
 	shutdownSystem(t, read, write, localhost, int32(clientPort))
 }
 
@@ -67,8 +53,10 @@ func TestDuplicateOrders(t *testing.T) {
 	setRunning(serverPort)
 	read := readConn(clientPort)
 	write := writeConn(serverPort)
-	confirmNewMessage(t, read, write, &msg.Message{msg.ORDER, msg.BUY, 1, 2, 3, 4, 5, localhost, int32(clientPort)})
-	confirmDupMessage(t, read, write, &msg.Message{msg.ORDER, msg.BUY, 1, 2, 3, 4, 5, localhost, int32(clientPort)})
+	send(t, write, &msg.Message{msg.ORDER, msg.BUY, 1, 2, 3, 4, 5, localhost, int32(clientPort)})
+	expect(t, read, msg.SERVER_ACK, msg.BUY)
+	send(t, write, &msg.Message{msg.ORDER, msg.BUY, 1, 2, 3, 4, 5, localhost, int32(clientPort)})
+	expect(t, read, msg.SERVER_ACK, msg.BUY)
 	shutdownSystem(t, read, write, localhost, int32(clientPort))
 }
 
@@ -78,8 +66,8 @@ func setRunning(serverPort int) {
 		panic(err)
 	}
 	responder := NewResponder()
-	matcher := &mockMatcher{}
-	coordinator.Coordinate(listener, responder, matcher, false)
+	match := matcher.NewMatcher(100)
+	coordinator.Coordinate(listener, responder, match, false)
 }
 
 func writeConn(port int) *net.UDPConn {
@@ -106,30 +94,24 @@ func readConn(port int) *net.UDPConn {
 	return conn
 }
 
-func confirmNewMessage(t *testing.T, read, write *net.UDPConn, o *msg.Message) {
-	sendMessage(t, write, o)
-	ack, err := receiveMessage(t, read)
-	if err != nil {
-		t.Error(err.Error())
-		return
-	}
-	validate(t, o, ack, true)
-	r, err := receiveMessage(t, read)
-	if err != nil {
-		t.Error(err.Error())
-		return
-	}
-	validate(t, o, r, false)
+func send(t *testing.T, write *net.UDPConn, o *msg.Message) {
+	buf := bytes.NewBuffer(make([]byte, 0))
+	binary.Write(buf, binary.BigEndian, o)
+	write.Write(buf.Bytes())
 }
 
-func confirmDupMessage(t *testing.T, read, write *net.UDPConn, o *msg.Message) {
-	sendMessage(t, write, o)
-	ack, err := receiveMessage(t, read)
+func expect(t *testing.T, read *net.UDPConn, route msg.MsgRoute, kind msg.MsgKind) {
+	r, err := receive(read)
 	if err != nil {
 		t.Error(err.Error())
 		return
 	}
-	validate(t, o, ack, true)
+	if r.Route != route {
+		t.Errorf("Expecting %v route in response, found %v", route, r.Route)
+	}
+	if r.Kind != kind {
+		t.Errorf("Expecting %v kind in response, found %v", kind, r.Kind)
+	}
 }
 
 func shutdownSystem(t *testing.T, read, write *net.UDPConn, ip [4]byte, port int32) {
@@ -137,22 +119,11 @@ func shutdownSystem(t *testing.T, read, write *net.UDPConn, ip [4]byte, port int
 	o.WriteShutdown()
 	o.IP = ip
 	o.Port = port
-	sendMessage(t, write, o)
-	ack, err := receiveMessage(t, read)
-	if err != nil {
-		t.Error(err.Error())
-		return
-	}
-	validate(t, o, ack, true)
+	send(t, write, o)
+	expect(t, read, msg.SERVER_ACK, msg.SHUTDOWN)
 }
 
-func sendMessage(t *testing.T, write *net.UDPConn, o *msg.Message) {
-	buf := bytes.NewBuffer(make([]byte, 0))
-	binary.Write(buf, binary.BigEndian, o)
-	write.Write(buf.Bytes())
-}
-
-func receiveMessage(t *testing.T, read *net.UDPConn) (*msg.Message, error) {
+func receive(read *net.UDPConn) (*msg.Message, error) {
 	s := make([]byte, msg.SizeofMessage)
 	_, _, err := read.ReadFromUDP(s)
 	if err != nil {
@@ -165,15 +136,12 @@ func receiveMessage(t *testing.T, read *net.UDPConn) (*msg.Message, error) {
 }
 
 // TODO review this method to ensure it still makes sense
-func validate(t *testing.T, order *msg.Message, resp *msg.Message, isAck bool) {
-	if isAck && resp.Route != msg.SERVER_ACK {
-		t.Errorf("Expecting %v route in response, found %v", msg.RESPONSE, resp.Route)
+func validate(t *testing.T, order *msg.Message, resp *msg.Message, route msg.MsgRoute, kind msg.MsgKind) {
+	if resp.Route != route {
+		t.Errorf("Expecting %v route in response, found %v", route, resp.Route)
 	}
-	if isAck && resp.Kind != order.Kind {
-		t.Errorf("Expecting %v kind response, found %v", order.Kind, resp.Kind)
-	}
-	if !isAck && resp.Kind != msg.FULL {
-		t.Errorf("Expecting %v kind response, found %v", msg.FULL, resp.Kind)
+	if resp.Kind != kind {
+		t.Errorf("Expecting %v kind response, found %v", kind, resp.Kind)
 	}
 	if order.Price != resp.Price {
 		t.Errorf("Price mismatch, expecting %d, found %d", order.Price, resp.Price)

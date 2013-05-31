@@ -31,7 +31,7 @@ func (r *Responder) Run() {
 	for {
 		select {
 		case resp := <-r.responses:
-			if resp.Route == msg.SHUTDOWN {
+			if resp.Route == msg.COMMAND && resp.Kind == msg.SHUTDOWN {
 				return
 			}
 			r.manageAcks(resp)

@@ -3,6 +3,7 @@ package msg
 import (
 	"errors"
 	"fmt"
+	"github.com/fmstephe/fstrconv"
 	"net"
 )
 
@@ -13,7 +14,7 @@ const (
 	// Incoming
 	ORDER      = MsgRoute(1)
 	CLIENT_ACK = MsgRoute(2)
-	SHUTDOWN   = MsgRoute(3)
+	COMMAND    = MsgRoute(3)
 	// Outgoing
 	RESPONSE   = MsgRoute(4)
 	SERVER_ACK = MsgRoute(5)
@@ -29,8 +30,8 @@ func (r MsgRoute) String() string {
 		return "ORDER"
 	case CLIENT_ACK:
 		return "CLIENT_ACK"
-	case SHUTDOWN:
-		return "SHUTDOWN"
+	case COMMAND:
+		return "COMMAND"
 	case RESPONSE:
 		return "RESPONSE"
 	case SERVER_ACK:
@@ -46,14 +47,15 @@ type MsgKind int32
 const (
 	NO_KIND = MsgKind(0)
 	// Incoming messages
-	BUY    = MsgKind(1)
-	SELL   = MsgKind(2)
-	CANCEL = MsgKind(3)
+	BUY      = MsgKind(1)
+	SELL     = MsgKind(2)
+	CANCEL   = MsgKind(3)
+	SHUTDOWN = MsgKind(4)
 	// Outgoing messages
-	PARTIAL       = MsgKind(4)
-	FULL          = MsgKind(5)
-	CANCELLED     = MsgKind(6)
-	NOT_CANCELLED = MsgKind(7)
+	PARTIAL       = MsgKind(5)
+	FULL          = MsgKind(6)
+	CANCELLED     = MsgKind(7)
+	NOT_CANCELLED = MsgKind(8)
 )
 
 func (k MsgKind) String() string {
@@ -66,6 +68,8 @@ func (k MsgKind) String() string {
 		return "SELL"
 	case CANCEL:
 		return "CANCEL"
+	case SHUTDOWN:
+		return "SHUTDOWN"
 	case PARTIAL:
 		return "PARTIAL"
 	case FULL:
@@ -139,7 +143,7 @@ func (m *Message) WriteCancelFor(om *Message) {
 }
 
 func (m *Message) WriteShutdown() {
-	m.Write(CostData{}, TradeData{}, NetData{}, SHUTDOWN, NO_KIND)
+	m.Write(CostData{}, TradeData{}, NetData{}, COMMAND, SHUTDOWN)
 }
 
 func (m *Message) WriteServerAck(om *Message) {
@@ -199,6 +203,17 @@ func (m *Message) SetUDPAddr(addr *net.UDPAddr) error {
 	}
 	m.IP[0], m.IP[1], m.IP[2], m.IP[3] = IP[0], IP[1], IP[2], IP[3]
 	m.Port = int32(addr.Port)
-	println(m.UDPAddr().String())
 	return nil
+}
+
+func (m *Message) String() string {
+	if m == nil {
+		return "<nil>"
+	}
+	price := fstrconv.Itoa64Delim(int64(m.Price), ',')
+	amount := fstrconv.Itoa64Delim(int64(m.Amount), ',')
+	traderId := fstrconv.Itoa64Delim(int64(m.TraderId), '-')
+	tradeId := fstrconv.Itoa64Delim(int64(m.TradeId), '-')
+	stockId := fstrconv.Itoa64Delim(int64(m.StockId), '-')
+	return fmt.Sprintf("(%v %v), price %s, amount %s, trader %s, trade %s, stock %s", m.Route, m.Kind, price, amount, traderId, tradeId, stockId)
 }

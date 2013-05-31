@@ -29,7 +29,7 @@ func (m *M) SetOrders(orders chan *msg.Message) {
 func (m *M) Run() {
 	for {
 		o := <-m.orders
-		if o.Route == msg.SHUTDOWN {
+		if o.Kind == msg.SHUTDOWN {
 			r := &msg.Message{}
 			r.WriteShutdown()
 			m.submit <- r
