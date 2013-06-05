@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-var cmprMaker = msg.NewMessageMaker()
+var cmprMaker = msg.NewMessageMaker(1)
 
 func TestCompareMatchers(t *testing.T) {
 	compareMatchers(t, 100, 1, 1, 1)

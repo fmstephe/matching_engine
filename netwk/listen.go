@@ -51,9 +51,9 @@ func (l *Listener) Run() {
 			println("Listener - to []byte: ", err.Error())
 			continue
 		}
-		r := &msg.Message{}
-		r.WriteServerAck(o)
-		l.submit <- r
+		a := &msg.Message{}
+		a.WriteServerAck(o)
+		l.submit <- a
 		if l.guidstore.Push(guid.MkGuid(o.TraderId, o.TradeId)) {
 			l.submit <- o
 		}

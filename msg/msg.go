@@ -210,10 +210,10 @@ func (m *Message) String() string {
 	if m == nil {
 		return "<nil>"
 	}
-	price := fstrconv.Itoa64Delim(int64(m.Price), ',')
+	//	price := fstrconv.Itoa64Delim(int64(m.Price), ',')
 	amount := fstrconv.Itoa64Delim(int64(m.Amount), ',')
 	traderId := fstrconv.Itoa64Delim(int64(m.TraderId), '-')
 	tradeId := fstrconv.Itoa64Delim(int64(m.TradeId), '-')
 	stockId := fstrconv.Itoa64Delim(int64(m.StockId), '-')
-	return fmt.Sprintf("(%v %v), price %s, amount %s, trader %s, trade %s, stock %s", m.Route, m.Kind, price, amount, traderId, tradeId, stockId)
+	return fmt.Sprintf("(%v %v), price %v, amount %s, trader %s, trade %s, stock %s, ip %v, port %v", m.Route, m.Kind, m.Price, amount, traderId, tradeId, stockId, m.IP, m.Port)
 }

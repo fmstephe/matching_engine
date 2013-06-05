@@ -135,7 +135,7 @@ func (m *M) fillableSell(s *prioq.OrderNode) bool {
 				amount := b.Amount()
 				price := price(b.Price(), s.Price())
 				s.ReduceAmount(amount)
-				completeTrade(m.submit, msg.PARTIAL, msg.FULL, b, s, price, amount)
+				completeTrade(m.submit, msg.FULL, msg.PARTIAL, b, s, price, amount)
 				m.slab.Free(m.matchQueues.PopBuy())
 				continue
 			}

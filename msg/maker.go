@@ -15,9 +15,9 @@ type MessageMaker struct {
 	r        *rand.Rand
 }
 
-func NewMessageMaker() *MessageMaker {
+func NewMessageMaker(initTraderId uint32) *MessageMaker {
 	r := rand.New(rand.NewSource(1))
-	return &MessageMaker{traderId: 0, r: r}
+	return &MessageMaker{traderId: initTraderId, r: r}
 }
 
 func (mm *MessageMaker) Seed(seed int64) {
@@ -75,7 +75,8 @@ func (mm *MessageMaker) MkOrders(prices []int64, kind MsgKind) []Message {
 	msgs := make([]Message, len(prices))
 	for i, price := range prices {
 		costData := CostData{Price: price, Amount: 1}
-		tradeData := TradeData{TraderId: uint32(i), TradeId: uint32(i), StockId: stockId}
+		mm.traderId++
+		tradeData := TradeData{TraderId: mm.traderId, TradeId: uint32(i), StockId: stockId}
 		msgs[i].Write(costData, tradeData, NetData{}, ORDER, kind)
 	}
 	return msgs
