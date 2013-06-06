@@ -163,28 +163,33 @@ func price(bPrice, sPrice int64) int64 {
 }
 
 func completeTrade(submit chan *msg.Message, brk, srk msg.MsgKind, b, s *prioq.OrderNode, price int64, amount uint32) {
-	br := &msg.Message{}
-	sr := &msg.Message{}
-	br.WriteResponse(-price, amount, b.TraderId(), b.TradeId(), b.StockId(), b.IP(), b.Port(), brk)
-	sr.WriteResponse(price, amount, s.TraderId(), s.TradeId(), b.StockId(), b.IP(), b.Port(), srk)
+	br := &msg.Message{Price: -price, Amount: amount, TraderId: b.TraderId(), TradeId: b.TradeId(), StockId: b.StockId()}
+	br.IP = b.IP()
+	br.Port = b.Port()
+	br.WriteResponse(brk)
+	sr := &msg.Message{Price: price, Amount: amount, TraderId: s.TraderId(), TradeId: s.TradeId(), StockId: s.StockId()}
+	sr.IP = b.IP()
+	sr.Port = b.Port()
+	sr.WriteResponse(srk)
 	submit <- br
 	submit <- sr
 }
 
 func completeCancelled(submit chan *msg.Message, c *prioq.OrderNode) {
-	cm := &msg.Message{}
-	cd := msg.CostData{Price: c.Price(), Amount: c.Amount()}
-	td := msg.TradeData{TraderId: c.TraderId(), TradeId: c.TradeId(), StockId: c.StockId()}
-	nd := msg.NetData{IP: c.IP(), Port: c.Port()}
-	cm.WriteCancelled(cd, td, nd)
-	submit <- cm
+	cr := writeMessage(c)
+	cr.WriteCancelled()
+	submit <- cr
 }
 
 func completeNotCancelled(submit chan *msg.Message, nc *prioq.OrderNode) {
-	ncm := &msg.Message{}
-	cd := msg.CostData{Price: nc.Price(), Amount: nc.Amount()}
-	td := msg.TradeData{TraderId: nc.TraderId(), TradeId: nc.TradeId(), StockId: nc.StockId()}
-	nd := msg.NetData{IP: nc.IP(), Port: nc.Port()}
-	ncm.WriteNotCancelled(cd, td, nd)
-	submit <- ncm
+	ncr := writeMessage(nc)
+	ncr.WriteNotCancelled()
+	submit <- ncr
+}
+
+func writeMessage(on *prioq.OrderNode) *msg.Message {
+	m := &msg.Message{Price: on.Price(), Amount: on.Amount(), TraderId: on.TraderId(), TradeId: on.TradeId(), StockId: on.StockId()}
+	m.IP = on.IP()
+	m.Port = on.Port()
+	return m
 }

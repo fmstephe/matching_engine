@@ -91,25 +91,6 @@ const (
 	SizeofMessage = 40
 )
 
-// For readable constructors
-type CostData struct {
-	Price  int64  // The highest/lowest acceptable price for a buy/sell
-	Amount uint32 // The number of units desired to buy/sell
-}
-
-// For readable constructors
-type TradeData struct {
-	TraderId uint32 // Identifies the submitting trader
-	TradeId  uint32 // Identifies this trade to the submitting trader
-	StockId  uint32 // Identifies the stock for trade
-}
-
-// For readable constructors
-type NetData struct {
-	IP   [4]byte // IPv4 address of client
-	Port int32   // Port of client
-}
-
 // Flat description of an incoming message
 type Message struct {
 	Route    MsgRoute
@@ -124,69 +105,54 @@ type Message struct {
 	// I think we need a checksum here
 }
 
-func (m *Message) WriteBuy(costData CostData, tradeData TradeData, netData NetData) {
-	m.Write(costData, tradeData, netData, ORDER, BUY)
+func (m *Message) WriteBuy() {
+	m.Route = ORDER
+	m.Kind = BUY
 }
 
-func (m *Message) WriteSell(costData CostData, tradeData TradeData, netData NetData) {
-	m.Write(costData, tradeData, netData, ORDER, SELL)
+func (m *Message) WriteSell() {
+	m.Route = ORDER
+	m.Kind = SELL
 }
 
-func (m *Message) WriteCancel(tradeData TradeData, netData NetData) {
-	m.Write(CostData{}, tradeData, netData, ORDER, CANCEL)
-}
-
-func (m *Message) WriteCancelFor(om *Message) {
-	*m = *om
+func (m *Message) WriteCancel() {
 	m.Route = ORDER
 	m.Kind = CANCEL
 }
 
-func (m *Message) WriteShutdown() {
-	m.Write(CostData{}, TradeData{}, NetData{}, COMMAND, SHUTDOWN)
+func (m *Message) WriteCancelFor(om *Message) {
+	*m = *om
+	m.WriteCancel()
 }
 
-func (m *Message) WriteServerAck(om *Message) {
+func (m *Message) WriteResponse(kind MsgKind) {
+	m.Route = RESPONSE
+	m.Kind = kind
+}
+
+func (m *Message) WriteCancelled() {
+	m.Route = RESPONSE
+	m.Kind = CANCELLED
+}
+
+func (m *Message) WriteNotCancelled() {
+	m.Route = RESPONSE
+	m.Kind = NOT_CANCELLED
+}
+
+func (m *Message) WriteShutdown() {
+	m.Route = COMMAND
+	m.Kind = SHUTDOWN
+}
+
+func (m *Message) WriteServerAckFor(om *Message) {
 	*m = *om
 	m.Route = SERVER_ACK
 }
 
-func (m *Message) WriteClientAck(om *Message) {
+func (m *Message) WriteClientAckFor(om *Message) {
 	*m = *om
 	m.Route = CLIENT_ACK
-}
-
-func (m *Message) WriteCancelled(costData CostData, tradeData TradeData, netData NetData) {
-	m.Write(costData, tradeData, netData, RESPONSE, CANCELLED)
-}
-
-func (m *Message) WriteNotCancelled(costData CostData, tradeData TradeData, netData NetData) {
-	m.Write(costData, tradeData, netData, RESPONSE, NOT_CANCELLED)
-}
-
-// This function is used to cover PARTIAL and FULL messages
-func (m *Message) WriteResponse(price int64, amount, traderId, tradeId, stockId uint32, ip [4]byte, port int32, kind MsgKind) {
-	m.Route = RESPONSE
-	m.Kind = kind
-	m.Price = price
-	m.Amount = amount
-	m.TraderId = traderId
-	m.TradeId = tradeId
-	m.StockId = stockId
-	m.IP = ip
-	m.Port = port
-}
-
-func (m *Message) Write(costData CostData, tradeData TradeData, netData NetData, route MsgRoute, kind MsgKind) {
-	m.Route = route
-	m.Kind = kind
-	m.Price = costData.Price
-	m.TraderId = tradeData.TraderId
-	m.TradeId = tradeData.TradeId
-	m.Amount = costData.Amount
-	m.StockId = tradeData.StockId
-	m.IP = netData.IP
-	m.Port = netData.Port
 }
 
 func (m *Message) UDPAddr() *net.UDPAddr {

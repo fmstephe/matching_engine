@@ -62,7 +62,7 @@ func (nt *netwkTester) Send(t *testing.T, m *msg.Message) {
 	nt.write.Write(buf.Bytes())
 	// We always expect a server ack when sending a message
 	ref := &msg.Message{}
-	ref.WriteServerAck(m)
+	ref.WriteServerAckFor(m)
 	nt.Expect(t, ref)
 }
 

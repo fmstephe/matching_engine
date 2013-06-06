@@ -86,19 +86,20 @@ func mkMessage(line string) (o *msg.Message, err error) {
 			useful = append(useful, w)
 		}
 	}
-	cd, td, err := mkData(useful)
+	m, err := mkData(useful)
+	*o = *m
 	if err != nil {
 		return
 	}
 	switch useful[3] {
 	case "B":
-		o.WriteBuy(cd, td, msg.NetData{})
+		o.WriteBuy()
 		return
 	case "S":
-		o.WriteSell(cd, td, msg.NetData{})
+		o.WriteSell()
 		return
 	case "D":
-		o.WriteCancel(td, msg.NetData{})
+		o.WriteCancel()
 		return
 	default:
 		return
@@ -106,7 +107,7 @@ func mkMessage(line string) (o *msg.Message, err error) {
 	panic("Unreachable")
 }
 
-func mkData(useful []string) (cd msg.CostData, td msg.TradeData, err error) {
+func mkData(useful []string) (m *msg.Message, err error) {
 	//      print("ID: ", useful[2], " Type: ", useful[3], " Price: ",  useful[4], " Amount: ", useful[5])
 	//      println()
 	var price, amount, traderId, tradeId int
@@ -115,9 +116,7 @@ func mkData(useful []string) (cd msg.CostData, td msg.TradeData, err error) {
 	traderId, err = strconv.Atoi(useful[2])
 	tradeId, err = strconv.Atoi(useful[2])
 	if err != nil {
-		return
+		return nil, err
 	}
-	cd = msg.CostData{Price: int64(price), Amount: uint32(amount)}
-	td = msg.TradeData{TraderId: uint32(traderId), TradeId: uint32(tradeId), StockId: uint32(1)}
-	return
+	return &msg.Message{Price: int64(price), Amount: uint32(amount), TraderId: uint32(traderId), TradeId: uint32(tradeId), StockId: uint32(1)}, nil
 }

@@ -52,7 +52,7 @@ func (l *Listener) Run() {
 			continue
 		}
 		a := &msg.Message{}
-		a.WriteServerAck(o)
+		a.WriteServerAckFor(o)
 		l.submit <- a
 		if l.guidstore.Push(guid.MkGuid(o.TraderId, o.TradeId)) {
 			l.submit <- o

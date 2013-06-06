@@ -39,10 +39,10 @@ func (mm *MessageMaker) MkPricedOrder(price int64, kind MsgKind) *Message {
 }
 
 func (mm *MessageMaker) writePricedOrder(price int64, kind MsgKind, m *Message) {
-	costData := CostData{Price: price, Amount: 1}
-	tradeData := TradeData{TraderId: mm.traderId, TradeId: 1, StockId: 1}
 	mm.traderId++
-	m.Write(costData, tradeData, NetData{}, ORDER, kind)
+	*m = Message{Price: price, Amount: 1, TraderId: mm.traderId, TradeId: 1, StockId: 1}
+	m.Route = ORDER
+	m.Kind = kind
 }
 
 func (mm *MessageMaker) ValRangePyramid(n int, low, high int64) []int64 {
@@ -74,10 +74,10 @@ func (mm *MessageMaker) MkSells(prices []int64) []Message {
 func (mm *MessageMaker) MkOrders(prices []int64, kind MsgKind) []Message {
 	msgs := make([]Message, len(prices))
 	for i, price := range prices {
-		costData := CostData{Price: price, Amount: 1}
 		mm.traderId++
-		tradeData := TradeData{TraderId: mm.traderId, TradeId: uint32(i), StockId: stockId}
-		msgs[i].Write(costData, tradeData, NetData{}, ORDER, kind)
+		msgs[i] = Message{Price: price, Amount: 1, TraderId: mm.traderId, TradeId: uint32(i), StockId: stockId}
+		msgs[i].Route = ORDER
+		msgs[i].Kind = kind
 	}
 	return msgs
 }
