@@ -12,7 +12,7 @@ import (
 type Listener struct {
 	conn      *net.UDPConn
 	guidstore *guid.Store
-	dispatch    chan *msg.Message
+	dispatch  chan *msg.Message
 }
 
 func NewListener(port string) (*Listener, error) {

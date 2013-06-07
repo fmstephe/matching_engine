@@ -7,7 +7,7 @@ import (
 
 type refmatcher struct {
 	matchQueues *prioq.RefMatchQueues
-	dispatch      chan *msg.Message
+	dispatch    chan *msg.Message
 	orders      chan *msg.Message
 }
 

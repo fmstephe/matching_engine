@@ -63,7 +63,7 @@ func (tm *testerMaker) Make() MatchTester {
 
 type localTester struct {
 	dispatch chan *msg.Message
-	orders chan *msg.Message
+	orders   chan *msg.Message
 }
 
 func (lt *localTester) Send(t *testing.T, m *msg.Message) {

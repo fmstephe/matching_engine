@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-const RESEND_MILLIS = time.Duration(100) * time.Second
+const RESEND_MILLIS = time.Duration(100) * time.Millisecond
 
 type Responder struct {
 	responses chan *msg.Message
@@ -58,7 +58,7 @@ func (r *Responder) manageAcks(resp *msg.Message) {
 			}
 		}
 	}
-	if resp.Route == msg.ORDER {
+	if resp.Route == msg.RESPONSE {
 		unacked = append(unacked, resp)
 	}
 	r.unacked = unacked

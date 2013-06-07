@@ -53,7 +53,7 @@ func Coordinate(l listener, r responder, m matcher, log bool) {
 }
 
 type dispatcher struct {
-	dispatch    chan *msg.Message
+	dispatch  chan *msg.Message
 	orders    chan *msg.Message
 	responses chan *msg.Message
 	log       bool

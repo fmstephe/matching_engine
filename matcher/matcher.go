@@ -9,7 +9,7 @@ import (
 type M struct {
 	matchQueues prioq.MatchQueues // No constructor required
 	slab        *prioq.Slab
-	dispatch      chan *msg.Message
+	dispatch    chan *msg.Message
 	orders      chan *msg.Message
 }
 
