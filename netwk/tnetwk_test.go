@@ -34,9 +34,8 @@ func (m *netwkTesterMaker) Make() matcher.MatchTester {
 	m.port++
 	serverPort := m.port
 	m.port++
-	clientPort := m.port
-	read := readConn(clientPort)
-	write := writeConn(serverPort)
+	freePort := m.port
+	m.port = m.port + 100 // Allows each netwkTester to have 100 client ports
 	listener, err := NewListener(strconv.Itoa(serverPort))
 	if err != nil {
 		panic(err)
@@ -44,22 +43,27 @@ func (m *netwkTesterMaker) Make() matcher.MatchTester {
 	responder := NewResponder()
 	match := matcher.NewMatcher(100)
 	coordinator.Coordinate(listener, responder, match, false)
-	return &netwkTester{ip: m.ip, serverPort: serverPort, clientPort: clientPort, read: read, write: write}
+	return &netwkTester{ip: m.ip, serverPort: serverPort, freePort: freePort, connsMap: make(map[uint32]*conns)}
 }
 
 type netwkTester struct {
 	ip         [4]byte
 	serverPort int
+	freePort   int
+	connsMap   map[uint32]*conns
+}
+
+type conns struct {
 	clientPort int
 	read       *net.UDPConn
 	write      *net.UDPConn
 }
 
 func (nt *netwkTester) Send(t *testing.T, m *msg.Message) {
-	nt.addNetwk(m)
+	nt.writeNetwk(m)
 	buf := bytes.NewBuffer(make([]byte, 0))
 	binary.Write(buf, binary.BigEndian, m)
-	nt.write.Write(buf.Bytes())
+	nt.getConns(m.TraderId).write.Write(buf.Bytes())
 	// We always expect a server ack when sending a message
 	ref := &msg.Message{}
 	ref.WriteServerAckFor(m)
@@ -67,8 +71,8 @@ func (nt *netwkTester) Send(t *testing.T, m *msg.Message) {
 }
 
 func (nt *netwkTester) Expect(t *testing.T, e *msg.Message) {
-	nt.addNetwk(e)
-	r, err := receive(nt.read)
+	nt.writeNetwk(e)
+	r, err := receive(nt.getConns(e.TraderId).read)
 	if err != nil {
 		t.Error(err.Error())
 		return
@@ -82,9 +86,21 @@ func (nt *netwkTester) Cleanup(t *testing.T) {
 	nt.Send(t, m)
 }
 
-func (nt *netwkTester) addNetwk(m *msg.Message) {
+func (nt *netwkTester) writeNetwk(m *msg.Message) {
 	m.IP = nt.ip
-	m.Port = int32(nt.clientPort)
+	m.Port = int32(nt.getConns(m.TraderId).clientPort)
+}
+
+func (nt *netwkTester) getConns(traderId uint32) *conns {
+	c := nt.connsMap[traderId]
+	if c == nil {
+		nt.freePort++
+		read := readConn(nt.freePort)
+		write := writeConn(nt.serverPort)
+		c = &conns{read: read, write: write, clientPort: nt.freePort}
+		nt.connsMap[traderId] = c
+	}
+	return c
 }
 
 func writeConn(port int) *net.UDPConn {

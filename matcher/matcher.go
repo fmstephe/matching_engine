@@ -168,8 +168,8 @@ func completeTrade(submit chan *msg.Message, brk, srk msg.MsgKind, b, s *prioq.O
 	br.Port = b.Port()
 	br.WriteResponse(brk)
 	sr := &msg.Message{Price: price, Amount: amount, TraderId: s.TraderId(), TradeId: s.TradeId(), StockId: s.StockId()}
-	sr.IP = b.IP()
-	sr.Port = b.Port()
+	sr.IP = s.IP()
+	sr.Port = s.Port()
 	sr.WriteResponse(srk)
 	submit <- br
 	submit <- sr
