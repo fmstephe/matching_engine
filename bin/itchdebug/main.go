@@ -41,10 +41,10 @@ func loop() {
 			}
 		}()
 		in := bufio.NewReader(os.Stdin)
-		submit := make(chan interface{}, 20)
+		dispatch := make(chan interface{}, 20)
 		orders := make(chan *msg.Message)
 		m := matcher.NewMatcher(1000)
-		m.SetSubmit(submit)
+		m.SetDispatch(dispatch)
 		m.SetOrders(orders)
 		go m.Run()
 		//
@@ -57,7 +57,7 @@ func loop() {
 			}
 			if o != nil && (o.Kind() == msg.BUY || o.Kind() == msg.SELL || o.Kind() == msg.CANCEL) {
 				orders<-o
-				clear(submit)
+				clear(dispatch)
 			}
 			checkPrint(ir, o, m, l)
 			c := checkPause(in, ir, o, l)

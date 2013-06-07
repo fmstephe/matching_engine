@@ -52,17 +52,17 @@ type testerMaker struct {
 }
 
 func (tm *testerMaker) Make() MatchTester {
-	submit := make(chan *msg.Message, 30)
+	dispatch := make(chan *msg.Message, 30)
 	orders := make(chan *msg.Message, 20)
 	m := NewMatcher(100)
-	m.SetSubmit(submit)
+	m.SetDispatch(dispatch)
 	m.SetOrders(orders)
 	go m.Run()
-	return &localTester{submit: submit, orders: orders}
+	return &localTester{dispatch: dispatch, orders: orders}
 }
 
 type localTester struct {
-	submit chan *msg.Message
+	dispatch chan *msg.Message
 	orders chan *msg.Message
 }
 
@@ -71,7 +71,7 @@ func (lt *localTester) Send(t *testing.T, m *msg.Message) {
 }
 
 func (lt *localTester) Expect(t *testing.T, ref *msg.Message) {
-	m := <-lt.submit
+	m := <-lt.dispatch
 	if *ref != *m {
 		t.Errorf("\nExpecting: %v\nFound:     %v", ref, m)
 	}

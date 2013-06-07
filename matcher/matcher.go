@@ -9,7 +9,7 @@ import (
 type M struct {
 	matchQueues prioq.MatchQueues // No constructor required
 	slab        *prioq.Slab
-	submit      chan *msg.Message
+	dispatch      chan *msg.Message
 	orders      chan *msg.Message
 }
 
@@ -18,8 +18,8 @@ func NewMatcher(slabSize int) *M {
 	return &M{slab: slab}
 }
 
-func (m *M) SetSubmit(submit chan *msg.Message) {
-	m.submit = submit
+func (m *M) SetDispatch(dispatch chan *msg.Message) {
+	m.dispatch = dispatch
 }
 
 func (m *M) SetOrders(orders chan *msg.Message) {
@@ -32,7 +32,7 @@ func (m *M) Run() {
 		if o.Kind == msg.SHUTDOWN {
 			r := &msg.Message{}
 			r.WriteShutdown()
-			m.submit <- r
+			m.dispatch <- r
 			return
 		}
 		on := m.slab.Malloc()
@@ -45,7 +45,7 @@ func (m *M) Run() {
 		case msg.CANCEL:
 			m.cancel(on)
 		default:
-			// This should probably just be an message to m.submit
+			// This should probably just be an message to m.dispatch
 			panic(fmt.Sprintf("MsgKind %v not supported", on.Kind()))
 		}
 	}
@@ -53,8 +53,8 @@ func (m *M) Run() {
 
 func (m *M) addBuy(b *prioq.OrderNode) {
 	if b.Price() == msg.MARKET_PRICE {
-		// This should probably just be a message to m.submit
-		panic("It is illegal to submit a buy at market price")
+		// This should probably just be a message to m.dispatch
+		panic("It is illegal to send a buy at market price")
 	}
 	if !m.fillableBuy(b) {
 		m.matchQueues.PushBuy(b)
@@ -70,10 +70,10 @@ func (m *M) addSell(s *prioq.OrderNode) {
 func (m *M) cancel(o *prioq.OrderNode) {
 	ro := m.matchQueues.Cancel(o)
 	if ro != nil {
-		completeCancelled(m.submit, ro)
+		completeCancelled(m.dispatch, ro)
 		m.slab.Free(ro)
 	} else {
-		completeNotCancelled(m.submit, o)
+		completeNotCancelled(m.dispatch, o)
 	}
 	m.slab.Free(o)
 }
@@ -90,21 +90,21 @@ func (m *M) fillableBuy(b *prioq.OrderNode) bool {
 				price := price(b.Price(), s.Price())
 				m.slab.Free(m.matchQueues.PopSell())
 				b.ReduceAmount(amount)
-				completeTrade(m.submit, msg.PARTIAL, msg.FULL, b, s, price, amount)
+				completeTrade(m.dispatch, msg.PARTIAL, msg.FULL, b, s, price, amount)
 				continue
 			}
 			if s.Amount() > b.Amount() {
 				amount := b.Amount()
 				price := price(b.Price(), s.Price())
 				s.ReduceAmount(amount)
-				completeTrade(m.submit, msg.FULL, msg.PARTIAL, b, s, price, amount)
+				completeTrade(m.dispatch, msg.FULL, msg.PARTIAL, b, s, price, amount)
 				m.slab.Free(b)
 				return true // The buy has been used up
 			}
 			if s.Amount() == b.Amount() {
 				amount := b.Amount()
 				price := price(b.Price(), s.Price())
-				completeTrade(m.submit, msg.FULL, msg.FULL, b, s, price, amount)
+				completeTrade(m.dispatch, msg.FULL, msg.FULL, b, s, price, amount)
 				m.slab.Free(m.matchQueues.PopSell())
 				m.slab.Free(b)
 				return true // The buy has been used up
@@ -127,7 +127,7 @@ func (m *M) fillableSell(s *prioq.OrderNode) bool {
 				amount := s.Amount()
 				price := price(b.Price(), s.Price())
 				b.ReduceAmount(amount)
-				completeTrade(m.submit, msg.PARTIAL, msg.FULL, b, s, price, amount)
+				completeTrade(m.dispatch, msg.PARTIAL, msg.FULL, b, s, price, amount)
 				m.slab.Free(s)
 				return true // The sell has been used up
 			}
@@ -135,14 +135,14 @@ func (m *M) fillableSell(s *prioq.OrderNode) bool {
 				amount := b.Amount()
 				price := price(b.Price(), s.Price())
 				s.ReduceAmount(amount)
-				completeTrade(m.submit, msg.FULL, msg.PARTIAL, b, s, price, amount)
+				completeTrade(m.dispatch, msg.FULL, msg.PARTIAL, b, s, price, amount)
 				m.slab.Free(m.matchQueues.PopBuy())
 				continue
 			}
 			if s.Amount() == b.Amount() {
 				amount := b.Amount()
 				price := price(b.Price(), s.Price())
-				completeTrade(m.submit, msg.FULL, msg.FULL, b, s, price, amount)
+				completeTrade(m.dispatch, msg.FULL, msg.FULL, b, s, price, amount)
 				m.slab.Free(m.matchQueues.PopBuy())
 				m.slab.Free(s)
 				return true // The sell has been used up
@@ -162,7 +162,7 @@ func price(bPrice, sPrice int64) int64 {
 	return sPrice + (d / 2)
 }
 
-func completeTrade(submit chan *msg.Message, brk, srk msg.MsgKind, b, s *prioq.OrderNode, price int64, amount uint32) {
+func completeTrade(dispatch chan *msg.Message, brk, srk msg.MsgKind, b, s *prioq.OrderNode, price int64, amount uint32) {
 	br := &msg.Message{Price: -price, Amount: amount, TraderId: b.TraderId(), TradeId: b.TradeId(), StockId: b.StockId()}
 	br.IP = b.IP()
 	br.Port = b.Port()
@@ -171,20 +171,20 @@ func completeTrade(submit chan *msg.Message, brk, srk msg.MsgKind, b, s *prioq.O
 	sr.IP = s.IP()
 	sr.Port = s.Port()
 	sr.WriteResponse(srk)
-	submit <- br
-	submit <- sr
+	dispatch <- br
+	dispatch <- sr
 }
 
-func completeCancelled(submit chan *msg.Message, c *prioq.OrderNode) {
+func completeCancelled(dispatch chan *msg.Message, c *prioq.OrderNode) {
 	cr := writeMessage(c)
 	cr.WriteCancelled()
-	submit <- cr
+	dispatch <- cr
 }
 
-func completeNotCancelled(submit chan *msg.Message, nc *prioq.OrderNode) {
+func completeNotCancelled(dispatch chan *msg.Message, nc *prioq.OrderNode) {
 	ncr := writeMessage(nc)
 	ncr.WriteNotCancelled()
-	submit <- ncr
+	dispatch <- ncr
 }
 
 func writeMessage(on *prioq.OrderNode) *msg.Message {

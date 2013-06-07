@@ -5,8 +5,8 @@ import (
 	"github.com/fmstephe/matching_engine/msg"
 )
 
-type submitChan interface {
-	SetSubmit(chan *msg.Message)
+type dispatchChan interface {
+	SetDispatch(chan *msg.Message)
 }
 
 type orderChan interface {
@@ -23,7 +23,7 @@ type runner interface {
 
 type listener interface {
 	runner
-	submitChan
+	dispatchChan
 }
 
 type responder interface {
@@ -33,18 +33,18 @@ type responder interface {
 
 type matcher interface {
 	runner
-	submitChan
+	dispatchChan
 	orderChan
 }
 
 func Coordinate(l listener, r responder, m matcher, log bool) {
-	submit := make(chan *msg.Message, 100)
+	dispatch := make(chan *msg.Message, 100)
 	orders := make(chan *msg.Message, 100)
 	responses := make(chan *msg.Message, 100)
-	d := &dispatcher{submit: submit, orders: orders, responses: responses, log: log}
-	l.SetSubmit(submit)
+	d := &dispatcher{dispatch: dispatch, orders: orders, responses: responses, log: log}
+	l.SetDispatch(dispatch)
 	r.SetResponses(responses)
-	m.SetSubmit(submit)
+	m.SetDispatch(dispatch)
 	m.SetOrders(orders)
 	go l.Run()
 	go r.Run()
@@ -53,7 +53,7 @@ func Coordinate(l listener, r responder, m matcher, log bool) {
 }
 
 type dispatcher struct {
-	submit    chan *msg.Message
+	dispatch    chan *msg.Message
 	orders    chan *msg.Message
 	responses chan *msg.Message
 	log       bool
@@ -61,7 +61,7 @@ type dispatcher struct {
 
 func (d *dispatcher) Run() {
 	for {
-		m := <-d.submit
+		m := <-d.dispatch
 		if d.log {
 			println(fmt.Sprintf("Dispatcher - %v", m))
 		}

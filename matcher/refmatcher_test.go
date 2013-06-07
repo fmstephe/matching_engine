@@ -7,13 +7,13 @@ import (
 
 type refmatcher struct {
 	matchQueues *prioq.RefMatchQueues
-	submit      chan *msg.Message
+	dispatch      chan *msg.Message
 	orders      chan *msg.Message
 }
 
-func newRefmatcher(lowPrice, highPrice int64, submit chan *msg.Message, orders chan *msg.Message) *refmatcher {
+func newRefmatcher(lowPrice, highPrice int64, dispatch chan *msg.Message, orders chan *msg.Message) *refmatcher {
 	matchQueues := prioq.NewRefMatchQueues(lowPrice, highPrice)
-	return &refmatcher{matchQueues: matchQueues, submit: submit, orders: orders}
+	return &refmatcher{matchQueues: matchQueues, dispatch: dispatch, orders: orders}
 }
 
 func (m *refmatcher) Run() {
@@ -24,10 +24,10 @@ func (m *refmatcher) Run() {
 		if o.Kind() == msg.CANCEL {
 			co := m.matchQueues.Cancel(o)
 			if co != nil {
-				completeCancelled(m.submit, co)
+				completeCancelled(m.dispatch, co)
 			}
 			if co == nil {
-				completeNotCancelled(m.submit, o)
+				completeNotCancelled(m.dispatch, o)
 			}
 		} else {
 			m.push(o)
@@ -64,7 +64,7 @@ func (m *refmatcher) match() {
 			m.matchQueues.PopBuy()
 			amount := s.Amount()
 			price := price(b.Price(), s.Price())
-			completeTrade(m.submit, msg.FULL, msg.FULL, b, s, price, amount)
+			completeTrade(m.dispatch, msg.FULL, msg.FULL, b, s, price, amount)
 		}
 		if s.Amount() > b.Amount() {
 			// pop buy
@@ -72,7 +72,7 @@ func (m *refmatcher) match() {
 			amount := b.Amount()
 			price := price(b.Price(), s.Price())
 			s.ReduceAmount(b.Amount())
-			completeTrade(m.submit, msg.FULL, msg.PARTIAL, b, s, price, amount)
+			completeTrade(m.dispatch, msg.FULL, msg.PARTIAL, b, s, price, amount)
 		}
 		if b.Amount() > s.Amount() {
 			// pop sell
@@ -80,7 +80,7 @@ func (m *refmatcher) match() {
 			amount := s.Amount()
 			price := price(b.Price(), s.Price())
 			b.ReduceAmount(s.Amount())
-			completeTrade(m.submit, msg.PARTIAL, msg.FULL, b, s, price, amount)
+			completeTrade(m.dispatch, msg.PARTIAL, msg.FULL, b, s, price, amount)
 		}
 	}
 }

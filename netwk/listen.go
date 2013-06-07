@@ -12,7 +12,7 @@ import (
 type Listener struct {
 	conn      *net.UDPConn
 	guidstore *guid.Store
-	submit    chan *msg.Message
+	dispatch    chan *msg.Message
 }
 
 func NewListener(port string) (*Listener, error) {
@@ -27,25 +27,25 @@ func NewListener(port string) (*Listener, error) {
 	return &Listener{conn: conn, guidstore: guid.NewStore()}, nil
 }
 
-func (l *Listener) SetSubmit(submit chan *msg.Message) {
-	l.submit = submit
+func (l *Listener) SetDispatch(dispatch chan *msg.Message) {
+	l.dispatch = dispatch
 }
 
 func (l *Listener) Run() {
 	defer l.conn.Close()
 	for {
-		s := make([]byte, msg.SizeofMessage)
-		n, _, err := l.conn.ReadFromUDP(s)
+		b := make([]byte, msg.SizeofMessage)
+		n, _, err := l.conn.ReadFromUDP(b)
 		if err != nil {
 			println("Listener - UDP Read: ", err.Error())
 			continue
 		}
 		if n != msg.SizeofMessage {
-			println(fmt.Sprintf("Listener: Error incorrect number of bytes. Expecting %d, found %d submit %v", msg.SizeofMessage, n, s))
+			println(fmt.Sprintf("Listener: Error incorrect number of bytes. Expecting %d, found %d in %v", msg.SizeofMessage, n, b))
 			continue
 		}
 		o := &msg.Message{}
-		buf := bytes.NewBuffer(s)
+		buf := bytes.NewBuffer(b)
 		err = binary.Read(buf, binary.BigEndian, o)
 		if err != nil {
 			println("Listener - to []byte: ", err.Error())
@@ -53,9 +53,9 @@ func (l *Listener) Run() {
 		}
 		a := &msg.Message{}
 		a.WriteServerAckFor(o)
-		l.submit <- a
+		l.dispatch <- a
 		if l.guidstore.Push(guid.MkGuid(o.TraderId, o.TradeId)) {
-			l.submit <- o
+			l.dispatch <- o
 		}
 		if o.Kind == msg.SHUTDOWN {
 			return

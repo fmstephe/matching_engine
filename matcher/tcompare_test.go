@@ -26,13 +26,13 @@ func TestCompareMatchers(t *testing.T) {
 }
 
 func compareMatchers(t *testing.T, orderPairs, depth int, lowPrice, highPrice int64) {
-	refsubmit := make(chan *msg.Message, orderPairs*2)
+	refdispatch := make(chan *msg.Message, orderPairs*2)
 	reforders := make(chan *msg.Message, 10)
-	refm := newRefmatcher(lowPrice, highPrice, refsubmit, reforders)
-	submit := make(chan *msg.Message, orderPairs*2)
+	refm := newRefmatcher(lowPrice, highPrice, refdispatch, reforders)
+	dispatch := make(chan *msg.Message, orderPairs*2)
 	orders := make(chan *msg.Message, 10)
 	m := NewMatcher(orderPairs * 2)
-	m.SetSubmit(submit)
+	m.SetDispatch(dispatch)
 	m.SetOrders(orders)
 	testSet, err := cmprMaker.RndTradeSet(orderPairs, depth, lowPrice, highPrice)
 	go refm.Run()
@@ -46,7 +46,7 @@ func compareMatchers(t *testing.T, orderPairs, depth int, lowPrice, highPrice in
 		reforders <- o
 		orders <- o
 		orders <- o
-		checkBuffers(t, refsubmit, submit)
+		checkBuffers(t, refdispatch, dispatch)
 	}
 }
 
