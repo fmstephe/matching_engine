@@ -9,6 +9,7 @@ import (
 	"net"
 	"strconv"
 	"testing"
+	"time"
 )
 
 // NB: There are a number of problems with these tests which are currently being ignored
@@ -16,6 +17,8 @@ import (
 // 2: The messages are currently not being acked, which means that responses may be re-sent - which would confuse response checking
 //    The reason this doesn't impact the tests right now is that the resend rate is so slow that the test is complete and the system
 //    shut down before unacked messages are resent, this is pretty delicate
+
+const ()
 
 func TestRunTestSuite(t *testing.T) {
 	matcher.RunTestSuite(t, newMatchTesterMaker())
@@ -43,7 +46,8 @@ func (m *netwkTesterMaker) Make() matcher.MatchTester {
 	responder := NewResponder()
 	match := matcher.NewMatcher(100)
 	coordinator.Coordinate(listener, responder, match, false)
-	return &netwkTester{ip: m.ip, serverPort: serverPort, freePort: freePort, connsMap: make(map[uint32]*conns)}
+	timeout := time.Duration(1) * time.Second
+	return &netwkTester{ip: m.ip, serverPort: serverPort, freePort: freePort, connsMap: make(map[uint32]*conns), timeout: timeout}
 }
 
 type netwkTester struct {
@@ -51,6 +55,7 @@ type netwkTester struct {
 	serverPort int
 	freePort   int
 	connsMap   map[uint32]*conns
+	timeout    time.Duration
 }
 
 type conns struct {
@@ -100,6 +105,8 @@ func (nt *netwkTester) getConns(traderId uint32) *conns {
 		c = &conns{read: read, write: write, clientPort: nt.freePort}
 		nt.connsMap[traderId] = c
 	}
+	c.write.SetDeadline(time.Now().Add(nt.timeout))
+	c.read.SetDeadline(time.Now().Add(nt.timeout))
 	return c
 }
 
