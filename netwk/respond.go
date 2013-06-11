@@ -31,14 +31,13 @@ func (r *Responder) Run() {
 	for {
 		select {
 		case resp := <-r.responses:
-			if resp.Route == msg.COMMAND && resp.Kind == msg.SHUTDOWN {
+			switch {
+			case resp.Route == msg.COMMAND && resp.Kind == msg.SHUTDOWN:
 				return
-			}
-			r.manageAcks(resp)
-			err := r.write(resp)
-			if err != nil {
-				// TODO this should be a message sent back to the coordinator
-				println("Responder - ", err.Error())
+			case resp.Route == msg.CLIENT_ACK:
+				r.handleClientAck(resp)
+			case resp.Route == msg.RESPONSE, resp.Route == msg.SERVER_ACK:
+				r.writeResponse(resp)
 			}
 		case <-t.C:
 			r.resend()
@@ -47,21 +46,27 @@ func (r *Responder) Run() {
 	}
 }
 
-func (r *Responder) manageAcks(resp *msg.Message) {
+func (r *Responder) handleClientAck(ca *msg.Message) {
 	unacked := r.unacked
-	if resp.Route == msg.CLIENT_ACK {
-		for i, uResp := range unacked {
-			if resp.TraderId == uResp.TraderId && resp.TradeId == uResp.TradeId {
-				unacked[i] = unacked[len(unacked)-1]
-				unacked = unacked[:len(unacked)-1]
-				// Corner cases?
-			}
+	for i, uResp := range unacked {
+		if ca.TraderId == uResp.TraderId && ca.TradeId == uResp.TradeId {
+			unacked[i] = unacked[len(unacked)-1]
+			unacked = unacked[:len(unacked)-1]
+			// Corner cases?
 		}
 	}
-	if resp.Route == msg.RESPONSE {
-		unacked = append(unacked, resp)
-	}
 	r.unacked = unacked
+}
+
+func (r *Responder) writeResponse(resp *msg.Message) {
+	if resp.Route == msg.RESPONSE {
+		r.unacked = append(r.unacked, resp)
+	}
+	err := r.write(resp)
+	if err != nil {
+		// TODO this should be a message sent back to the coordinator
+		println("Responder - ", err.Error())
+	}
 }
 
 func (r *Responder) resend() {

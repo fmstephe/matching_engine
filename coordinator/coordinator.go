@@ -68,7 +68,7 @@ func (d *dispatcher) Run() {
 		switch {
 		case m.Route == msg.ORDER:
 			d.orders <- m
-		case m.Route == msg.RESPONSE, m.Route == msg.SERVER_ACK:
+		case m.Route == msg.RESPONSE, m.Route == msg.SERVER_ACK, m.Route == msg.CLIENT_ACK:
 			d.responses <- m
 		case m.Route == msg.COMMAND:
 			d.responses <- m

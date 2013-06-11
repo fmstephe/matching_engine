@@ -51,13 +51,18 @@ func (l *Listener) Run() {
 			println("Listener - to []byte: ", err.Error())
 			continue
 		}
-		a := &msg.Message{}
-		a.WriteServerAckFor(o)
-		l.dispatch <- a
+		if o.Route != msg.CLIENT_ACK {
+			a := &msg.Message{}
+			a.WriteServerAckFor(o)
+			l.dispatch <- a
+		}
 		if l.guidstore.Push(guid.MkGuid(o.TraderId, o.TradeId)) {
 			l.dispatch <- o
 		}
-		if o.Kind == msg.SHUTDOWN {
+		if o.Route == msg.CLIENT_ACK {
+			l.dispatch <- o
+		}
+		if o.Route == msg.COMMAND && o.Kind == msg.SHUTDOWN {
 			return
 		}
 	}

@@ -44,6 +44,7 @@ func (r MsgRoute) String() string {
 
 type MsgKind int32
 
+// TODO replace PARTIAL and FULL with PARTIAL_SELL, PARTIAL_BUY and FULL_SELL, FULL_BUY
 const (
 	NO_KIND = MsgKind(0)
 	// Incoming messages
@@ -91,6 +92,7 @@ const (
 	SizeofMessage = 40
 )
 
+// TODO add validation method to Message
 // Flat description of an incoming message
 type Message struct {
 	Route    MsgRoute
