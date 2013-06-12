@@ -99,7 +99,7 @@ func mkMessage(line string) (o *msg.Message, err error) {
 		o.WriteSell()
 		return
 	case "D":
-		o.WriteCancel()
+		o.WriteCancelFor(o)
 		return
 	default:
 		return
