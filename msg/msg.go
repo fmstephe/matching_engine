@@ -7,14 +7,14 @@ import (
 	"net"
 )
 
-var routesToKinds = map[MsgRoute] map[MsgKind] bool {
-	NO_ROUTE: map[MsgKind] bool {},
-	ORDER: map[MsgKind] bool {BUY: true, SELL: true, CANCEL: true},
-	CLIENT_ACK: map[MsgKind] bool {PARTIAL: true, FULL: true, CANCELLED: true, NOT_CANCELLED: true},
-	COMMAND: map[MsgKind] bool {SHUTDOWN: true},
-	RESPONSE: map[MsgKind] bool {PARTIAL: true, FULL: true, CANCELLED: true, NOT_CANCELLED: true},
-	SERVER_ACK: map[MsgKind] bool {BUY: true, SELL: true, CANCEL: true, SHUTDOWN: true},
-	ERROR: nil, // TODO
+var routesToKinds = map[MsgRoute]map[MsgKind]bool{
+	NO_ROUTE:   map[MsgKind]bool{},
+	ORDER:      map[MsgKind]bool{BUY: true, SELL: true, CANCEL: true},
+	CLIENT_ACK: map[MsgKind]bool{PARTIAL: true, FULL: true, CANCELLED: true, NOT_CANCELLED: true},
+	COMMAND:    map[MsgKind]bool{SHUTDOWN: true},
+	RESPONSE:   map[MsgKind]bool{PARTIAL: true, FULL: true, CANCELLED: true, NOT_CANCELLED: true},
+	SERVER_ACK: map[MsgKind]bool{BUY: true, SELL: true, CANCEL: true, SHUTDOWN: true},
+	ERROR:      nil, // TODO
 }
 
 type MsgRoute int32
@@ -118,13 +118,15 @@ type Message struct {
 
 func (m *Message) IsValid() bool {
 	kinds := routesToKinds[m.Route]
-	if !kinds[m.Kind] || m.IP == [4]byte{0,0,0,0} || m.Port == 0 {
+	if !kinds[m.Kind] || m.IP == [4]byte{0, 0, 0, 0} || m.Port == 0 {
 		return false
 	}
 	if m.Kind == SHUTDOWN {
 		return m.Price == 0 && m.Amount == 0 && m.TraderId == 0 && m.TradeId == 0 && m.StockId == 0
 	} else {
-		return (m.Price != 0 || m.Kind == SELL) && m.Amount != 0 && m.TraderId != 0 && m.TradeId != 0 && m.StockId != 0 && m.Port != 0
+		isValid := (m.Price != 0 || m.Kind == SELL || m.Kind == CANCEL || m.Kind == CANCELLED || m.Kind == NOT_CANCELLED)
+		isValid = isValid && m.Amount != 0 && m.TraderId != 0 && m.TradeId != 0 && m.StockId != 0
+		return isValid
 	}
 	panic("Unreachable")
 }
