@@ -102,18 +102,28 @@ func (nt *netwkTester) ExpectFiniteResends(t *testing.T, e *msg.Message) {
 			return
 		}
 		if err != nil {
-			// TODO We should really check the type of the error here
+			expectTimeoutErr(t, err)
 			return
 		}
 	}
-	_, fname, lnum, _ := runtime.Caller(1) // TODO this is a good idea done badly
+	_, fname, lnum, _ := runtime.Caller(1)
 	t.Errorf("\nExpecting timeout\nReceived %d responses\n%s:%d", limit, fname, lnum)
 }
 
 func (nt *netwkTester) ExpectTimeout(t *testing.T, traderId uint32) {
 	r, err := receive(nt.getConns(traderId).read)
 	if err == nil {
-		t.Error("\nExpecting timeout\n Recieved %v", r)
+		_, fname, lnum, _ := runtime.Caller(1)
+		t.Error("\nExpecting timeout\n Recieved %v\n%s%d", r, fname, lnum)
+	}
+	expectTimeoutErr(t, err)
+}
+
+func expectTimeoutErr(t *testing.T, err error) {
+	e, ok := err.(net.Error)
+	if !ok || !e.Timeout() {
+		_, fname, lnum, _ := runtime.Caller(2)
+		t.Errorf("\nUnexpected error %v\n%s:%d", err, fname, lnum)
 	}
 }
 
@@ -183,7 +193,7 @@ func receive(read *net.UDPConn) (*msg.Message, error) {
 
 func validate(t *testing.T, m, e *msg.Message) bool {
 	if *m != *e {
-		_, fname, lnum, _ := runtime.Caller(2) // TODO this is a good idea done badly
+		_, fname, lnum, _ := runtime.Caller(2)
 		t.Errorf("\nExpecting: %v\nFound:     %v \n%s:%d", e, m, fname, lnum)
 		return false
 	}
