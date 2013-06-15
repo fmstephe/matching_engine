@@ -7,17 +7,15 @@ import (
 	"net"
 )
 
-var routesToKinds = map[MsgRoute]map[MsgKind]bool{
-	NO_ROUTE:   map[MsgKind]bool{},
-	ORDER:      map[MsgKind]bool{BUY: true, SELL: true, CANCEL: true},
-	CLIENT_ACK: map[MsgKind]bool{PARTIAL: true, FULL: true, CANCELLED: true, NOT_CANCELLED: true},
-	COMMAND:    map[MsgKind]bool{SHUTDOWN: true},
-	RESPONSE:   map[MsgKind]bool{PARTIAL: true, FULL: true, CANCELLED: true, NOT_CANCELLED: true},
-	SERVER_ACK: map[MsgKind]bool{BUY: true, SELL: true, CANCEL: true, SHUTDOWN: true},
-	ERROR:      nil, // TODO
-}
+type MsgStatus uint32
 
-type MsgRoute int32
+const (
+	NORMAL             = MsgStatus(0)
+	SENDABLE_ERROR     = MsgStatus(1)
+	NOT_SENDABLE_ERROR = MsgStatus(1)
+)
+
+type MsgRoute uint32
 
 const (
 	NO_ROUTE = MsgRoute(0)
@@ -28,8 +26,6 @@ const (
 	// Outgoing
 	RESPONSE   = MsgRoute(4)
 	SERVER_ACK = MsgRoute(5)
-	// Internal
-	ERROR = MsgRoute(6)
 )
 
 func (r MsgRoute) String() string {
@@ -46,13 +42,11 @@ func (r MsgRoute) String() string {
 		return "RESPONSE"
 	case SERVER_ACK:
 		return "SERVER_ACK"
-	case ERROR:
-		return "ERROR"
 	}
 	panic("Uncreachable")
 }
 
-type MsgKind int32
+type MsgKind uint32
 
 // TODO replace PARTIAL and FULL with PARTIAL_SELL, PARTIAL_BUY and FULL_SELL, FULL_BUY
 const (
@@ -99,11 +93,21 @@ const (
 )
 
 const (
-	SizeofMessage = 40
+	SizeofMessage = 44
 )
+
+var routesToKinds = map[MsgRoute]map[MsgKind]bool{
+	NO_ROUTE:   map[MsgKind]bool{},
+	ORDER:      map[MsgKind]bool{BUY: true, SELL: true, CANCEL: true},
+	CLIENT_ACK: map[MsgKind]bool{PARTIAL: true, FULL: true, CANCELLED: true, NOT_CANCELLED: true},
+	COMMAND:    map[MsgKind]bool{SHUTDOWN: true},
+	RESPONSE:   map[MsgKind]bool{PARTIAL: true, FULL: true, CANCELLED: true, NOT_CANCELLED: true},
+	SERVER_ACK: map[MsgKind]bool{BUY: true, SELL: true, CANCEL: true, SHUTDOWN: true},
+}
 
 // Flat description of an incoming message
 type Message struct {
+	Status   MsgStatus
 	Route    MsgRoute
 	Kind     MsgKind
 	Price    int64
@@ -175,6 +179,10 @@ func (m *Message) WriteServerAckFor(om *Message) {
 func (m *Message) WriteClientAckFor(om *Message) {
 	*m = *om
 	m.Route = CLIENT_ACK
+}
+
+func (m *Message) WriteStatus(status MsgStatus) {
+	m.Status = status
 }
 
 func (m *Message) UDPAddr() *net.UDPAddr {
