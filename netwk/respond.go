@@ -14,6 +14,7 @@ const RESEND_MILLIS = time.Duration(100) * time.Millisecond
 
 type Responder struct {
 	responses chan *msg.Message
+	dispatch  chan *msg.Message
 	unacked   []*msg.Message
 }
 
@@ -25,6 +26,10 @@ func (r *Responder) SetResponses(responses chan *msg.Message) {
 	r.responses = responses
 }
 
+func (r *Responder) SetDispatch(dispatch chan *msg.Message) {
+	r.dispatch = dispatch
+}
+
 func (r *Responder) Run() {
 	defer shutdown()
 	t := time.NewTimer(RESEND_MILLIS)
@@ -32,12 +37,14 @@ func (r *Responder) Run() {
 		select {
 		case resp := <-r.responses:
 			switch {
-			case resp.Route == msg.COMMAND && resp.Kind == msg.SHUTDOWN:
-				return
+			case resp.Status == msg.NOT_SENDABLE_ERROR:
+				panic("Not sendable error sent to responder. Probable infinite loop.")
+			case resp.Status == msg.SENDABLE_ERROR, resp.Route == msg.RESPONSE, resp.Route == msg.SERVER_ACK:
+				r.writeResponse(resp)
 			case resp.Route == msg.CLIENT_ACK:
 				r.handleClientAck(resp)
-			case resp.Route == msg.RESPONSE, resp.Route == msg.SERVER_ACK:
-				r.writeResponse(resp)
+			case resp.Route == msg.COMMAND && resp.Kind == msg.SHUTDOWN:
+				return
 			}
 		case <-t.C:
 			r.resend()
@@ -46,6 +53,7 @@ func (r *Responder) Run() {
 	}
 }
 
+// TODO write some pure unit tests around the unacked feature
 func (r *Responder) handleClientAck(ca *msg.Message) {
 	unacked := r.unacked
 	for i, uResp := range unacked {
@@ -64,9 +72,18 @@ func (r *Responder) writeResponse(resp *msg.Message) {
 	}
 	err := r.write(resp)
 	if err != nil {
-		// TODO this should be a message sent back to the coordinator
-		println("Responder - ", err.Error())
+		r.handleError(resp, err)
 	}
+}
+
+func (r *Responder) handleError(resp *msg.Message, err error) {
+	em := &msg.Message{}
+	*em = *resp
+	em.WriteStatus(msg.NOT_SENDABLE_ERROR)
+	if e, ok := err.(net.Error); ok && e.Temporary() {
+		em.WriteStatus(msg.SENDABLE_ERROR)
+	}
+	r.dispatch <- em
 }
 
 func (r *Responder) resend() {

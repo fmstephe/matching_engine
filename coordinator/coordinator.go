@@ -28,6 +28,7 @@ type listener interface {
 
 type responder interface {
 	runner
+	dispatchChan
 	responseChan
 }
 
@@ -44,8 +45,9 @@ func Coordinate(l listener, r responder, m matcher, log bool) {
 	d := &dispatcher{dispatch: dispatch, orders: orders, responses: responses, log: log}
 	l.SetDispatch(dispatch)
 	r.SetResponses(responses)
-	m.SetDispatch(dispatch)
+	r.SetDispatch(dispatch)
 	m.SetOrders(orders)
+	m.SetDispatch(dispatch)
 	go l.Run()
 	go r.Run()
 	go m.Run()
@@ -66,11 +68,16 @@ func (d *dispatcher) Run() {
 			println(fmt.Sprintf("Dispatcher - %v", m))
 		}
 		switch {
+		case m.Status == msg.NOT_SENDABLE_ERROR:
+			continue
+		case m.Status == msg.SENDABLE_ERROR:
+			d.responses <- m
 		case m.Route == msg.ORDER:
 			d.orders <- m
 		case m.Route == msg.RESPONSE, m.Route == msg.SERVER_ACK, m.Route == msg.CLIENT_ACK:
 			d.responses <- m
 		case m.Route == msg.COMMAND:
+			d.orders <- m
 			d.responses <- m
 			if m.Kind == msg.SHUTDOWN {
 				return
