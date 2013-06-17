@@ -12,8 +12,20 @@ type MsgStatus uint32
 const (
 	NORMAL             = MsgStatus(0)
 	SENDABLE_ERROR     = MsgStatus(1)
-	NOT_SENDABLE_ERROR = MsgStatus(1)
+	NOT_SENDABLE_ERROR = MsgStatus(2)
 )
+
+func (s MsgStatus) String() string {
+	switch s {
+	case NORMAL:
+		return "NORMAL"
+	case SENDABLE_ERROR:
+		return "SENDABLE_ERROR"
+	case NOT_SENDABLE_ERROR:
+		return "NOT_SENDABLE_ERROR"
+	}
+	panic("Unreachable")
+}
 
 type MsgRoute uint32
 
@@ -120,9 +132,15 @@ type Message struct {
 	// I think we need a checksum here
 }
 
-func (m *Message) IsValid() bool {
+func (m *Message) Valid() bool {
+	if m.Status == NOT_SENDABLE_ERROR {
+		return true
+	}
+	if m.Status == SENDABLE_ERROR {
+		return m.IP != [4]byte{} && m.Port != 0
+	}
 	kinds := routesToKinds[m.Route]
-	if !kinds[m.Kind] || m.IP == [4]byte{0, 0, 0, 0} || m.Port == 0 {
+	if !kinds[m.Kind] || m.IP == [4]byte{} || m.Port == 0 {
 		return false
 	}
 	if m.Kind == SHUTDOWN {
@@ -206,10 +224,14 @@ func (m *Message) String() string {
 	if m == nil {
 		return "<nil>"
 	}
-	//	price := fstrconv.Itoa64Delim(int64(m.Price), ',')
+	price := fstrconv.Itoa64Delim(int64(m.Price), ',')
 	amount := fstrconv.Itoa64Delim(int64(m.Amount), ',')
 	traderId := fstrconv.Itoa64Delim(int64(m.TraderId), '-')
 	tradeId := fstrconv.Itoa64Delim(int64(m.TradeId), '-')
 	stockId := fstrconv.Itoa64Delim(int64(m.StockId), '-')
-	return fmt.Sprintf("(%v %v), price %v, amount %s, trader %s, trade %s, stock %s, ip %v, port %v", m.Route, m.Kind, m.Price, amount, traderId, tradeId, stockId, m.IP, m.Port)
+	status := ""
+	if m.Status != NORMAL {
+		status = m.Status.String() + "! "
+	}
+	return fmt.Sprintf("%s(%v %v), price %v, amount %s, trader %s, trade %s, stock %s, ip %v, port %v", status, m.Route, m.Kind, price, amount, traderId, tradeId, stockId, m.IP, m.Port)
 }
