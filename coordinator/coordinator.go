@@ -61,6 +61,7 @@ type dispatcher struct {
 	log       bool
 }
 
+// TODO this really needs unit testing. It's not trivial any more
 func (d *dispatcher) Run() {
 	for {
 		m := <-d.dispatch
@@ -68,8 +69,10 @@ func (d *dispatcher) Run() {
 			println(fmt.Sprintf("Dispatcher - %v", m))
 		}
 		switch {
+		case !m.Valid():
+			d.resubmitErr(m)
 		case m.Status == msg.NOT_SENDABLE_ERROR:
-			continue
+			// Do nothing, the error is already logged
 		case m.Status == msg.SENDABLE_ERROR:
 			d.responses <- m
 		case m.Route == msg.ORDER:
@@ -86,4 +89,15 @@ func (d *dispatcher) Run() {
 			panic(fmt.Sprintf("Dispatcher - Unkown object: %v", m))
 		}
 	}
+}
+
+func (d *dispatcher) resubmitErr(m *msg.Message) {
+	em := &msg.Message{}
+	*em = *m
+	if em.Networked() {
+		em.WriteStatus(msg.SENDABLE_ERROR)
+	} else {
+		em.WriteStatus(msg.NOT_SENDABLE_ERROR)
+	}
+	d.dispatch <- em
 }

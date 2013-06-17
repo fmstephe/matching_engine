@@ -75,7 +75,7 @@ func (mm *MessageMaker) MkOrders(prices []int64, kind MsgKind) []Message {
 	msgs := make([]Message, len(prices))
 	for i, price := range prices {
 		mm.traderId++
-		msgs[i] = Message{Price: price, Amount: 1, TraderId: mm.traderId, TradeId: uint32(i), StockId: stockId}
+		msgs[i] = Message{Price: price, Amount: 1, TraderId: mm.traderId, TradeId: uint32(i + 1), StockId: stockId}
 		msgs[i].Route = ORDER
 		msgs[i].Kind = kind
 	}

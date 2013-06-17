@@ -137,10 +137,10 @@ func (m *Message) Valid() bool {
 		return true
 	}
 	if m.Status == SENDABLE_ERROR {
-		return m.IP != [4]byte{} && m.Port != 0
+		return m.Networked()
 	}
 	kinds := routesToKinds[m.Route]
-	if !kinds[m.Kind] || m.IP == [4]byte{} || m.Port == 0 {
+	if !kinds[m.Kind] || !m.Networked() {
 		return false
 	}
 	if m.Kind == SHUTDOWN {
@@ -151,6 +151,10 @@ func (m *Message) Valid() bool {
 		return isValid
 	}
 	panic("Unreachable")
+}
+
+func (m *Message) Networked() bool {
+	return m.IP != [4]byte{} && m.Port != 0
 }
 
 func (m *Message) WriteBuy() {
