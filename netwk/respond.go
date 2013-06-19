@@ -3,8 +3,6 @@ package netwk
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
-	"fmt"
 	"github.com/fmstephe/matching_engine/msg"
 	"net"
 	"time"
@@ -12,14 +10,19 @@ import (
 
 const RESEND_MILLIS = time.Duration(100) * time.Millisecond
 
+type ipWriter interface {
+	Write(data []byte, ip [4]byte, port int) error
+}
+
 type Responder struct {
 	responses chan *msg.Message
 	dispatch  chan *msg.Message
 	unacked   []*msg.Message
+	writer    ipWriter
 }
 
-func NewResponder() *Responder {
-	return &Responder{unacked: make([]*msg.Message, 0, 100)}
+func NewResponder(writer ipWriter) *Responder {
+	return &Responder{unacked: make([]*msg.Message, 0, 100), writer: writer}
 }
 
 func (r *Responder) SetResponses(responses chan *msg.Message) {
@@ -31,7 +34,7 @@ func (r *Responder) SetDispatch(dispatch chan *msg.Message) {
 }
 
 func (r *Responder) Run() {
-	defer shutdown()
+	defer r.shutdown()
 	t := time.NewTimer(RESEND_MILLIS)
 	for {
 		select {
@@ -98,19 +101,8 @@ func (r *Responder) write(resp *msg.Message) error {
 	if err != nil {
 		return err
 	}
-	conn, err := net.DialUDP("udp", nil, resp.UDPAddr())
-	if err != nil {
-		return err
-	}
-	n, err := conn.Write(nbuf.Bytes())
-	if err != nil {
-		return err
-	}
-	if n != msg.SizeofMessage {
-		return errors.New(fmt.Sprintf("Insufficient bytes written. Expecting %d, found %d", msg.SizeofMessage, n))
-	}
-	return nil
+	return r.writer.Write(nbuf.Bytes(), resp.IP, int(resp.Port))
 }
 
-func shutdown() {
+func (r *Responder) shutdown() {
 }

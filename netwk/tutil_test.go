@@ -39,11 +39,17 @@ func (m *netwkTesterMaker) Make() matcher.MatchTester {
 	m.port++
 	minPort := m.port
 	m.port = m.port + portAllocation
-	listener, err := NewListener(strconv.Itoa(serverPort))
+	port := strconv.Itoa(serverPort)
+	addr, err := net.ResolveUDPAddr("udp", ":"+port)
 	if err != nil {
 		panic(err)
 	}
-	responder := NewResponder()
+	conn, err := net.ListenUDP("udp", addr)
+	if err != nil {
+		panic(err)
+	}
+	listener := NewListener(conn)
+	responder := NewResponder(&udpWriter{})
 	match := matcher.NewMatcher(100)
 	coordinator.Coordinate(listener, responder, match, false)
 	timeout := time.Duration(1) * time.Second

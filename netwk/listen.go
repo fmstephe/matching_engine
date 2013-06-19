@@ -6,25 +6,17 @@ import (
 	"fmt"
 	"github.com/fmstephe/matching_engine/guid"
 	"github.com/fmstephe/matching_engine/msg"
-	"net"
+	"io"
 )
 
 type Listener struct {
-	conn      *net.UDPConn
+	reader    io.ReadCloser
 	guidstore *guid.Store
 	dispatch  chan *msg.Message
 }
 
-func NewListener(port string) (*Listener, error) {
-	addr, err := net.ResolveUDPAddr("udp", ":"+port)
-	if err != nil {
-		return nil, err
-	}
-	conn, err := net.ListenUDP("udp", addr)
-	if err != nil {
-		return nil, err
-	}
-	return &Listener{conn: conn, guidstore: guid.NewStore()}, nil
+func NewListener(reader io.ReadCloser) *Listener {
+	return &Listener{reader: reader, guidstore: guid.NewStore()}
 }
 
 func (l *Listener) SetDispatch(dispatch chan *msg.Message) {
@@ -32,10 +24,10 @@ func (l *Listener) SetDispatch(dispatch chan *msg.Message) {
 }
 
 func (l *Listener) Run() {
-	defer l.conn.Close()
+	defer l.reader.Close()
 	for {
 		b := make([]byte, msg.SizeofMessage)
-		n, _, err := l.conn.ReadFromUDP(b)
+		n, err := l.reader.Read(b)
 		if err != nil {
 			println("Listener - UDP Read: ", err.Error())
 			continue
