@@ -8,6 +8,8 @@ import (
 
 var mkr = newMatchTesterMaker()
 
+// TODO we are getting races on resent messages - a solution could be to CLIENT_ACK a message inside the Expect method
+// Then drain the port of all repeat messages.
 func TestRunTestSuite(t *testing.T) {
 	matcher.RunTestSuite(t, newMatchTesterMaker())
 }
@@ -34,7 +36,7 @@ func TestResponseResend(t *testing.T) {
 	sas := &msg.Message{TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	sas.Route = msg.RESPONSE
 	sas.Kind = msg.FULL
-	// We expect that we will keep receiving the RESPONSE msassagsas, because we didn't ack them
+	// We expect that we will keep receiving the RESPONSE messages, because we didn't ack them
 	mt.Expect(t, sab)
 	mt.Expect(t, sas)
 	mt.Expect(t, sab)

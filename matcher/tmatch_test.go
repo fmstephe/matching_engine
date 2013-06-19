@@ -2,6 +2,7 @@ package matcher
 
 import (
 	"github.com/fmstephe/matching_engine/msg"
+	"runtime"
 	"testing"
 )
 
@@ -73,7 +74,14 @@ func (lt *localTester) Send(t *testing.T, m *msg.Message) {
 func (lt *localTester) Expect(t *testing.T, ref *msg.Message) {
 	m := <-lt.dispatch
 	if *ref != *m {
-		t.Errorf("\nExpecting: %v\nFound:     %v", ref, m)
+		_, fname, lnum, _ := runtime.Caller(1)
+		t.Errorf("\nExpecting: %v\nFound:     %v\n%s:%d", ref, m, fname, lnum)
+	}
+}
+
+func (lt *localTester) ExpectEmpty(t *testing.T, traderId uint32) {
+	if len(lt.dispatch) != 0 {
+		t.Errorf("\nExpecting Empty:\nFound: %v", <-lt.dispatch)
 	}
 }
 

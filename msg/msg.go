@@ -60,7 +60,6 @@ func (r MsgRoute) String() string {
 
 type MsgKind uint32
 
-// TODO replace PARTIAL and FULL with PARTIAL_SELL, PARTIAL_BUY and FULL_SELL, FULL_BUY
 const (
 	NO_KIND = MsgKind(0)
 	// Incoming messages

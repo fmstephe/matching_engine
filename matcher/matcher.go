@@ -7,15 +7,16 @@ import (
 )
 
 type M struct {
-	matchQueues prioq.MatchQueues // No constructor required
+	matchQueues map[uint32]*prioq.MatchQueues
 	slab        *prioq.Slab
 	dispatch    chan *msg.Message
 	orders      chan *msg.Message
 }
 
 func NewMatcher(slabSize int) *M {
+	matchQueues := make(map[uint32]*prioq.MatchQueues)
 	slab := prioq.NewSlab(slabSize)
-	return &M{slab: slab}
+	return &M{matchQueues: matchQueues, slab: slab}
 }
 
 func (m *M) SetDispatch(dispatch chan *msg.Message) {
@@ -24,6 +25,15 @@ func (m *M) SetDispatch(dispatch chan *msg.Message) {
 
 func (m *M) SetOrders(orders chan *msg.Message) {
 	m.orders = orders
+}
+
+func (m *M) getMatchQueues(stockId uint32) *prioq.MatchQueues {
+	q := m.matchQueues[stockId]
+	if q == nil {
+		q = &prioq.MatchQueues{}
+		m.matchQueues[stockId] = q
+	}
+	return q
 }
 
 func (m *M) Run() {
@@ -45,7 +55,7 @@ func (m *M) Run() {
 		case msg.CANCEL:
 			m.cancel(on)
 		default:
-			// This should probably just be an message to m.dispatch
+			// This should probably just be a message to m.dispatch
 			panic(fmt.Sprintf("MsgKind %v not supported", on.Kind()))
 		}
 	}
@@ -56,19 +66,22 @@ func (m *M) addBuy(b *prioq.OrderNode) {
 		// This should probably just be a message to m.dispatch
 		panic("It is illegal to send a buy at market price")
 	}
-	if !m.fillableBuy(b) {
-		m.matchQueues.PushBuy(b)
+	q := m.getMatchQueues(b.StockId())
+	if !m.fillableBuy(b, q) {
+		q.PushBuy(b)
 	}
 }
 
 func (m *M) addSell(s *prioq.OrderNode) {
-	if !m.fillableSell(s) {
-		m.matchQueues.PushSell(s)
+	q := m.getMatchQueues(s.StockId())
+	if !m.fillableSell(s, q) {
+		q.PushSell(s)
 	}
 }
 
 func (m *M) cancel(o *prioq.OrderNode) {
-	ro := m.matchQueues.Cancel(o)
+	q := m.getMatchQueues(o.StockId())
+	ro := q.Cancel(o)
 	if ro != nil {
 		completeCancelled(m.dispatch, ro)
 		m.slab.Free(ro)
@@ -78,9 +91,9 @@ func (m *M) cancel(o *prioq.OrderNode) {
 	m.slab.Free(o)
 }
 
-func (m *M) fillableBuy(b *prioq.OrderNode) bool {
+func (m *M) fillableBuy(b *prioq.OrderNode, q *prioq.MatchQueues) bool {
 	for {
-		s := m.matchQueues.PeekSell()
+		s := q.PeekSell()
 		if s == nil {
 			return false
 		}
@@ -88,7 +101,7 @@ func (m *M) fillableBuy(b *prioq.OrderNode) bool {
 			if b.Amount() > s.Amount() {
 				amount := s.Amount()
 				price := price(b.Price(), s.Price())
-				m.slab.Free(m.matchQueues.PopSell())
+				m.slab.Free(q.PopSell())
 				b.ReduceAmount(amount)
 				completeTrade(m.dispatch, msg.PARTIAL, msg.FULL, b, s, price, amount)
 				continue
@@ -105,7 +118,7 @@ func (m *M) fillableBuy(b *prioq.OrderNode) bool {
 				amount := b.Amount()
 				price := price(b.Price(), s.Price())
 				completeTrade(m.dispatch, msg.FULL, msg.FULL, b, s, price, amount)
-				m.slab.Free(m.matchQueues.PopSell())
+				m.slab.Free(q.PopSell())
 				m.slab.Free(b)
 				return true // The buy has been used up
 			}
@@ -116,9 +129,9 @@ func (m *M) fillableBuy(b *prioq.OrderNode) bool {
 	panic("Unreachable")
 }
 
-func (m *M) fillableSell(s *prioq.OrderNode) bool {
+func (m *M) fillableSell(s *prioq.OrderNode, q *prioq.MatchQueues) bool {
 	for {
-		b := m.matchQueues.PeekBuy()
+		b := q.PeekBuy()
 		if b == nil {
 			return false
 		}
@@ -136,14 +149,14 @@ func (m *M) fillableSell(s *prioq.OrderNode) bool {
 				price := price(b.Price(), s.Price())
 				s.ReduceAmount(amount)
 				completeTrade(m.dispatch, msg.FULL, msg.PARTIAL, b, s, price, amount)
-				m.slab.Free(m.matchQueues.PopBuy())
+				m.slab.Free(q.PopBuy())
 				continue
 			}
 			if s.Amount() == b.Amount() {
 				amount := b.Amount()
 				price := price(b.Price(), s.Price())
 				completeTrade(m.dispatch, msg.FULL, msg.FULL, b, s, price, amount)
-				m.slab.Free(m.matchQueues.PopBuy())
+				m.slab.Free(q.PopBuy())
 				m.slab.Free(s)
 				return true // The sell has been used up
 			}

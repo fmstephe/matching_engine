@@ -87,10 +87,29 @@ func (nt *netwkTester) Expect(t *testing.T, e *msg.Message) {
 	nt.writeNetwk(e)
 	r, err := receive(nt.getConns(e.TraderId).read)
 	if err != nil {
-		t.Error(err.Error())
+		_, fname, lnum, _ := runtime.Caller(1)
+		t.Errorf("Failure %s\n%s:%d", err.Error(), fname, lnum)
 		return
 	}
 	validate(t, r, e)
+}
+
+// This implementation uses a heuristic that a timeout or a certain number of SERVER_ACK
+// messages satisfies an empty expectation
+func (nt *netwkTester) ExpectEmpty(t *testing.T, traderId uint32) {
+	limit := 20
+	for i := 0; i < limit; i++ {
+		r, err := receive(nt.getConns(traderId).read)
+		if err == nil && r.Route != msg.SERVER_ACK {
+			t.Errorf("\nExpecting empty\nReceived %v", r)
+			return
+		}
+		if err != nil {
+			expectTimeoutErr(t, err)
+			return
+		}
+	}
+	return
 }
 
 func (nt *netwkTester) ExpectFiniteResends(t *testing.T, e *msg.Message) {

@@ -6,10 +6,6 @@ import (
 	"math/rand"
 )
 
-var (
-	stockId = uint32(1)
-)
-
 type MessageMaker struct {
 	traderId uint32
 	r        *rand.Rand
@@ -63,15 +59,15 @@ func (mm *MessageMaker) ValRangeFlat(n int, low, high int64) []int64 {
 	return vals
 }
 
-func (mm *MessageMaker) MkBuys(prices []int64) []Message {
-	return mm.MkOrders(prices, BUY)
+func (mm *MessageMaker) MkBuys(prices []int64, stockId uint32) []Message {
+	return mm.MkOrders(prices, stockId, BUY)
 }
 
-func (mm *MessageMaker) MkSells(prices []int64) []Message {
-	return mm.MkOrders(prices, SELL)
+func (mm *MessageMaker) MkSells(prices []int64, stockId uint32) []Message {
+	return mm.MkOrders(prices, stockId, SELL)
 }
 
-func (mm *MessageMaker) MkOrders(prices []int64, kind MsgKind) []Message {
+func (mm *MessageMaker) MkOrders(prices []int64, stockId uint32, kind MsgKind) []Message {
 	msgs := make([]Message, len(prices))
 	for i, price := range prices {
 		mm.traderId++
