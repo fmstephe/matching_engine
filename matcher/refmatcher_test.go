@@ -1,25 +1,25 @@
 package matcher
 
 import (
+	"github.com/fmstephe/matching_engine/matcher/pqueue"
 	"github.com/fmstephe/matching_engine/msg"
-	"github.com/fmstephe/matching_engine/prioq"
 )
 
 type refmatcher struct {
-	matchQueues *prioq.RefMatchQueues
+	matchQueues *pqueue.RefMatchQueues
 	dispatch    chan *msg.Message
 	orders      chan *msg.Message
 }
 
 func newRefmatcher(lowPrice, highPrice int64, dispatch chan *msg.Message, orders chan *msg.Message) *refmatcher {
-	matchQueues := prioq.NewRefMatchQueues(lowPrice, highPrice)
+	matchQueues := pqueue.NewRefMatchQueues(lowPrice, highPrice)
 	return &refmatcher{matchQueues: matchQueues, dispatch: dispatch, orders: orders}
 }
 
 func (m *refmatcher) Run() {
 	for {
 		od := <-m.orders
-		o := &prioq.OrderNode{}
+		o := &pqueue.OrderNode{}
 		o.CopyFrom(od)
 		if o.Kind() == msg.CANCEL {
 			co := m.matchQueues.Cancel(o)
@@ -36,7 +36,7 @@ func (m *refmatcher) Run() {
 	}
 }
 
-func (m *refmatcher) push(o *prioq.OrderNode) {
+func (m *refmatcher) push(o *pqueue.OrderNode) {
 	if o.Kind() == msg.BUY {
 		m.matchQueues.PushBuy(o)
 		return

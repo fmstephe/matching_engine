@@ -1,26 +1,26 @@
-package prioq
+package pqueue
 
 import ()
 
 // An easy to build priority queue
-type prioq struct {
+type pqueue struct {
 	prios               [][]*OrderNode
 	lowPrice, highPrice int64
 }
 
-func mkPrioq(lowPrice, highPrice int64) *prioq {
+func mkPrioq(lowPrice, highPrice int64) *pqueue {
 	prios := make([][]*OrderNode, highPrice-lowPrice+1)
-	return &prioq{prios: prios, lowPrice: lowPrice, highPrice: highPrice}
+	return &pqueue{prios: prios, lowPrice: lowPrice, highPrice: highPrice}
 }
 
-func (q *prioq) push(o *OrderNode) {
+func (q *pqueue) push(o *OrderNode) {
 	idx := o.Price() - q.lowPrice
 	prio := q.prios[idx]
 	prio = append(prio, o)
 	q.prios[idx] = prio
 }
 
-func (q *prioq) peekMax() *OrderNode {
+func (q *pqueue) peekMax() *OrderNode {
 	if len(q.prios) == 0 {
 		return nil
 	}
@@ -35,7 +35,7 @@ func (q *prioq) peekMax() *OrderNode {
 	return nil
 }
 
-func (q *prioq) popMax() *OrderNode {
+func (q *pqueue) popMax() *OrderNode {
 	if len(q.prios) == 0 {
 		return nil
 	}
@@ -50,7 +50,7 @@ func (q *prioq) popMax() *OrderNode {
 	return nil
 }
 
-func (q *prioq) peekMin() *OrderNode {
+func (q *pqueue) peekMin() *OrderNode {
 	if len(q.prios) == 0 {
 		return nil
 	}
@@ -65,7 +65,7 @@ func (q *prioq) peekMin() *OrderNode {
 	return nil
 }
 
-func (q *prioq) popMin() *OrderNode {
+func (q *pqueue) popMin() *OrderNode {
 	if len(q.prios) == 0 {
 		return nil
 	}
@@ -80,7 +80,7 @@ func (q *prioq) popMin() *OrderNode {
 	return nil
 }
 
-func (q *prioq) pop(i int) *OrderNode {
+func (q *pqueue) pop(i int) *OrderNode {
 	prio := q.prios[i]
 	o := prio[0]
 	prio = prio[1:]
@@ -88,7 +88,7 @@ func (q *prioq) pop(i int) *OrderNode {
 	return o
 }
 
-func (q *prioq) cancel(guid int64) *OrderNode {
+func (q *pqueue) cancel(guid int64) *OrderNode {
 	for i := range q.prios {
 		priceQ := q.prios[i]
 		for j := range priceQ {

@@ -1,4 +1,4 @@
-package prioq
+package pqueue
 
 import (
 	"bytes"

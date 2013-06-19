@@ -1,4 +1,4 @@
-package prioq
+package pqueue
 
 import (
 	"github.com/fmstephe/matching_engine/msg"
@@ -7,7 +7,7 @@ import (
 )
 
 // A function signature allowing us to switch easily between min and max queues
-type popperFun func(*testing.T, *rbtree, *rbtree, *prioq) (*OrderNode, *OrderNode, *OrderNode)
+type popperFun func(*testing.T, *rbtree, *rbtree, *pqueue) (*OrderNode, *OrderNode, *OrderNode)
 
 var msgMkr = msg.NewMessageMaker(1)
 
@@ -293,7 +293,7 @@ func checkQueue(t *testing.T, n *node) {
 }
 
 // Function to pop and peek and check that everything is in order
-func popCheck(t *testing.T, priceTree, guidTree *rbtree, q *prioq, popper popperFun) {
+func popCheck(t *testing.T, priceTree, guidTree *rbtree, q *pqueue, popper popperFun) {
 	peek, pop, check := popper(t, priceTree, guidTree, q)
 	if pop != check {
 		t.Errorf("Mismatched push/pop pair")
@@ -307,7 +307,7 @@ func popCheck(t *testing.T, priceTree, guidTree *rbtree, q *prioq, popper popper
 }
 
 // Helper functions for popping either the max or the min from our queues
-func maxPopper(t *testing.T, priceTree, guidTree *rbtree, q *prioq) (peek, pop, check *OrderNode) {
+func maxPopper(t *testing.T, priceTree, guidTree *rbtree, q *pqueue) (peek, pop, check *OrderNode) {
 	peek = priceTree.peekMax().getOrderNode()
 	if !guidTree.Has(peek.Guid()) {
 		t.Errorf("Guid rbtree does not contain peeked order")
@@ -322,7 +322,7 @@ func maxPopper(t *testing.T, priceTree, guidTree *rbtree, q *prioq) (peek, pop, 
 	return
 }
 
-func minPopper(t *testing.T, priceTree, guidTree *rbtree, q *prioq) (peek, pop, check *OrderNode) {
+func minPopper(t *testing.T, priceTree, guidTree *rbtree, q *pqueue) (peek, pop, check *OrderNode) {
 	peek = priceTree.peekMin().getOrderNode()
 	if !guidTree.Has(peek.Guid()) {
 		t.Errorf("Guid rbtree does not contain peeked order")

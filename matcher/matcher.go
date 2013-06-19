@@ -2,20 +2,20 @@ package matcher
 
 import (
 	"fmt"
+	"github.com/fmstephe/matching_engine/matcher/pqueue"
 	"github.com/fmstephe/matching_engine/msg"
-	"github.com/fmstephe/matching_engine/prioq"
 )
 
 type M struct {
-	matchQueues map[uint32]*prioq.MatchQueues
-	slab        *prioq.Slab
+	matchQueues map[uint32]*pqueue.MatchQueues
+	slab        *pqueue.Slab
 	dispatch    chan *msg.Message
 	orders      chan *msg.Message
 }
 
 func NewMatcher(slabSize int) *M {
-	matchQueues := make(map[uint32]*prioq.MatchQueues)
-	slab := prioq.NewSlab(slabSize)
+	matchQueues := make(map[uint32]*pqueue.MatchQueues)
+	slab := pqueue.NewSlab(slabSize)
 	return &M{matchQueues: matchQueues, slab: slab}
 }
 
@@ -27,10 +27,10 @@ func (m *M) SetOrders(orders chan *msg.Message) {
 	m.orders = orders
 }
 
-func (m *M) getMatchQueues(stockId uint32) *prioq.MatchQueues {
+func (m *M) getMatchQueues(stockId uint32) *pqueue.MatchQueues {
 	q := m.matchQueues[stockId]
 	if q == nil {
-		q = &prioq.MatchQueues{}
+		q = &pqueue.MatchQueues{}
 		m.matchQueues[stockId] = q
 	}
 	return q
@@ -61,7 +61,7 @@ func (m *M) Run() {
 	}
 }
 
-func (m *M) addBuy(b *prioq.OrderNode) {
+func (m *M) addBuy(b *pqueue.OrderNode) {
 	if b.Price() == msg.MARKET_PRICE {
 		// This should probably just be a message to m.dispatch
 		panic("It is illegal to send a buy at market price")
@@ -72,14 +72,14 @@ func (m *M) addBuy(b *prioq.OrderNode) {
 	}
 }
 
-func (m *M) addSell(s *prioq.OrderNode) {
+func (m *M) addSell(s *pqueue.OrderNode) {
 	q := m.getMatchQueues(s.StockId())
 	if !m.fillableSell(s, q) {
 		q.PushSell(s)
 	}
 }
 
-func (m *M) cancel(o *prioq.OrderNode) {
+func (m *M) cancel(o *pqueue.OrderNode) {
 	q := m.getMatchQueues(o.StockId())
 	ro := q.Cancel(o)
 	if ro != nil {
@@ -91,7 +91,7 @@ func (m *M) cancel(o *prioq.OrderNode) {
 	m.slab.Free(o)
 }
 
-func (m *M) fillableBuy(b *prioq.OrderNode, q *prioq.MatchQueues) bool {
+func (m *M) fillableBuy(b *pqueue.OrderNode, q *pqueue.MatchQueues) bool {
 	for {
 		s := q.PeekSell()
 		if s == nil {
@@ -129,7 +129,7 @@ func (m *M) fillableBuy(b *prioq.OrderNode, q *prioq.MatchQueues) bool {
 	panic("Unreachable")
 }
 
-func (m *M) fillableSell(s *prioq.OrderNode, q *prioq.MatchQueues) bool {
+func (m *M) fillableSell(s *pqueue.OrderNode, q *pqueue.MatchQueues) bool {
 	for {
 		b := q.PeekBuy()
 		if b == nil {
@@ -175,7 +175,7 @@ func price(bPrice, sPrice int64) int64 {
 	return sPrice + (d / 2)
 }
 
-func completeTrade(dispatch chan *msg.Message, brk, srk msg.MsgKind, b, s *prioq.OrderNode, price int64, amount uint32) {
+func completeTrade(dispatch chan *msg.Message, brk, srk msg.MsgKind, b, s *pqueue.OrderNode, price int64, amount uint32) {
 	br := &msg.Message{Price: -price, Amount: amount, TraderId: b.TraderId(), TradeId: b.TradeId(), StockId: b.StockId()}
 	br.IP = b.IP()
 	br.Port = b.Port()
@@ -188,19 +188,19 @@ func completeTrade(dispatch chan *msg.Message, brk, srk msg.MsgKind, b, s *prioq
 	dispatch <- sr
 }
 
-func completeCancelled(dispatch chan *msg.Message, c *prioq.OrderNode) {
+func completeCancelled(dispatch chan *msg.Message, c *pqueue.OrderNode) {
 	cr := writeMessage(c)
 	cr.WriteCancelled()
 	dispatch <- cr
 }
 
-func completeNotCancelled(dispatch chan *msg.Message, nc *prioq.OrderNode) {
+func completeNotCancelled(dispatch chan *msg.Message, nc *pqueue.OrderNode) {
 	ncr := writeMessage(nc)
 	ncr.WriteNotCancelled()
 	dispatch <- ncr
 }
 
-func writeMessage(on *prioq.OrderNode) *msg.Message {
+func writeMessage(on *pqueue.OrderNode) *msg.Message {
 	m := &msg.Message{Price: on.Price(), Amount: on.Amount(), TraderId: on.TraderId(), TradeId: on.TradeId(), StockId: on.StockId()}
 	m.IP = on.IP()
 	m.Port = on.Port()

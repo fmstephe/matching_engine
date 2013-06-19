@@ -1,10 +1,10 @@
-package prioq
+package pqueue
 
 import ()
 
 type RefMatchQueues struct {
-	buys  *prioq
-	sells *prioq
+	buys  *pqueue
+	sells *pqueue
 	size  int
 }
 
