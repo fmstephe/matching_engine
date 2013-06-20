@@ -8,15 +8,13 @@ import (
 
 var mkr = newMatchTesterMaker()
 
-// TODO we are getting races on resent messages - a solution could be to CLIENT_ACK a message inside the Expect method
-// Then drain the port of all repeat messages.
 func TestRunTestSuite(t *testing.T) {
 	matcher.RunTestSuite(t, newMatchTesterMaker())
 }
 
 func TestResponseResend(t *testing.T) {
-	mt := mkr.Make()
-	mt.(*netwkTester).timeout = RESEND_MILLIS * 5
+	mt := mkr.Make().(*netwkTester)
+	mt.timeout = RESEND_MILLIS * 5
 	defer mt.Cleanup(t)
 	// Add Sell
 	s := &msg.Message{TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
@@ -37,18 +35,18 @@ func TestResponseResend(t *testing.T) {
 	sas.Route = msg.RESPONSE
 	sas.Kind = msg.FULL
 	// We expect that we will keep receiving the RESPONSE messages, because we didn't ack them
-	mt.Expect(t, sab)
-	mt.Expect(t, sas)
-	mt.Expect(t, sab)
-	mt.Expect(t, sas)
-	mt.Expect(t, sab)
-	mt.Expect(t, sas)
-	mt.Expect(t, sab)
-	mt.Expect(t, sas)
-	mt.Expect(t, sab)
-	mt.Expect(t, sas)
-	mt.Expect(t, sab)
-	mt.Expect(t, sas)
+	mt.ExpectNoAck(t, sab)
+	mt.ExpectNoAck(t, sas)
+	mt.ExpectNoAck(t, sab)
+	mt.ExpectNoAck(t, sas)
+	mt.ExpectNoAck(t, sab)
+	mt.ExpectNoAck(t, sas)
+	mt.ExpectNoAck(t, sab)
+	mt.ExpectNoAck(t, sas)
+	mt.ExpectNoAck(t, sab)
+	mt.ExpectNoAck(t, sas)
+	mt.ExpectNoAck(t, sab)
+	mt.ExpectNoAck(t, sas)
 }
 
 func TestClientAck(t *testing.T) {
@@ -74,8 +72,8 @@ func TestClientAck(t *testing.T) {
 	sas.Route = msg.RESPONSE
 	sas.Kind = msg.FULL
 	// We expect that we will keep receiving the RESPONSE messages, until we ack them
-	mt.Expect(t, sab)
-	mt.Expect(t, sas)
+	mt.ExpectNoAck(t, sab)
+	mt.ExpectNoAck(t, sas)
 	// client ack buy
 	cab := &msg.Message{TraderId: 2, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
 	cab.Route = msg.CLIENT_ACK
@@ -87,6 +85,6 @@ func TestClientAck(t *testing.T) {
 	cas.Kind = msg.FULL
 	mt.SendNoAck(t, cas)
 	// We expect that after we send the client acks we will no longer receive resends
-	mt.ExpectFiniteResends(t, sab)
-	mt.ExpectFiniteResends(t, sas)
+	mt.ExpectEmpty(t, sab.TraderId)
+	mt.ExpectEmpty(t, sas.TraderId)
 }

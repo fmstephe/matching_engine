@@ -3,6 +3,7 @@ package netwk
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"github.com/fmstephe/matching_engine/coordinator"
 	"github.com/fmstephe/matching_engine/matcher"
@@ -14,11 +15,7 @@ import (
 	"time"
 )
 
-// NB: There are a number of problems with these tests which are currently being ignored
-// 1: Because we are communicating via UDP messages could arrive out of order, in practice they travel in-order via localhost
-// 2: In the main test suite messages are currently not being acked, which means that responses may be re-sent - which would
-//    confuse response checking. This doesn't impact the tests right now because the resend rate is so slow that the test is
-//    complete and the system shut down before unacked messages are resent, this is pretty delicate.
+// Because we are communicating via UDP, messages could arrive out of order, in practice they travel in-order via localhost
 
 const (
 	portAllocation = 100
@@ -71,68 +68,66 @@ type conns struct {
 	write      *net.UDPConn
 }
 
-func (nt *netwkTester) Send(t *testing.T, m *msg.Message) {
-	nt.writeNetwk(m)
+func (nt *netwkTester) writeMsg(m *msg.Message) error {
+	nt.writeNetwkInfo(m)
 	buf := bytes.NewBuffer(make([]byte, 0))
 	binary.Write(buf, binary.BigEndian, m)
-	nt.getConns(m.TraderId).write.Write(buf.Bytes())
-	// We always expect a server ack when sending a message
+	_, err := nt.getConns(m.TraderId).write.Write(buf.Bytes())
+	return err
+}
+
+func (nt *netwkTester) Send(t *testing.T, m *msg.Message) {
+	if err := nt.writeMsg(m); err != nil {
+		_, fname, lnum, _ := runtime.Caller(1)
+		t.Errorf("\n%s\n%s:%d", err.Error(), fname, lnum)
+	}
 	ref := &msg.Message{}
 	ref.WriteServerAckFor(m)
-	nt.Expect(t, ref)
+	nt.simpleExpect(t, ref)
 }
 
 func (nt *netwkTester) SendNoAck(t *testing.T, m *msg.Message) {
-	nt.writeNetwk(m)
-	buf := bytes.NewBuffer(make([]byte, 0))
-	binary.Write(buf, binary.BigEndian, m)
-	nt.getConns(m.TraderId).write.Write(buf.Bytes())
+	if err := nt.writeMsg(m); err != nil {
+		_, fname, lnum, _ := runtime.Caller(1)
+		t.Errorf("\n%s\n%s:%d", err.Error(), fname, lnum)
+	}
 }
 
 func (nt *netwkTester) Expect(t *testing.T, e *msg.Message) {
-	nt.writeNetwk(e)
+	nt.simpleExpect(t, e)
+	ca := &msg.Message{}
+	ca.WriteClientAckFor(e)
+	if err := nt.writeMsg(ca); err != nil {
+		_, fname, lnum, _ := runtime.Caller(1)
+		t.Errorf("\n%s\n%s:%d", err.Error(), fname, lnum)
+	}
+}
+
+func (nt *netwkTester) ExpectNoAck(t *testing.T, e *msg.Message) {
+	nt.simpleExpect(t, e)
+}
+
+func (nt *netwkTester) simpleExpect(t *testing.T, e *msg.Message) {
+	nt.writeNetwkInfo(e)
 	r, err := receive(nt.getConns(e.TraderId).read)
 	if err != nil {
-		_, fname, lnum, _ := runtime.Caller(1)
+		_, fname, lnum, _ := runtime.Caller(2)
 		t.Errorf("Failure %s\n%s:%d", err.Error(), fname, lnum)
 		return
 	}
-	validate(t, r, e)
+	if err = validate(r, e); err != nil {
+		_, fname, lnum, _ := runtime.Caller(2)
+		t.Errorf("Failure %s\n%s:%d", err.Error(), fname, lnum)
+		return
+	}
 }
 
-// This implementation uses a heuristic that a timeout or a certain number of SERVER_ACK
-// messages satisfies an empty expectation
 func (nt *netwkTester) ExpectEmpty(t *testing.T, traderId uint32) {
-	limit := 20
-	for i := 0; i < limit; i++ {
-		r, err := receive(nt.getConns(traderId).read)
-		if err == nil && r.Route != msg.SERVER_ACK {
-			t.Errorf("\nExpecting empty\nReceived %v", r)
-			return
-		}
-		if err != nil {
-			expectTimeoutErr(t, err)
-			return
-		}
+	_, err := receive(nt.getConns(traderId).read)
+	if err != nil {
+		expectTimeoutErr(t, err)
 	}
 	return
-}
-
-func (nt *netwkTester) ExpectFiniteResends(t *testing.T, e *msg.Message) {
-	nt.writeNetwk(e)
-	limit := 20
-	for i := 0; i < limit; i++ {
-		r, err := receive(nt.getConns(e.TraderId).read)
-		if err == nil && !validate(t, r, e) {
-			return
-		}
-		if err != nil {
-			expectTimeoutErr(t, err)
-			return
-		}
-	}
-	_, fname, lnum, _ := runtime.Caller(1)
-	t.Errorf("\nExpecting timeout\nReceived %d responses\n%s:%d", limit, fname, lnum)
 }
 
 func (nt *netwkTester) ExpectTimeout(t *testing.T, traderId uint32) {
@@ -158,7 +153,7 @@ func (nt *netwkTester) Cleanup(t *testing.T) {
 	nt.Send(t, m)
 }
 
-func (nt *netwkTester) writeNetwk(m *msg.Message) {
+func (nt *netwkTester) writeNetwkInfo(m *msg.Message) {
 	m.IP = nt.ip
 	m.Port = int32(nt.getConns(m.TraderId).clientPort)
 }
@@ -170,8 +165,8 @@ func (nt *netwkTester) getConns(traderId uint32) *conns {
 		if nt.freePort > nt.maxPort {
 			panic(fmt.Sprintf("Too many ports used. Only allowed %d", portAllocation))
 		}
-		read := readConn(nt.freePort)
-		write := writeConn(nt.serverPort)
+		read := mkReadConn(nt.freePort)
+		write := mkWriteConn(nt.serverPort)
 		c = &conns{read: read, write: write, clientPort: nt.freePort}
 		nt.connsMap[traderId] = c
 	}
@@ -180,7 +175,7 @@ func (nt *netwkTester) getConns(traderId uint32) *conns {
 	return c
 }
 
-func writeConn(port int) *net.UDPConn {
+func mkWriteConn(port int) *net.UDPConn {
 	addr, err := net.ResolveUDPAddr("udp", ":"+strconv.Itoa(port))
 	if err != nil {
 		panic(err)
@@ -192,7 +187,7 @@ func writeConn(port int) *net.UDPConn {
 	return conn
 }
 
-func readConn(port int) *net.UDPConn {
+func mkReadConn(port int) *net.UDPConn {
 	addr, err := net.ResolveUDPAddr("upd", ":"+strconv.Itoa(port))
 	if err != nil {
 		panic(err)
@@ -216,11 +211,9 @@ func receive(read *net.UDPConn) (*msg.Message, error) {
 	return r, nil
 }
 
-func validate(t *testing.T, m, e *msg.Message) bool {
+func validate(m, e *msg.Message) error {
 	if *m != *e {
-		_, fname, lnum, _ := runtime.Caller(2)
-		t.Errorf("\nExpecting: %v\nFound:     %v \n%s:%d", e, m, fname, lnum)
-		return false
+		return errors.New(fmt.Sprintf("\nExpecting: %v\nFound:     %v \n%s:%d", e, m))
 	}
-	return true
+	return nil
 }
