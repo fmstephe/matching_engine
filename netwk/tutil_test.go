@@ -3,7 +3,6 @@ package netwk
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"github.com/fmstephe/matching_engine/coordinator"
 	"github.com/fmstephe/matching_engine/matcher"
@@ -115,11 +114,7 @@ func (nt *netwkTester) simpleExpect(t *testing.T, e *msg.Message) {
 		t.Errorf("Failure %s\n%s:%d", err.Error(), fname, lnum)
 		return
 	}
-	if err = validate(r, e); err != nil {
-		_, fname, lnum, _ := runtime.Caller(2)
-		t.Errorf("Failure %s\n%s:%d", err.Error(), fname, lnum)
-		return
-	}
+	validate(t, r, e, 3)
 }
 
 func (nt *netwkTester) ExpectEmpty(t *testing.T, traderId uint32) {
@@ -211,9 +206,9 @@ func receive(read *net.UDPConn) (*msg.Message, error) {
 	return r, nil
 }
 
-func validate(m, e *msg.Message) error {
+func validate(t *testing.T, m, e *msg.Message, stackOffset int) {
 	if *m != *e {
-		return errors.New(fmt.Sprintf("\nExpecting: %v\nFound:     %v \n%s:%d", e, m))
+		_, fname, lnum, _ := runtime.Caller(stackOffset)
+		t.Errorf("\nExpecting: %v\nFound:     %v \n%s:%d", e, m, fname, lnum)
 	}
-	return nil
 }

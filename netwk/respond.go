@@ -40,12 +40,12 @@ func (r *Responder) Run() {
 		select {
 		case resp := <-r.responses:
 			switch {
-			case resp.Status == msg.NOT_SENDABLE_ERROR:
-				panic("Not sendable error sent to responder. Probable infinite loop.")
 			case resp.Status == msg.SENDABLE_ERROR, resp.Route == msg.RESPONSE, resp.Route == msg.SERVER_ACK:
 				r.writeResponse(resp)
 			case resp.Route == msg.CLIENT_ACK:
 				r.handleClientAck(resp)
+			case resp.Status == msg.NOT_SENDABLE_ERROR:
+				panic("Not sendable error sent to responder. Probable infinite loop.")
 			case resp.Route == msg.COMMAND && resp.Kind == msg.SHUTDOWN:
 				return
 			}
@@ -63,18 +63,35 @@ func (r *Responder) handleClientAck(ca *msg.Message) {
 		if ca.TraderId == uResp.TraderId && ca.TradeId == uResp.TradeId {
 			unacked[i] = unacked[len(unacked)-1]
 			unacked = unacked[:len(unacked)-1]
-			// Corner cases?
+			r.unacked = unacked
+			return
 		}
 	}
-	r.unacked = unacked
 }
 
 func (r *Responder) writeResponse(resp *msg.Message) {
+	r.addToUnacked(resp)
+	r.write(resp)
+}
+
+func (r *Responder) addToUnacked(resp *msg.Message) {
 	if resp.Route == msg.RESPONSE {
 		r.unacked = append(r.unacked, resp)
 	}
-	err := r.write(resp)
-	if err != nil {
+}
+
+func (r *Responder) resend() {
+	for _, resp := range r.unacked {
+		r.write(resp)
+	}
+}
+
+func (r *Responder) write(resp *msg.Message) {
+	nbuf := &bytes.Buffer{}
+	if err := binary.Write(nbuf, binary.BigEndian, resp); err != nil {
+		r.handleError(resp, err)
+	}
+	if err := r.writer.Write(nbuf.Bytes(), resp.IP, int(resp.Port)); err != nil {
 		r.handleError(resp, err)
 	}
 }
@@ -87,21 +104,6 @@ func (r *Responder) handleError(resp *msg.Message, err error) {
 		em.WriteStatus(msg.SENDABLE_ERROR)
 	}
 	r.dispatch <- em
-}
-
-func (r *Responder) resend() {
-	for _, resp := range r.unacked {
-		r.write(resp)
-	}
-}
-
-func (r *Responder) write(resp *msg.Message) error {
-	nbuf := &bytes.Buffer{}
-	err := binary.Write(nbuf, binary.BigEndian, resp)
-	if err != nil {
-		return err
-	}
-	return r.writer.Write(nbuf.Bytes(), resp.IP, int(resp.Port))
 }
 
 func (r *Responder) shutdown() {
