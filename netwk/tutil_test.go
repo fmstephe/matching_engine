@@ -49,7 +49,8 @@ func (m *netwkTesterMaker) Make() matcher.MatchTester {
 	match := matcher.NewMatcher(100)
 	coordinator.Coordinate(listener, responder, match, false)
 	timeout := time.Duration(1) * time.Second
-	return &netwkTester{ip: m.ip, serverPort: serverPort, maxPort: m.port - 1, freePort: minPort, connsMap: make(map[uint32]*conns), timeout: timeout}
+	clientMap := make(map[uint32]*client)
+	return &netwkTester{ip: m.ip, serverPort: serverPort, maxPort: m.port - 1, freePort: minPort, clientMap: clientMap, timeout: timeout}
 }
 
 type netwkTester struct {
@@ -57,26 +58,13 @@ type netwkTester struct {
 	serverPort int
 	freePort   int
 	maxPort    int
-	connsMap   map[uint32]*conns
+	clientMap  map[uint32]*client
 	timeout    time.Duration
 }
 
-type conns struct {
-	clientPort int
-	read       *net.UDPConn
-	write      *net.UDPConn
-}
-
-func (nt *netwkTester) writeMsg(m *msg.Message) error {
-	nt.writeNetwkInfo(m)
-	buf := bytes.NewBuffer(make([]byte, 0))
-	binary.Write(buf, binary.BigEndian, m)
-	_, err := nt.getConns(m.TraderId).write.Write(buf.Bytes())
-	return err
-}
-
 func (nt *netwkTester) Send(t *testing.T, m *msg.Message) {
-	if err := nt.writeMsg(m); err != nil {
+	c := nt.getClient(m.TraderId)
+	if err := c.writeMsg(m); err != nil {
 		_, fname, lnum, _ := runtime.Caller(1)
 		t.Errorf("\n%s\n%s:%d", err.Error(), fname, lnum)
 	}
@@ -86,17 +74,31 @@ func (nt *netwkTester) Send(t *testing.T, m *msg.Message) {
 }
 
 func (nt *netwkTester) SendNoAck(t *testing.T, m *msg.Message) {
-	if err := nt.writeMsg(m); err != nil {
+	c := nt.getClient(m.TraderId)
+	if err := c.writeMsg(m); err != nil {
 		_, fname, lnum, _ := runtime.Caller(1)
 		t.Errorf("\n%s\n%s:%d", err.Error(), fname, lnum)
 	}
 }
 
+func (nt *netwkTester) simpleExpect(t *testing.T, e *msg.Message) {
+	c := nt.getClient(e.TraderId)
+	c.writeNetwkInfo(e)
+	r, err := c.receive()
+	if err != nil {
+		_, fname, lnum, _ := runtime.Caller(2)
+		t.Errorf("Failure %s\n%s:%d", err.Error(), fname, lnum)
+		return
+	}
+	validate(t, r, e, 3)
+}
+
 func (nt *netwkTester) Expect(t *testing.T, e *msg.Message) {
+	c := nt.getClient(e.TraderId)
 	nt.simpleExpect(t, e)
 	ca := &msg.Message{}
 	ca.WriteClientAckFor(e)
-	if err := nt.writeMsg(ca); err != nil {
+	if err := c.writeMsg(ca); err != nil {
 		_, fname, lnum, _ := runtime.Caller(1)
 		t.Errorf("\n%s\n%s:%d", err.Error(), fname, lnum)
 	}
@@ -106,19 +108,9 @@ func (nt *netwkTester) ExpectNoAck(t *testing.T, e *msg.Message) {
 	nt.simpleExpect(t, e)
 }
 
-func (nt *netwkTester) simpleExpect(t *testing.T, e *msg.Message) {
-	nt.writeNetwkInfo(e)
-	r, err := receive(nt.getConns(e.TraderId).read)
-	if err != nil {
-		_, fname, lnum, _ := runtime.Caller(2)
-		t.Errorf("Failure %s\n%s:%d", err.Error(), fname, lnum)
-		return
-	}
-	validate(t, r, e, 3)
-}
-
 func (nt *netwkTester) ExpectEmpty(t *testing.T, traderId uint32) {
-	_, err := receive(nt.getConns(traderId).read)
+	c := nt.getClient(traderId)
+	_, err := c.receive()
 	if err != nil {
 		expectTimeoutErr(t, err)
 	}
@@ -126,7 +118,8 @@ func (nt *netwkTester) ExpectEmpty(t *testing.T, traderId uint32) {
 }
 
 func (nt *netwkTester) ExpectTimeout(t *testing.T, traderId uint32) {
-	r, err := receive(nt.getConns(traderId).read)
+	c := nt.getClient(traderId)
+	r, err := c.receive()
 	if err == nil {
 		_, fname, lnum, _ := runtime.Caller(1)
 		t.Error("\nExpecting timeout\n Recieved %v\n%s%d", r, fname, lnum)
@@ -143,18 +136,16 @@ func expectTimeoutErr(t *testing.T, err error) {
 }
 
 func (nt *netwkTester) Cleanup(t *testing.T) {
-	m := &msg.Message{}
-	m.WriteShutdown()
-	nt.Send(t, m)
+	for _, c := range nt.clientMap {
+		m := &msg.Message{}
+		m.WriteShutdown()
+		c.writeMsg(m)
+		return
+	}
 }
 
-func (nt *netwkTester) writeNetwkInfo(m *msg.Message) {
-	m.IP = nt.ip
-	m.Port = int32(nt.getConns(m.TraderId).clientPort)
-}
-
-func (nt *netwkTester) getConns(traderId uint32) *conns {
-	c := nt.connsMap[traderId]
+func (nt *netwkTester) getClient(traderId uint32) *client {
+	c := nt.clientMap[traderId]
 	if c == nil {
 		nt.freePort++
 		if nt.freePort > nt.maxPort {
@@ -162,12 +153,44 @@ func (nt *netwkTester) getConns(traderId uint32) *conns {
 		}
 		read := mkReadConn(nt.freePort)
 		write := mkWriteConn(nt.serverPort)
-		c = &conns{read: read, write: write, clientPort: nt.freePort}
-		nt.connsMap[traderId] = c
+		c = &client{read: read, write: write, clientPort: nt.freePort, ip: nt.ip}
+		nt.clientMap[traderId] = c
 	}
 	c.write.SetDeadline(time.Now().Add(nt.timeout))
 	c.read.SetDeadline(time.Now().Add(nt.timeout))
 	return c
+}
+
+type client struct {
+	ip         [4]byte
+	clientPort int
+	read       *net.UDPConn
+	write      *net.UDPConn
+}
+
+func (c *client) writeMsg(m *msg.Message) error {
+	c.writeNetwkInfo(m)
+	buf := bytes.NewBuffer(make([]byte, 0))
+	binary.Write(buf, binary.BigEndian, m)
+	_, err := c.write.Write(buf.Bytes())
+	return err
+}
+
+func (c *client) writeNetwkInfo(m *msg.Message) {
+	m.IP = c.ip
+	m.Port = int32(c.clientPort)
+}
+
+func (c *client) receive() (*msg.Message, error) {
+	s := make([]byte, msg.SizeofMessage)
+	_, _, err := c.read.ReadFromUDP(s)
+	if err != nil {
+		return nil, err
+	}
+	buf := bytes.NewBuffer(s)
+	r := &msg.Message{}
+	binary.Read(buf, binary.BigEndian, r)
+	return r, nil
 }
 
 func mkWriteConn(port int) *net.UDPConn {
@@ -192,18 +215,6 @@ func mkReadConn(port int) *net.UDPConn {
 		panic(err)
 	}
 	return conn
-}
-
-func receive(read *net.UDPConn) (*msg.Message, error) {
-	s := make([]byte, msg.SizeofMessage)
-	_, _, err := read.ReadFromUDP(s)
-	if err != nil {
-		return nil, err
-	}
-	buf := bytes.NewBuffer(s)
-	r := &msg.Message{}
-	binary.Read(buf, binary.BigEndian, r)
-	return r, nil
 }
 
 func validate(t *testing.T, m, e *msg.Message, stackOffset int) {

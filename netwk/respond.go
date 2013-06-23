@@ -56,7 +56,6 @@ func (r *Responder) Run() {
 	}
 }
 
-// TODO write some pure unit tests around the unacked feature
 func (r *Responder) handleClientAck(ca *msg.Message) {
 	unacked := r.unacked
 	for i, uResp := range unacked {
