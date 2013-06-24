@@ -3,16 +3,9 @@ package netwk
 import (
 	"bytes"
 	"encoding/binary"
-	"github.com/fmstephe/matching_engine/matcher"
 	"github.com/fmstephe/matching_engine/msg"
 	"testing"
 )
-
-var mkr = newMatchTesterMaker()
-
-func TestRunTestSuite(t *testing.T) {
-	matcher.RunTestSuite(t, newMatchTesterMaker())
-}
 
 func TestResponseResend(t *testing.T) {
 	mt := mkr.Make().(*netwkTester)
