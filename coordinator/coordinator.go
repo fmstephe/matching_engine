@@ -71,9 +71,7 @@ func (d *dispatcher) Run() {
 		switch {
 		case !m.Valid():
 			d.resubmitErr(m)
-		case m.Status == msg.NOT_SENDABLE_ERROR:
-			// Do nothing, the error is already logged
-		case m.Status == msg.SENDABLE_ERROR:
+		case m.Status == msg.ERROR:
 			d.responses <- m
 		case m.Route == msg.ORDER:
 			d.orders <- m
@@ -94,10 +92,6 @@ func (d *dispatcher) Run() {
 func (d *dispatcher) resubmitErr(m *msg.Message) {
 	em := &msg.Message{}
 	*em = *m
-	if em.Networked() {
-		em.WriteStatus(msg.SENDABLE_ERROR)
-	} else {
-		em.WriteStatus(msg.NOT_SENDABLE_ERROR)
-	}
+	em.WriteStatus(msg.ERROR)
 	d.dispatch <- em
 }

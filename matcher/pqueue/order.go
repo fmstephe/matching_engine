@@ -14,8 +14,6 @@ type OrderNode struct {
 	amount    uint32
 	stockId   uint32
 	kind      msg.MsgKind
-	ip        [4]byte
-	port      int32
 	nextFree  *OrderNode
 }
 
@@ -24,8 +22,6 @@ func (o *OrderNode) CopyFrom(from *msg.Message) {
 	o.stockId = from.StockId
 	o.kind = from.Kind
 	o.setup(from.Price, guid.MkGuid(from.TraderId, from.TradeId))
-	o.ip = from.IP
-	o.port = from.Port
 }
 
 func (o *OrderNode) setup(price, guid int64) {
@@ -59,14 +55,6 @@ func (o *OrderNode) ReduceAmount(s uint32) {
 
 func (o *OrderNode) StockId() uint32 {
 	return o.stockId
-}
-
-func (o *OrderNode) IP() [4]byte {
-	return o.ip
-}
-
-func (o *OrderNode) Port() int32 {
-	return o.port
 }
 
 func (o *OrderNode) Kind() msg.MsgKind {

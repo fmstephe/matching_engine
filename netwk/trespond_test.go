@@ -84,21 +84,25 @@ func TestClientAck(t *testing.T) {
 	mt.ExpectEmpty(t, sas.TraderId)
 }
 
-type chanIpWriter struct {
+type chanWriter struct {
 	out chan *msg.Message
 }
 
-func (c chanIpWriter) Write(data []byte, ip [4]byte, port int) error {
+func (c chanWriter) Write(data []byte) (int, error) {
 	buf := bytes.NewBuffer(data)
 	r := &msg.Message{}
 	binary.Read(buf, binary.BigEndian, r)
 	c.out <- r
+	return len(data), nil
+}
+
+func (c chanWriter) Close() error {
 	return nil
 }
 
 func TestUnackedAreResent(t *testing.T) {
 	out := make(chan *msg.Message, 100)
-	w := chanIpWriter{out}
+	w := chanWriter{out}
 	r := NewResponder(w)
 	// Pre-canned message/ack pairs
 	m1 := &msg.Message{TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1, Route: msg.RESPONSE, Kind: msg.FULL}

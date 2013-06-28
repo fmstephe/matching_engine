@@ -1,28 +1,23 @@
 package msg
 
 import (
-	"errors"
 	"fmt"
 	"github.com/fmstephe/fstrconv"
-	"net"
 )
 
 type MsgStatus uint32
 
 const (
-	NORMAL             = MsgStatus(0)
-	SENDABLE_ERROR     = MsgStatus(1)
-	NOT_SENDABLE_ERROR = MsgStatus(2)
+	NORMAL = MsgStatus(0)
+	ERROR  = MsgStatus(1)
 )
 
 func (s MsgStatus) String() string {
 	switch s {
 	case NORMAL:
 		return "NORMAL"
-	case SENDABLE_ERROR:
-		return "SENDABLE_ERROR"
-	case NOT_SENDABLE_ERROR:
-		return "NOT_SENDABLE_ERROR"
+	case ERROR:
+		return "ERROR"
 	}
 	panic("Unreachable")
 }
@@ -104,7 +99,7 @@ const (
 )
 
 const (
-	SizeofMessage = 44
+	SizeofMessage = 36
 )
 
 var routesToKinds = map[MsgRoute]map[MsgKind]bool{
@@ -126,20 +121,15 @@ type Message struct {
 	TraderId uint32
 	TradeId  uint32
 	StockId  uint32
-	IP       [4]byte
-	Port     int32
 	// I think we need a checksum here
 }
 
 func (m *Message) Valid() bool {
-	if m.Status == NOT_SENDABLE_ERROR {
+	if m.Status == ERROR {
 		return true
 	}
-	if m.Status == SENDABLE_ERROR {
-		return m.Networked()
-	}
 	kinds := routesToKinds[m.Route]
-	if !kinds[m.Kind] || !m.Networked() {
+	if !kinds[m.Kind] {
 		return false
 	}
 	if m.Kind == SHUTDOWN {
@@ -150,10 +140,6 @@ func (m *Message) Valid() bool {
 		return isValid
 	}
 	panic("Unreachable")
-}
-
-func (m *Message) Networked() bool {
-	return m.IP != [4]byte{} && m.Port != 0
 }
 
 func (m *Message) WriteBuy() {
@@ -206,23 +192,6 @@ func (m *Message) WriteStatus(status MsgStatus) {
 	m.Status = status
 }
 
-func (m *Message) UDPAddr() *net.UDPAddr {
-	addr := &net.UDPAddr{}
-	addr.IP = net.IPv4(m.IP[0], m.IP[1], m.IP[2], m.IP[3])
-	addr.Port = int(m.Port)
-	return addr
-}
-
-func (m *Message) SetUDPAddr(addr *net.UDPAddr) error {
-	IP := addr.IP.To4()
-	if IP == nil {
-		return errors.New(fmt.Sprintf("IP address (%s) is not IPv4", addr.IP.String()))
-	}
-	m.IP[0], m.IP[1], m.IP[2], m.IP[3] = IP[0], IP[1], IP[2], IP[3]
-	m.Port = int32(addr.Port)
-	return nil
-}
-
 func (m *Message) String() string {
 	if m == nil {
 		return "<nil>"
@@ -236,5 +205,5 @@ func (m *Message) String() string {
 	if m.Status != NORMAL {
 		status = m.Status.String() + "! "
 	}
-	return fmt.Sprintf("%s(%v %v), price %v, amount %s, trader %s, trade %s, stock %s, ip %v, port %v", status, m.Route, m.Kind, price, amount, traderId, tradeId, stockId, m.IP, m.Port)
+	return fmt.Sprintf("%s(%v %v), price %v, amount %s, trader %s, trade %s, stock %s", status, m.Route, m.Kind, price, amount, traderId, tradeId, stockId)
 }

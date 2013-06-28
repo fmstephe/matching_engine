@@ -3,25 +3,25 @@ package netwk
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
+	"fmt"
 	"github.com/fmstephe/matching_engine/msg"
+	"io"
 	"net"
+	"os"
 	"time"
 )
 
 const RESEND_MILLIS = time.Duration(100) * time.Millisecond
 
-type ipWriter interface {
-	Write(data []byte, ip [4]byte, port int) error
-}
-
 type Responder struct {
 	responses chan *msg.Message
 	dispatch  chan *msg.Message
 	unacked   []*msg.Message
-	writer    ipWriter
+	writer    io.WriteCloser
 }
 
-func NewResponder(writer ipWriter) *Responder {
+func NewResponder(writer io.WriteCloser) *Responder {
 	return &Responder{unacked: make([]*msg.Message, 0, 100), writer: writer}
 }
 
@@ -40,12 +40,10 @@ func (r *Responder) Run() {
 		select {
 		case resp := <-r.responses:
 			switch {
-			case resp.Status == msg.SENDABLE_ERROR, resp.Route == msg.RESPONSE, resp.Route == msg.SERVER_ACK:
+			case resp.Status == msg.ERROR, resp.Route == msg.RESPONSE, resp.Route == msg.SERVER_ACK:
 				r.writeResponse(resp)
 			case resp.Route == msg.CLIENT_ACK:
 				r.handleClientAck(resp)
-			case resp.Status == msg.NOT_SENDABLE_ERROR:
-				panic("Not sendable error sent to responder. Probable infinite loop.")
 			case resp.Route == msg.COMMAND && resp.Kind == msg.SHUTDOWN:
 				return
 			}
@@ -87,23 +85,30 @@ func (r *Responder) resend() {
 
 func (r *Responder) write(resp *msg.Message) {
 	nbuf := &bytes.Buffer{}
-	if err := binary.Write(nbuf, binary.BigEndian, resp); err != nil {
+	err := binary.Write(nbuf, binary.BigEndian, resp)
+	if err != nil {
 		r.handleError(resp, err)
 	}
-	if err := r.writer.Write(nbuf.Bytes(), resp.IP, int(resp.Port)); err != nil {
+	n, err := r.writer.Write(nbuf.Bytes())
+	if err != nil {
 		r.handleError(resp, err)
+	}
+	if n != msg.SizeofMessage {
+		cerr := errors.New(fmt.Sprintf("Insufficient data written. Expecting %d, found %d", msg.SizeofMessage, n))
+		r.handleError(resp, cerr)
 	}
 }
 
 func (r *Responder) handleError(resp *msg.Message, err error) {
 	em := &msg.Message{}
 	*em = *resp
-	em.WriteStatus(msg.NOT_SENDABLE_ERROR)
-	if e, ok := err.(net.Error); ok && e.Temporary() {
-		em.WriteStatus(msg.SENDABLE_ERROR)
+	em.WriteStatus(msg.ERROR)
+	if e, ok := err.(net.Error); ok && !e.Temporary() {
+		os.Exit(1)
 	}
 	r.dispatch <- em
 }
 
 func (r *Responder) shutdown() {
+	r.writer.Close()
 }

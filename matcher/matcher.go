@@ -177,12 +177,8 @@ func price(bPrice, sPrice int64) int64 {
 
 func completeTrade(dispatch chan *msg.Message, brk, srk msg.MsgKind, b, s *pqueue.OrderNode, price int64, amount uint32) {
 	br := &msg.Message{Price: -price, Amount: amount, TraderId: b.TraderId(), TradeId: b.TradeId(), StockId: b.StockId()}
-	br.IP = b.IP()
-	br.Port = b.Port()
 	br.WriteResponse(brk)
 	sr := &msg.Message{Price: price, Amount: amount, TraderId: s.TraderId(), TradeId: s.TradeId(), StockId: s.StockId()}
-	sr.IP = s.IP()
-	sr.Port = s.Port()
 	sr.WriteResponse(srk)
 	dispatch <- br
 	dispatch <- sr
@@ -202,7 +198,5 @@ func completeNotCancelled(dispatch chan *msg.Message, nc *pqueue.OrderNode) {
 
 func writeMessage(on *pqueue.OrderNode) *msg.Message {
 	m := &msg.Message{Price: on.Price(), Amount: on.Amount(), TraderId: on.TraderId(), TradeId: on.TradeId(), StockId: on.StockId()}
-	m.IP = on.IP()
-	m.Port = on.Port()
 	return m
 }

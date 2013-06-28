@@ -19,6 +19,7 @@ type MatchTesterMaker interface {
 }
 
 func RunTestSuite(t *testing.T, mkr MatchTesterMaker) {
+	// TODO no cancellation tests
 	testSellBuyMatch(t, mkr)
 	testBuySellMatch(t, mkr)
 	testBuyDoubleSellMatch(t, mkr)
