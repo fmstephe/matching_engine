@@ -1,10 +1,6 @@
 package netwk
 
 import (
-	"bytes"
-	"encoding/binary"
-	"errors"
-	"fmt"
 	"github.com/fmstephe/matching_engine/msg"
 	"io"
 	"net"
@@ -40,7 +36,7 @@ func (r *Responder) Run() {
 		select {
 		case resp := <-r.responses:
 			switch {
-			case resp.Status == msg.ERROR, resp.Route == msg.RESPONSE, resp.Route == msg.SERVER_ACK:
+			case resp.Status != msg.NORMAL, resp.Route == msg.RESPONSE, resp.Route == msg.SERVER_ACK:
 				r.writeResponse(resp)
 			case resp.Route == msg.CLIENT_ACK:
 				r.handleClientAck(resp)
@@ -84,29 +80,26 @@ func (r *Responder) resend() {
 }
 
 func (r *Responder) write(resp *msg.Message) {
-	nbuf := &bytes.Buffer{}
-	err := binary.Write(nbuf, binary.BigEndian, resp)
+	b := make([]byte, msg.SizeofMessage)
+	resp.WriteTo(b)
+	n, err := r.writer.Write(b)
 	if err != nil {
-		r.handleError(resp, err)
-	}
-	n, err := r.writer.Write(nbuf.Bytes())
-	if err != nil {
-		r.handleError(resp, err)
+		r.handleError(resp, err, msg.WRITE_ERROR)
 	}
 	if n != msg.SizeofMessage {
-		cerr := errors.New(fmt.Sprintf("Insufficient data written. Expecting %d, found %d", msg.SizeofMessage, n))
-		r.handleError(resp, cerr)
+		r.handleError(resp, err, msg.SMALL_WRITE_ERROR)
 	}
 }
 
-func (r *Responder) handleError(resp *msg.Message, err error) {
+func (r *Responder) handleError(resp *msg.Message, err error, s msg.MsgStatus) {
 	em := &msg.Message{}
 	*em = *resp
-	em.WriteStatus(msg.ERROR)
+	em.WriteStatus(s)
+	r.dispatch <- em
+	println(err)
 	if e, ok := err.(net.Error); ok && !e.Temporary() {
 		os.Exit(1)
 	}
-	r.dispatch <- em
 }
 
 func (r *Responder) shutdown() {

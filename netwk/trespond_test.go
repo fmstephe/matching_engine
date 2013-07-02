@@ -1,8 +1,6 @@
 package netwk
 
 import (
-	"bytes"
-	"encoding/binary"
 	"github.com/fmstephe/matching_engine/msg"
 	"testing"
 )
@@ -88,12 +86,11 @@ type chanWriter struct {
 	out chan *msg.Message
 }
 
-func (c chanWriter) Write(data []byte) (int, error) {
-	buf := bytes.NewBuffer(data)
+func (c chanWriter) Write(b []byte) (int, error) {
 	r := &msg.Message{}
-	binary.Read(buf, binary.BigEndian, r)
+	r.WriteFrom(b)
 	c.out <- r
-	return len(data), nil
+	return len(b), nil
 }
 
 func (c chanWriter) Close() error {

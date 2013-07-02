@@ -1,8 +1,6 @@
 package netwk
 
 import (
-	"bytes"
-	"encoding/binary"
 	"fmt"
 	"github.com/fmstephe/matching_engine/guid"
 	"github.com/fmstephe/matching_engine/msg"
@@ -27,6 +25,9 @@ func (l *Listener) Run() {
 	defer l.reader.Close()
 	for {
 		b := l.read()
+		if b == nil {
+			continue
+		}
 		o := l.deserialise(b)
 		shutdown := l.forward(o)
 		if shutdown {
@@ -39,23 +40,21 @@ func (l *Listener) read() []byte {
 	b := make([]byte, msg.SizeofMessage)
 	n, err := l.reader.Read(b)
 	if err != nil {
+		em := &msg.Message{}
+		em.WriteStatus(msg.READ_ERROR)
+		l.dispatch <- em
 		println("Listener - UDP Read: ", err.Error())
 		return nil
 	}
-	if n != msg.SizeofMessage {
-		println(fmt.Sprintf("Listener: Error incorrect number of bytes. Expecting %d, found %d in %v", msg.SizeofMessage, n, b))
-		return nil
-	}
-	return b
+	return b[:n]
 }
 
 func (l *Listener) deserialise(b []byte) *msg.Message {
 	o := &msg.Message{}
-	buf := bytes.NewBuffer(b)
-	err := binary.Read(buf, binary.BigEndian, o)
-	if err != nil {
-		println("Listener - to []byte: ", err.Error())
-		return nil
+	o.WriteFrom(b)
+	if len(b) != msg.SizeofMessage {
+		o.WriteStatus(msg.SMALL_READ_ERROR)
+		println(fmt.Sprintf("Listener: Error incorrect number of bytes. Expecting %d, found %d in %v", msg.SizeofMessage, len(b), b))
 	}
 	return o
 }

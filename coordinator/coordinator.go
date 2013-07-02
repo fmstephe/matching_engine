@@ -71,7 +71,7 @@ func (d *dispatcher) Run() {
 		switch {
 		case !m.Valid():
 			d.resubmitErr(m)
-		case m.Status == msg.ERROR:
+		case m.Status != msg.NORMAL:
 			d.responses <- m
 		case m.Route == msg.ORDER:
 			d.orders <- m
@@ -92,6 +92,6 @@ func (d *dispatcher) Run() {
 func (d *dispatcher) resubmitErr(m *msg.Message) {
 	em := &msg.Message{}
 	*em = *m
-	em.WriteStatus(msg.ERROR)
+	em.WriteStatus(msg.INVALID_MSG_ERROR)
 	d.dispatch <- em
 }

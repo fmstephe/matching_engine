@@ -3,26 +3,37 @@ package msg
 import (
 	"fmt"
 	"github.com/fmstephe/fstrconv"
+	"unsafe"
 )
 
-type MsgStatus uint32
+type MsgStatus byte
 
 const (
-	NORMAL = MsgStatus(0)
-	ERROR  = MsgStatus(1)
+	NORMAL            = MsgStatus(iota)
+	INVALID_MSG_ERROR = MsgStatus(iota)
+	READ_ERROR        = MsgStatus(iota)
+	SMALL_READ_ERROR  = MsgStatus(iota)
+	WRITE_ERROR       = MsgStatus(iota)
+	SMALL_WRITE_ERROR = MsgStatus(iota)
 )
 
 func (s MsgStatus) String() string {
 	switch s {
 	case NORMAL:
 		return "NORMAL"
-	case ERROR:
-		return "ERROR"
+	case READ_ERROR:
+		return "READ_ERROR"
+	case SMALL_READ_ERROR:
+		return "SMALL_READ_ERROR"
+	case WRITE_ERROR:
+		return "WRITE_ERROR"
+	case SMALL_WRITE_ERROR:
+		return "SMALL_WRITE_ERROR"
 	}
 	panic("Unreachable")
 }
 
-type MsgRoute uint32
+type MsgRoute byte
 
 const (
 	NO_ROUTE = MsgRoute(0)
@@ -53,7 +64,7 @@ func (r MsgRoute) String() string {
 	panic("Uncreachable")
 }
 
-type MsgKind uint32
+type MsgKind byte
 
 const (
 	NO_KIND = MsgKind(0)
@@ -98,10 +109,6 @@ const (
 	MARKET_PRICE = 0
 )
 
-const (
-	SizeofMessage = 36
-)
-
 var routesToKinds = map[MsgRoute]map[MsgKind]bool{
 	NO_ROUTE:   map[MsgKind]bool{},
 	ORDER:      map[MsgKind]bool{BUY: true, SELL: true, CANCEL: true},
@@ -113,9 +120,11 @@ var routesToKinds = map[MsgRoute]map[MsgKind]bool{
 
 // Flat description of an incoming message
 type Message struct {
+	pad8     byte
 	Status   MsgStatus
 	Route    MsgRoute
 	Kind     MsgKind
+	pad32    uint32
 	Price    int64
 	Amount   uint32
 	TraderId uint32
@@ -124,8 +133,12 @@ type Message struct {
 	// I think we need a checksum here
 }
 
+const (
+	SizeofMessage = int(unsafe.Sizeof(Message{}))
+)
+
 func (m *Message) Valid() bool {
-	if m.Status == ERROR {
+	if m.Status != NORMAL {
 		return true
 	}
 	kinds := routesToKinds[m.Route]
@@ -206,4 +219,16 @@ func (m *Message) String() string {
 		status = m.Status.String() + "! "
 	}
 	return fmt.Sprintf("%s(%v %v), price %v, amount %s, trader %s, trade %s, stock %s", status, m.Route, m.Kind, price, amount, traderId, tradeId, stockId)
+}
+
+func (m *Message) WriteTo(b []byte) {
+	p := unsafe.Pointer(m)
+	mb := (*([SizeofMessage]byte))(p)[:]
+	copy(b, mb)
+}
+
+func (m *Message) WriteFrom(b []byte) {
+	p := unsafe.Pointer(m)
+	mb := (*([SizeofMessage]byte))(p)[:]
+	copy(mb, b)
 }

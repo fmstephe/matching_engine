@@ -29,7 +29,7 @@ func testFullAndOpenSell(t *testing.T, f func(Message) Message, full, openSell b
 	testAllCategories(t, f, full, openSell, false, false)
 	fSErr := func(m Message) Message {
 		nm := f(m)
-		nm.WriteStatus(ERROR)
+		nm.WriteStatus(INVALID_MSG_ERROR)
 		return nm
 	}
 	testAllCategories(t, fSErr, true, true, true, true)

@@ -1,8 +1,6 @@
 package netwk
 
 import (
-	"bytes"
-	"encoding/binary"
 	"github.com/fmstephe/matching_engine/coordinator"
 	"github.com/fmstephe/matching_engine/matcher"
 	"github.com/fmstephe/matching_engine/msg"
@@ -122,23 +120,21 @@ func (nt *netwkTester) Cleanup(t *testing.T) {
 }
 
 func (nt *netwkTester) writeMsg(m *msg.Message) error {
-	nt.write.SetDeadline(time.Now().Add(nt.timeout))
-	buf := bytes.NewBuffer(make([]byte, 0))
-	binary.Write(buf, binary.BigEndian, m)
-	_, err := nt.write.Write(buf.Bytes())
+	b := make([]byte, msg.SizeofMessage)
+	m.WriteTo(b)
+	_, err := nt.write.Write(b)
 	return err
 }
 
 func (nt *netwkTester) receive() (*msg.Message, error) {
 	nt.read.SetDeadline(time.Now().Add(nt.timeout))
-	s := make([]byte, msg.SizeofMessage)
-	_, _, err := nt.read.ReadFromUDP(s)
+	b := make([]byte, msg.SizeofMessage)
+	_, _, err := nt.read.ReadFromUDP(b)
 	if err != nil {
 		return nil, err
 	}
-	buf := bytes.NewBuffer(s)
 	r := &msg.Message{}
-	binary.Read(buf, binary.BigEndian, r)
+	r.WriteFrom(b)
 	return r, nil
 }
 
