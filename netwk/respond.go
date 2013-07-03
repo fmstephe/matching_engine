@@ -54,6 +54,7 @@ func (r *Responder) handleClientAck(ca *msg.Message) {
 	unacked := r.unacked
 	for i, uResp := range unacked {
 		if ca.TraderId == uResp.TraderId && ca.TradeId == uResp.TradeId {
+			// TODO this should be a map of guid->Message
 			unacked[i] = unacked[len(unacked)-1]
 			unacked = unacked[:len(unacked)-1]
 			r.unacked = unacked
