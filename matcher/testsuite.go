@@ -49,11 +49,11 @@ func testSellBuyMatch(t *testing.T, mkr MatchTesterMaker) {
 	mt.Send(t, b)
 	// Full match
 	es := &msg.Message{TraderId: 1, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
-	es.Route = msg.RESPONSE
+	es.Route = msg.MATCHER_RESPONSE
 	es.Kind = msg.FULL
 	mt.Expect(t, es)
 	eb := &msg.Message{TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
-	eb.Route = msg.RESPONSE
+	eb.Route = msg.MATCHER_RESPONSE
 	eb.Kind = msg.FULL
 	mt.Expect(t, eb)
 }
@@ -75,11 +75,11 @@ func testBuySellMatch(t *testing.T, mkr MatchTesterMaker) {
 	mt.Send(t, s)
 	// Full match
 	eb := &msg.Message{TraderId: 1, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
-	eb.Route = msg.RESPONSE
+	eb.Route = msg.MATCHER_RESPONSE
 	eb.Kind = msg.FULL
 	mt.Expect(t, eb)
 	es := &msg.Message{TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
-	es.Route = msg.RESPONSE
+	es.Route = msg.MATCHER_RESPONSE
 	es.Kind = msg.FULL
 	mt.Expect(t, es)
 }
@@ -101,11 +101,11 @@ func testBuyDoubleSellMatch(t *testing.T, mkr MatchTesterMaker) {
 	mt.Send(t, s1)
 	// Full match
 	eb1 := &msg.Message{TraderId: 1, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
-	eb1.Route = msg.RESPONSE
+	eb1.Route = msg.MATCHER_RESPONSE
 	eb1.Kind = msg.PARTIAL
 	mt.Expect(t, eb1)
 	es1 := &msg.Message{TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
-	es1.Route = msg.RESPONSE
+	es1.Route = msg.MATCHER_RESPONSE
 	es1.Kind = msg.FULL
 	mt.Expect(t, es1)
 	// Add Sell2
@@ -115,11 +115,11 @@ func testBuyDoubleSellMatch(t *testing.T, mkr MatchTesterMaker) {
 	mt.Send(t, s2)
 	// Full Match II
 	eb2 := &msg.Message{TraderId: 1, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
-	eb2.Route = msg.RESPONSE
+	eb2.Route = msg.MATCHER_RESPONSE
 	eb2.Kind = msg.FULL
 	mt.Expect(t, eb2)
 	es2 := &msg.Message{TraderId: 2, TradeId: 2, StockId: 1, Price: 7, Amount: 1}
-	es2.Route = msg.RESPONSE
+	es2.Route = msg.MATCHER_RESPONSE
 	es2.Kind = msg.FULL
 	mt.Expect(t, es2)
 }
@@ -141,11 +141,11 @@ func testSellDoubleBuyMatch(t *testing.T, mkr MatchTesterMaker) {
 	mt.Send(t, b1)
 	// Full match
 	eb1 := &msg.Message{TraderId: 2, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
-	eb1.Route = msg.RESPONSE
+	eb1.Route = msg.MATCHER_RESPONSE
 	eb1.Kind = msg.FULL
 	mt.Expect(t, eb1)
 	es1 := &msg.Message{TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
-	es1.Route = msg.RESPONSE
+	es1.Route = msg.MATCHER_RESPONSE
 	es1.Kind = msg.PARTIAL
 	mt.Expect(t, es1)
 	// Add Buy2
@@ -155,11 +155,11 @@ func testSellDoubleBuyMatch(t *testing.T, mkr MatchTesterMaker) {
 	mt.Send(t, b2)
 	// Full Match II
 	eb2 := &msg.Message{TraderId: 2, TradeId: 2, StockId: 1, Price: -7, Amount: 1}
-	eb2.Route = msg.RESPONSE
+	eb2.Route = msg.MATCHER_RESPONSE
 	eb2.Kind = msg.FULL
 	mt.Expect(t, eb2)
 	es2 := &msg.Message{TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
-	es2.Route = msg.RESPONSE
+	es2.Route = msg.MATCHER_RESPONSE
 	es2.Kind = msg.FULL
 	mt.Expect(t, es2)
 }
@@ -181,11 +181,11 @@ func testMidPrice(t *testing.T, mkr MatchTesterMaker) {
 	mt.Send(t, s)
 	// Full match
 	eb := &msg.Message{TraderId: 1, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
-	eb.Route = msg.RESPONSE
+	eb.Route = msg.MATCHER_RESPONSE
 	eb.Kind = msg.FULL
 	mt.Expect(t, eb)
 	es := &msg.Message{TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
-	es.Route = msg.RESPONSE
+	es.Route = msg.MATCHER_RESPONSE
 	es.Kind = msg.FULL
 	mt.Expect(t, es)
 }
@@ -207,11 +207,11 @@ func testMidPriceBigSell(t *testing.T, mkr MatchTesterMaker) {
 	mt.Send(t, s)
 	// Full match
 	eb := &msg.Message{TraderId: 1, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
-	eb.Route = msg.RESPONSE
+	eb.Route = msg.MATCHER_RESPONSE
 	eb.Kind = msg.FULL
 	mt.Expect(t, eb)
 	es := &msg.Message{TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
-	es.Route = msg.RESPONSE
+	es.Route = msg.MATCHER_RESPONSE
 	es.Kind = msg.PARTIAL
 	mt.Expect(t, es)
 }
@@ -233,11 +233,11 @@ func testMidPriceBigBuy(t *testing.T, mkr MatchTesterMaker) {
 	mt.Send(t, s)
 	// Full match
 	eb := &msg.Message{TraderId: 1, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
-	eb.Route = msg.RESPONSE
+	eb.Route = msg.MATCHER_RESPONSE
 	eb.Kind = msg.PARTIAL
 	mt.Expect(t, eb)
 	es := &msg.Message{TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
-	es.Route = msg.RESPONSE
+	es.Route = msg.MATCHER_RESPONSE
 	es.Kind = msg.FULL
 	mt.Expect(t, es)
 }
@@ -264,11 +264,11 @@ func testTradeSeparateStocks(t *testing.T, mkr MatchTesterMaker) {
 	mt.Send(t, s2)
 	// Full match stock 2
 	es2 := &msg.Message{TraderId: 1, TradeId: 1, StockId: 2, Price: -7, Amount: 1}
-	es2.Route = msg.RESPONSE
+	es2.Route = msg.MATCHER_RESPONSE
 	es2.Kind = msg.FULL
 	mt.Expect(t, es2)
 	eb2 := &msg.Message{TraderId: 2, TradeId: 2, StockId: 2, Price: 7, Amount: 1}
-	eb2.Route = msg.RESPONSE
+	eb2.Route = msg.MATCHER_RESPONSE
 	eb2.Kind = msg.FULL
 	mt.Expect(t, eb2)
 	// Add Buy stock 1
@@ -278,11 +278,11 @@ func testTradeSeparateStocks(t *testing.T, mkr MatchTesterMaker) {
 	mt.Send(t, b1)
 	// Full match stock 1
 	eb1 := &msg.Message{TraderId: 1, TradeId: 2, StockId: 1, Price: -7, Amount: 1}
-	eb1.Route = msg.RESPONSE
+	eb1.Route = msg.MATCHER_RESPONSE
 	eb1.Kind = msg.FULL
 	mt.Expect(t, eb1)
 	es1 := &msg.Message{TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
-	es1.Route = msg.RESPONSE
+	es1.Route = msg.MATCHER_RESPONSE
 	es1.Kind = msg.FULL
 	mt.Expect(t, es1)
 }

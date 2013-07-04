@@ -36,7 +36,7 @@ func (r *Responder) Run() {
 		select {
 		case resp := <-r.responses:
 			switch {
-			case resp.Status != msg.NORMAL, resp.Route == msg.RESPONSE, resp.Route == msg.SERVER_ACK:
+			case resp.Status != msg.NORMAL, resp.Route == msg.MATCHER_RESPONSE, resp.Route == msg.SERVER_ACK:
 				r.writeResponse(resp)
 			case resp.Route == msg.CLIENT_ACK:
 				r.handleClientAck(resp)
@@ -69,7 +69,7 @@ func (r *Responder) writeResponse(resp *msg.Message) {
 }
 
 func (r *Responder) addToUnacked(resp *msg.Message) {
-	if resp.Route == msg.RESPONSE {
+	if resp.Route == msg.MATCHER_RESPONSE {
 		r.unacked = append(r.unacked, resp)
 	}
 }

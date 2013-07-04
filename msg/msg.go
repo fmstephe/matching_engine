@@ -21,6 +21,8 @@ func (s MsgStatus) String() string {
 	switch s {
 	case NORMAL:
 		return "NORMAL"
+	case INVALID_MSG_ERROR:
+		return "INVALID_MSG_ERROR"
 	case READ_ERROR:
 		return "READ_ERROR"
 	case SMALL_READ_ERROR:
@@ -42,8 +44,8 @@ const (
 	CLIENT_ACK = MsgRoute(2)
 	COMMAND    = MsgRoute(3)
 	// Outgoing
-	RESPONSE   = MsgRoute(4)
-	SERVER_ACK = MsgRoute(5)
+	MATCHER_RESPONSE = MsgRoute(4)
+	SERVER_ACK       = MsgRoute(5)
 )
 
 func (r MsgRoute) String() string {
@@ -56,8 +58,8 @@ func (r MsgRoute) String() string {
 		return "CLIENT_ACK"
 	case COMMAND:
 		return "COMMAND"
-	case RESPONSE:
-		return "RESPONSE"
+	case MATCHER_RESPONSE:
+		return "MATCHER_RESPONSE"
 	case SERVER_ACK:
 		return "SERVER_ACK"
 	}
@@ -110,12 +112,12 @@ const (
 )
 
 var routesToKinds = map[MsgRoute]map[MsgKind]bool{
-	NO_ROUTE:   map[MsgKind]bool{},
-	ORDER:      map[MsgKind]bool{BUY: true, SELL: true, CANCEL: true},
-	CLIENT_ACK: map[MsgKind]bool{PARTIAL: true, FULL: true, CANCELLED: true, NOT_CANCELLED: true},
-	COMMAND:    map[MsgKind]bool{SHUTDOWN: true},
-	RESPONSE:   map[MsgKind]bool{PARTIAL: true, FULL: true, CANCELLED: true, NOT_CANCELLED: true},
-	SERVER_ACK: map[MsgKind]bool{BUY: true, SELL: true, CANCEL: true, SHUTDOWN: true},
+	NO_ROUTE:         map[MsgKind]bool{},
+	ORDER:            map[MsgKind]bool{BUY: true, SELL: true, CANCEL: true},
+	CLIENT_ACK:       map[MsgKind]bool{PARTIAL: true, FULL: true, CANCELLED: true, NOT_CANCELLED: true},
+	COMMAND:          map[MsgKind]bool{SHUTDOWN: true},
+	MATCHER_RESPONSE: map[MsgKind]bool{PARTIAL: true, FULL: true, CANCELLED: true, NOT_CANCELLED: true},
+	SERVER_ACK:       map[MsgKind]bool{BUY: true, SELL: true, CANCEL: true, SHUTDOWN: true},
 }
 
 // Flat description of an incoming message
@@ -172,17 +174,17 @@ func (m *Message) WriteCancelFor(om *Message) {
 }
 
 func (m *Message) WriteResponse(kind MsgKind) {
-	m.Route = RESPONSE
+	m.Route = MATCHER_RESPONSE
 	m.Kind = kind
 }
 
 func (m *Message) WriteCancelled() {
-	m.Route = RESPONSE
+	m.Route = MATCHER_RESPONSE
 	m.Kind = CANCELLED
 }
 
 func (m *Message) WriteNotCancelled() {
-	m.Route = RESPONSE
+	m.Route = MATCHER_RESPONSE
 	m.Kind = NOT_CANCELLED
 }
 

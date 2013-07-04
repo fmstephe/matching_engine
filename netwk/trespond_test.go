@@ -21,13 +21,13 @@ func TestResponseResend(t *testing.T) {
 	mt.Send(t, b)
 	// server ack buy
 	sab := &msg.Message{TraderId: 2, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
-	sab.Route = msg.RESPONSE
+	sab.Route = msg.MATCHER_RESPONSE
 	sab.Kind = msg.FULL
 	// server ack sell
 	sas := &msg.Message{TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
-	sas.Route = msg.RESPONSE
+	sas.Route = msg.MATCHER_RESPONSE
 	sas.Kind = msg.FULL
-	// We expect that we will keep receiving the RESPONSE messages, because we didn't ack them
+	// We expect that we will keep receiving the MATCHER_RESPONSE messages, because we didn't ack them
 	mt.ExpectNoAck(t, sab)
 	mt.ExpectNoAck(t, sas)
 	mt.ExpectNoAck(t, sab)
@@ -58,13 +58,13 @@ func TestClientAck(t *testing.T) {
 	mt.Send(t, b)
 	// server ack buy
 	sab := &msg.Message{TraderId: 2, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
-	sab.Route = msg.RESPONSE
+	sab.Route = msg.MATCHER_RESPONSE
 	sab.Kind = msg.FULL
 	// server ack sell
 	sas := &msg.Message{TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
-	sas.Route = msg.RESPONSE
+	sas.Route = msg.MATCHER_RESPONSE
 	sas.Kind = msg.FULL
-	// We expect that we will keep receiving the RESPONSE messages, until we ack them
+	// We expect that we will keep receiving the MATCHER_RESPONSE messages, until we ack them
 	mt.ExpectNoAck(t, sab)
 	mt.ExpectNoAck(t, sas)
 	// client ack buy
@@ -102,19 +102,19 @@ func TestUnackedAreResent(t *testing.T) {
 	w := chanWriter{out}
 	r := NewResponder(w)
 	// Pre-canned message/ack pairs
-	m1 := &msg.Message{TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1, Route: msg.RESPONSE, Kind: msg.FULL}
+	m1 := &msg.Message{TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1, Route: msg.MATCHER_RESPONSE, Kind: msg.FULL}
 	a1 := &msg.Message{TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1, Route: msg.CLIENT_ACK, Kind: msg.FULL}
-	m2 := &msg.Message{TraderId: 123, TradeId: 2000, StockId: 1, Price: 1, Amount: 1, Route: msg.RESPONSE, Kind: msg.FULL}
+	m2 := &msg.Message{TraderId: 123, TradeId: 2000, StockId: 1, Price: 1, Amount: 1, Route: msg.MATCHER_RESPONSE, Kind: msg.FULL}
 	a2 := &msg.Message{TraderId: 123, TradeId: 2000, StockId: 1, Price: 1, Amount: 1, Route: msg.CLIENT_ACK, Kind: msg.FULL}
-	m3 := &msg.Message{TraderId: 777, TradeId: 5432, StockId: 1, Price: 1, Amount: 1, Route: msg.RESPONSE, Kind: msg.FULL}
+	m3 := &msg.Message{TraderId: 777, TradeId: 5432, StockId: 1, Price: 1, Amount: 1, Route: msg.MATCHER_RESPONSE, Kind: msg.FULL}
 	a3 := &msg.Message{TraderId: 777, TradeId: 5432, StockId: 1, Price: 1, Amount: 1, Route: msg.CLIENT_ACK, Kind: msg.FULL}
-	m4 := &msg.Message{TraderId: 371, TradeId: 999, StockId: 1, Price: 1, Amount: 1, Route: msg.RESPONSE, Kind: msg.FULL}
+	m4 := &msg.Message{TraderId: 371, TradeId: 999, StockId: 1, Price: 1, Amount: 1, Route: msg.MATCHER_RESPONSE, Kind: msg.FULL}
 	a4 := &msg.Message{TraderId: 371, TradeId: 999, StockId: 1, Price: 1, Amount: 1, Route: msg.CLIENT_ACK, Kind: msg.FULL}
-	m5 := &msg.Message{TraderId: 87, TradeId: 50, StockId: 1, Price: 1, Amount: 1, Route: msg.RESPONSE, Kind: msg.FULL}
+	m5 := &msg.Message{TraderId: 87, TradeId: 50, StockId: 1, Price: 1, Amount: 1, Route: msg.MATCHER_RESPONSE, Kind: msg.FULL}
 	a5 := &msg.Message{TraderId: 87, TradeId: 50, StockId: 1, Price: 1, Amount: 1, Route: msg.CLIENT_ACK, Kind: msg.FULL}
-	m6 := &msg.Message{TraderId: 40, TradeId: 499, StockId: 1, Price: 1, Amount: 1, Route: msg.RESPONSE, Kind: msg.FULL}
+	m6 := &msg.Message{TraderId: 40, TradeId: 499, StockId: 1, Price: 1, Amount: 1, Route: msg.MATCHER_RESPONSE, Kind: msg.FULL}
 	a6 := &msg.Message{TraderId: 40, TradeId: 499, StockId: 1, Price: 1, Amount: 1, Route: msg.CLIENT_ACK, Kind: msg.FULL}
-	m7 := &msg.Message{TraderId: 99, TradeId: 700000, StockId: 1, Price: 1, Amount: 1, Route: msg.RESPONSE, Kind: msg.FULL}
+	m7 := &msg.Message{TraderId: 99, TradeId: 700000, StockId: 1, Price: 1, Amount: 1, Route: msg.MATCHER_RESPONSE, Kind: msg.FULL}
 	a7 := &msg.Message{TraderId: 99, TradeId: 700000, StockId: 1, Price: 1, Amount: 1, Route: msg.CLIENT_ACK, Kind: msg.FULL}
 	aUnkown := &msg.Message{TraderId: 1, TradeId: 1, StockId: 1, Price: 1, Amount: 1, Route: msg.CLIENT_ACK, Kind: msg.FULL}
 
