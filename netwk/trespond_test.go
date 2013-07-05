@@ -28,18 +28,14 @@ func TestResponseResend(t *testing.T) {
 	sas.Route = msg.MATCHER_RESPONSE
 	sas.Kind = msg.FULL
 	// We expect that we will keep receiving the MATCHER_RESPONSE messages, because we didn't ack them
-	mt.ExpectNoAck(t, sab)
-	mt.ExpectNoAck(t, sas)
-	mt.ExpectNoAck(t, sab)
-	mt.ExpectNoAck(t, sas)
-	mt.ExpectNoAck(t, sab)
-	mt.ExpectNoAck(t, sas)
-	mt.ExpectNoAck(t, sab)
-	mt.ExpectNoAck(t, sas)
-	mt.ExpectNoAck(t, sab)
-	mt.ExpectNoAck(t, sas)
-	mt.ExpectNoAck(t, sab)
-	mt.ExpectNoAck(t, sas)
+	mt.ExpectOneOf_NoAck(t, sab, sas)
+	mt.ExpectOneOf_NoAck(t, sab, sas)
+	mt.ExpectOneOf_NoAck(t, sab, sas)
+	mt.ExpectOneOf_NoAck(t, sab, sas)
+	mt.ExpectOneOf_NoAck(t, sab, sas)
+	mt.ExpectOneOf_NoAck(t, sab, sas)
+	mt.ExpectOneOf_NoAck(t, sab, sas)
+	mt.ExpectOneOf_NoAck(t, sab, sas)
 }
 
 func TestClientAck(t *testing.T) {
@@ -65,8 +61,7 @@ func TestClientAck(t *testing.T) {
 	sas.Route = msg.MATCHER_RESPONSE
 	sas.Kind = msg.FULL
 	// We expect that we will keep receiving the MATCHER_RESPONSE messages, until we ack them
-	mt.ExpectNoAck(t, sab)
-	mt.ExpectNoAck(t, sas)
+	mt.ExpectOneOf_NoAck(t, sab, sas)
 	// client ack buy
 	cab := &msg.Message{TraderId: 2, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
 	cab.Route = msg.CLIENT_ACK

@@ -83,8 +83,19 @@ func (nt *netwkTester) Expect(t *testing.T, e *msg.Message) {
 	}
 }
 
-func (nt *netwkTester) ExpectNoAck(t *testing.T, e *msg.Message) {
-	nt.simpleExpect(t, e)
+func (nt *netwkTester) ExpectOneOf_NoAck(t *testing.T, es ...*msg.Message) {
+	r, err := nt.receive()
+	if err != nil {
+		_, fname, lnum, _ := runtime.Caller(1)
+		t.Errorf("Failure %s\n%s:%d", err.Error(), fname, lnum)
+		return
+	}
+	for _, e := range es {
+		if *e == *r {
+			return
+		}
+	}
+	t.Errorf("Expecting one of %v, received %v instead", es, r)
 }
 
 func (nt *netwkTester) ExpectEmpty(t *testing.T, traderId uint32) {

@@ -1,6 +1,7 @@
 package netwk
 
 import (
+	"github.com/fmstephe/matching_engine/guid"
 	"github.com/fmstephe/matching_engine/msg"
 	"io"
 	"net"
@@ -13,12 +14,12 @@ const RESEND_MILLIS = time.Duration(100) * time.Millisecond
 type Responder struct {
 	responses chan *msg.Message
 	dispatch  chan *msg.Message
-	unacked   []*msg.Message
+	unacked   map[int64]*msg.Message
 	writer    io.WriteCloser
 }
 
 func NewResponder(writer io.WriteCloser) *Responder {
-	return &Responder{unacked: make([]*msg.Message, 0, 100), writer: writer}
+	return &Responder{unacked: make(map[int64]*msg.Message), writer: writer}
 }
 
 func (r *Responder) SetResponses(responses chan *msg.Message) {
@@ -51,15 +52,10 @@ func (r *Responder) Run() {
 }
 
 func (r *Responder) handleClientAck(ca *msg.Message) {
-	unacked := r.unacked
-	for i, uResp := range unacked {
-		if ca.TraderId == uResp.TraderId && ca.TradeId == uResp.TradeId {
-			// TODO this should be a map of guid->Message
-			unacked[i] = unacked[len(unacked)-1]
-			unacked = unacked[:len(unacked)-1]
-			r.unacked = unacked
-			return
-		}
+	g := guid.MkGuid(ca.TraderId, ca.TradeId)
+	m := r.unacked[g]
+	if m != nil {
+		delete(r.unacked, g)
 	}
 }
 
@@ -70,7 +66,8 @@ func (r *Responder) writeResponse(resp *msg.Message) {
 
 func (r *Responder) addToUnacked(resp *msg.Message) {
 	if resp.Route == msg.MATCHER_RESPONSE {
-		r.unacked = append(r.unacked, resp)
+		g := guid.MkGuid(resp.TraderId, resp.TradeId)
+		r.unacked[g] = resp
 	}
 }
 
