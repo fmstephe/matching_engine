@@ -35,7 +35,7 @@ func (m *netwkTesterMaker) Make() matcher.MatchTester {
 	responder := NewResponder(matcherWrite)
 	match := matcher.NewMatcher(100)
 	coordinator.Coordinate(listener, responder, match, false)
-	timeout := time.Duration(1) * time.Second
+	timeout := RESEND_MILLIS * 5
 	return &netwkTester{ip: m.ip, write: clientWrite, read: clientRead, timeout: timeout}
 }
 

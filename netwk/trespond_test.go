@@ -7,7 +7,6 @@ import (
 
 func TestResponseResend(t *testing.T) {
 	mt := mkr.Make().(*netwkTester)
-	mt.timeout = RESEND_MILLIS * 5
 	defer mt.Cleanup(t)
 	// Add Sell
 	s := &msg.Message{TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
@@ -40,7 +39,6 @@ func TestResponseResend(t *testing.T) {
 
 func TestClientAck(t *testing.T) {
 	mt := mkr.Make().(*netwkTester)
-	mt.timeout = RESEND_MILLIS * 5
 	defer mt.Cleanup(t)
 	// Add Sell
 	s := &msg.Message{TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}

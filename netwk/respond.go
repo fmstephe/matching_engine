@@ -94,7 +94,7 @@ func (r *Responder) handleError(resp *msg.Message, err error, s msg.MsgStatus) {
 	*em = *resp
 	em.WriteStatus(s)
 	r.dispatch <- em
-	println(err)
+	println(err.Error())
 	if e, ok := err.(net.Error); ok && !e.Temporary() {
 		os.Exit(1)
 	}
