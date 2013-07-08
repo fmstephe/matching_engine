@@ -55,15 +55,13 @@ func (m *M) Run() {
 		case msg.CANCEL:
 			m.cancel(on)
 		default:
-			// TODO This should probably just be a message to m.dispatch
-			panic(fmt.Sprintf("MsgKind %v not supported", on.Kind()))
+			panic(fmt.Sprintf("MsgKind %v not supported", o))
 		}
 	}
 }
 
 func (m *M) addBuy(b *pqueue.OrderNode) {
 	if b.Price() == msg.MARKET_PRICE {
-		// TODO This should probably just be a message to m.dispatch
 		panic("It is illegal to send a buy at market price")
 	}
 	q := m.getMatchQueues(b.StockId())
