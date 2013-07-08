@@ -1,11 +1,8 @@
 package msg
 
 import (
-	"runtime"
 	"testing"
 )
-
-// TODO needs code review - after removing the network information from the messages this has changed significantly
 
 var LOCALHOST = [4]byte{127, 0, 0, 1}
 
@@ -50,20 +47,21 @@ func testAllCategories(t *testing.T, f func(Message) Message, full, openSell, pa
 
 func expect(t *testing.T, isValid bool, m Message) {
 	if isValid != m.Valid() {
-		_, fname, lnum, _ := runtime.Caller(3)
 		if isValid {
-			t.Errorf("\nExpected valid\n%v\n%s:%d", m, fname, lnum)
+			t.Errorf("\nExpected valid\n%v", m)
 		} else {
-			t.Errorf("\nExpected invalid\n%v\n%s:%d", m, fname, lnum)
+			t.Errorf("\nExpected invalid\n%v", m)
 		}
 	}
 }
 
 func TestRouteAndKindlessMessages(t *testing.T) {
 	f := func(m Message) Message {
-		return Message{}
+		m.Route = NO_ROUTE
+		m.Kind = NO_KIND
+		return m
 	}
-	testAllCategories(t, f, false, false, false, false)
+	testFullAndOpenSell(t, f, false, false)
 }
 
 func TestZeroedMessage(t *testing.T) {
@@ -96,30 +94,12 @@ func TestWriteCancelFor(t *testing.T) {
 }
 
 func TestWriteResponse(t *testing.T) {
-	// can write partial response
+	// can't write no_kind response
 	f := func(m Message) Message {
-		m.WriteResponse(PARTIAL)
+		m.WriteResponse(NO_KIND)
 		return m
 	}
-	testFullAndOpenSell(t, f, true, false)
-	// can write full response
-	f = func(m Message) Message {
-		m.WriteResponse(FULL)
-		return m
-	}
-	testFullAndOpenSell(t, f, true, false)
-	// can write cancelled response
-	f = func(m Message) Message {
-		m.WriteResponse(CANCELLED)
-		return m
-	}
-	testFullAndOpenSell(t, f, true, true)
-	// can write not_cancelled response
-	f = func(m Message) Message {
-		m.WriteResponse(NOT_CANCELLED)
-		return m
-	}
-	testFullAndOpenSell(t, f, true, true)
+	testFullAndOpenSell(t, f, false, false)
 	// can't write buy response
 	f = func(m Message) Message {
 		m.WriteResponse(BUY)
@@ -144,9 +124,34 @@ func TestWriteResponse(t *testing.T) {
 		return m
 	}
 	testFullAndOpenSell(t, f, false, false)
+	// can write partial response
+	f = func(m Message) Message {
+		m.WriteResponse(PARTIAL)
+		return m
+	}
+	testFullAndOpenSell(t, f, true, false)
+	// can write full response
+	f = func(m Message) Message {
+		m.WriteResponse(FULL)
+		return m
+	}
+	testFullAndOpenSell(t, f, true, false)
+	// can write cancelled response
+	f = func(m Message) Message {
+		m.WriteResponse(CANCELLED)
+		return m
+	}
+	testFullAndOpenSell(t, f, true, true)
+	// can write not_cancelled response
+	f = func(m Message) Message {
+		m.WriteResponse(NOT_CANCELLED)
+		return m
+	}
+	testFullAndOpenSell(t, f, true, true)
 }
 
 func TestWriteCancelled(t *testing.T) {
+	// Can cancel standard message and open sell
 	f := func(m Message) Message {
 		m.WriteCancelled()
 		return m
@@ -155,6 +160,7 @@ func TestWriteCancelled(t *testing.T) {
 }
 
 func TestWriteNotCancelled(t *testing.T) {
+	// Can not_cancel standard message and open sell
 	f := func(m Message) Message {
 		m.WriteNotCancelled()
 		return m
@@ -163,6 +169,7 @@ func TestWriteNotCancelled(t *testing.T) {
 }
 
 func TestWriteShutdown(t *testing.T) {
+	// Shutdown must have zero values other than Route and Kind
 	f := func(m Message) Message {
 		m.WriteShutdown()
 		return m
@@ -176,8 +183,16 @@ func TestWriteServerAckFor(t *testing.T) {
 	mo := &Message{}
 	m.WriteServerAckFor(mo)
 	expect(t, false, m)
-	// Can write server ack for buy
+	// Can't write server ack for no_kind
 	f := func(m Message) Message {
+		m.Kind = NO_KIND
+		sa := Message{}
+		sa.WriteServerAckFor(&m)
+		return sa
+	}
+	testFullAndOpenSell(t, f, false, false)
+	// Can write server ack for buy
+	f = func(m Message) Message {
 		m.WriteBuy()
 		sa := Message{}
 		sa.WriteServerAckFor(&m)
@@ -248,8 +263,16 @@ func TestWriteClientAckFor(t *testing.T) {
 	mo := &Message{}
 	m.WriteClientAckFor(mo)
 	expect(t, false, m)
-	// Cannot write client ack for buy
+	// Cannot write client ack for no_kind
 	f := func(m Message) Message {
+		m.Kind = NO_KIND
+		sa := Message{}
+		sa.WriteClientAckFor(&m)
+		return sa
+	}
+	testFullAndOpenSell(t, f, false, false)
+	// Cannot write client ack for buy
+	f = func(m Message) Message {
 		m.WriteBuy()
 		sa := Message{}
 		sa.WriteClientAckFor(&m)
