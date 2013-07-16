@@ -1,7 +1,6 @@
 package netwk
 
 import (
-	"github.com/fmstephe/matching_engine/guid"
 	"github.com/fmstephe/matching_engine/msg"
 	"io"
 	"net"
@@ -14,12 +13,12 @@ const RESEND_MILLIS = time.Duration(100) * time.Millisecond
 type Responder struct {
 	responses chan *msg.Message
 	dispatch  chan *msg.Message
-	unacked   map[int64]*msg.Message
+	unacked   *MsgSet
 	writer    io.WriteCloser
 }
 
 func NewResponder(writer io.WriteCloser) *Responder {
-	return &Responder{unacked: make(map[int64]*msg.Message), writer: writer}
+	return &Responder{unacked: NewMsgSet(), writer: writer}
 }
 
 func (r *Responder) SetResponses(responses chan *msg.Message) {
@@ -52,11 +51,7 @@ func (r *Responder) Run() {
 }
 
 func (r *Responder) handleClientAck(ca *msg.Message) {
-	g := guid.MkGuid(ca.TraderId, ca.TradeId)
-	m := r.unacked[g]
-	if m != nil {
-		delete(r.unacked, g)
-	}
+	r.unacked.Remove(ca)
 }
 
 func (r *Responder) writeResponse(resp *msg.Message) {
@@ -66,15 +61,15 @@ func (r *Responder) writeResponse(resp *msg.Message) {
 
 func (r *Responder) addToUnacked(resp *msg.Message) {
 	if resp.Route == msg.MATCHER_RESPONSE {
-		g := guid.MkGuid(resp.TraderId, resp.TradeId)
-		r.unacked[g] = resp
+		r.unacked.Add(resp)
 	}
 }
 
 func (r *Responder) resend() {
-	for _, resp := range r.unacked {
-		r.write(resp)
-	}
+	// There is a way to turn r.Write into a closure directly - but needs go 1.1
+	r.unacked.Do(func(m *msg.Message) {
+		r.write(m)
+	})
 }
 
 func (r *Responder) write(resp *msg.Message) {

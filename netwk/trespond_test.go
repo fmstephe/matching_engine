@@ -90,7 +90,25 @@ func (c chanWriter) Close() error {
 	return nil
 }
 
-func TestUnackedAreResent(t *testing.T) {
+// Two response messages with the same traderId/tradeId should both be resent (until acked)
+// When this test was written the CANCELLED message would overwrite the PARTIAL, and only the CANCELLED would be resent
+func TestServerAckNotOverwrittenByCancel(t *testing.T) {
+	out := make(chan *msg.Message, 100)
+	w := chanWriter{out}
+	r := NewResponder(w)
+	p := &msg.Message{TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1, Route: msg.MATCHER_RESPONSE, Kind: msg.PARTIAL}
+	c := &msg.Message{TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1, Route: msg.MATCHER_RESPONSE, Kind: msg.CANCELLED}
+	// Add buy server-ack to unacked list
+	r.addToUnacked(p)
+	r.resend()
+	allResent(t, out, p)
+	// Add cancel server-ack to unacked list
+	r.addToUnacked(c)
+	r.resend()
+	allResent(t, out, p, c)
+}
+
+func TestUnackedInDetail(t *testing.T) {
 	out := make(chan *msg.Message, 100)
 	w := chanWriter{out}
 	r := NewResponder(w)

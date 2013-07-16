@@ -1,6 +1,7 @@
 package guid
 
 import (
+	"github.com/fmstephe/matching_engine/msg"
 	"math"
 	"math/rand"
 	"testing"
@@ -49,7 +50,8 @@ func benchmarker(b *testing.B, randMax int64) {
 		a[i] = r.Int63n(randMax)
 	}
 	b.StartTimer()
+	// TODO this bench mark is incomplete
 	for i := 0; i < b.N*pushes; i++ {
-		s.Push(a[i])
+		s.Push(msg.NO_KIND, a[i])
 	}
 }

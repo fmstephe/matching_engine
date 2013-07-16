@@ -1,6 +1,7 @@
 package guid
 
 import (
+	"github.com/fmstephe/matching_engine/msg"
 	"math"
 	"math/rand"
 	"testing"
@@ -12,7 +13,8 @@ func TestPushMany(t *testing.T) {
 	s := NewStore()
 	for i := 0; i < 100; i++ {
 		v := r.Int63n(math.MaxInt64)
-		pushed := s.Push(v)
+		// TODO this test is incomplete
+		pushed := s.Push(msg.NO_KIND, v)
 		present := m[v]
 		m[v] = true
 		if pushed == present {

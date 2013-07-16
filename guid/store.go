@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/fmstephe/matching_engine/msg"
 	"strconv"
 )
 
@@ -13,23 +14,35 @@ const (
 )
 
 type Store struct {
-	root *node
+	roots map[msg.MsgKind]*root
 }
 
 func NewStore() *Store {
-	return &Store{}
+	return &Store{roots: make(map[msg.MsgKind]*root)}
 }
 
-func (s *Store) String() string {
-	return s.root.String()
-}
-
-func (s *Store) Push(val int64) (added bool) {
-	if s.root == nil {
-		s.root = newNode(val)
-		s.root.pp = &s.root
+func (s *Store) Push(kind msg.MsgKind, val int64) (added bool) {
+	r := s.roots[kind]
+	if r == nil {
+		r = newRoot(val)
+		s.roots[kind] = r
 	}
-	return s.root.push(val)
+	return r.push(val)
+}
+
+type root struct {
+	n *node
+}
+
+func newRoot(val int64) *root {
+	n := newNode(val)
+	r := &root{n: n}
+	n.pp = &r.n
+	return r
+}
+
+func (r *root) push(val int64) bool {
+	return r.n.push(val)
 }
 
 type node struct {
@@ -200,9 +213,11 @@ func validateRBT(s *Store) (err error) {
 			err = r.(error)
 		}
 	}()
-	blackBalance(s.root, 0)
-	testReds(s.root, 0)
-	checkStructure(s.root)
+	for _, r := range s.roots {
+		blackBalance(r.n, 0)
+		testReds(r.n, 0)
+		checkStructure(r.n)
+	}
 	return nil
 }
 

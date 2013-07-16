@@ -53,7 +53,7 @@ func (l *Listener) forward(o *msg.Message) (shutdown bool) {
 		a.WriteServerAckFor(o)
 		l.dispatch <- a
 	}
-	if o.Route == msg.CLIENT_ACK || o.Kind == msg.CANCEL || l.guidstore.Push(guid.MkGuid(o.TraderId, o.TradeId)) {
+	if l.guidstore.Push(o.Kind, guid.MkGuid(o.TraderId, o.TradeId)) {
 		l.dispatch <- o
 	}
 	return o.Route == msg.COMMAND && o.Kind == msg.SHUTDOWN
