@@ -2,19 +2,19 @@ package netwk
 
 import (
 	"fmt"
-	"github.com/fmstephe/matching_engine/guid"
 	"github.com/fmstephe/matching_engine/msg"
+	"github.com/fmstephe/matching_engine/msg/msgutil"
 	"io"
 )
 
 type Listener struct {
-	reader    io.ReadCloser
-	guidstore *guid.Store
-	dispatch  chan *msg.Message
+	reader   io.ReadCloser
+	ticker   *msgutil.Ticker
+	dispatch chan *msg.Message
 }
 
 func NewListener(reader io.ReadCloser) *Listener {
-	return &Listener{reader: reader, guidstore: guid.NewStore()}
+	return &Listener{reader: reader, ticker: msgutil.NewTicker()}
 }
 
 func (l *Listener) SetDispatch(dispatch chan *msg.Message) {
@@ -53,7 +53,7 @@ func (l *Listener) forward(o *msg.Message) (shutdown bool) {
 		a.WriteServerAckFor(o)
 		l.dispatch <- a
 	}
-	if l.guidstore.Push(o.Kind, guid.MkGuid(o.TraderId, o.TradeId)) {
+	if l.ticker.Tick(o) {
 		l.dispatch <- o
 	}
 	return o.Route == msg.COMMAND && o.Kind == msg.SHUTDOWN

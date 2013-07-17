@@ -15,6 +15,7 @@ const (
 	SMALL_READ_ERROR  = MsgStatus(iota)
 	WRITE_ERROR       = MsgStatus(iota)
 	SMALL_WRITE_ERROR = MsgStatus(iota)
+	NUM_OF_STATUS     = int32(iota)
 )
 
 func (s MsgStatus) String() string {
@@ -38,14 +39,15 @@ func (s MsgStatus) String() string {
 type MsgRoute byte
 
 const (
-	NO_ROUTE = MsgRoute(0)
+	NO_ROUTE = MsgRoute(iota)
 	// Incoming
-	ORDER      = MsgRoute(1)
-	CLIENT_ACK = MsgRoute(2)
-	COMMAND    = MsgRoute(3)
+	ORDER      = MsgRoute(iota)
+	CLIENT_ACK = MsgRoute(iota)
+	COMMAND    = MsgRoute(iota)
 	// Outgoing
-	MATCHER_RESPONSE = MsgRoute(4)
-	SERVER_ACK       = MsgRoute(5)
+	MATCHER_RESPONSE = MsgRoute(iota)
+	SERVER_ACK       = MsgRoute(iota)
+	NUM_OF_ROUTE     = int32(iota)
 )
 
 func (r MsgRoute) String() string {
@@ -69,17 +71,18 @@ func (r MsgRoute) String() string {
 type MsgKind byte
 
 const (
-	NO_KIND = MsgKind(0)
+	NO_KIND = MsgKind(iota)
 	// Incoming messages
-	BUY      = MsgKind(1)
-	SELL     = MsgKind(2)
-	CANCEL   = MsgKind(3)
-	SHUTDOWN = MsgKind(4)
+	BUY      = MsgKind(iota)
+	SELL     = MsgKind(iota)
+	CANCEL   = MsgKind(iota)
+	SHUTDOWN = MsgKind(iota)
 	// Outgoing messages
-	PARTIAL       = MsgKind(5)
-	FULL          = MsgKind(6)
-	CANCELLED     = MsgKind(7)
-	NOT_CANCELLED = MsgKind(8)
+	PARTIAL       = MsgKind(iota)
+	FULL          = MsgKind(iota)
+	CANCELLED     = MsgKind(iota)
+	NOT_CANCELLED = MsgKind(iota)
+	NUM_OF_KIND   = int32(iota)
 )
 
 func (k MsgKind) String() string {

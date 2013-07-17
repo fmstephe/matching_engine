@@ -5,6 +5,8 @@ import (
 	"testing"
 )
 
+var mkr = newMatchTesterMaker()
+
 func TestResponseResend(t *testing.T) {
 	mt := mkr.Make().(*netwkTester)
 	defer mt.Cleanup(t)
@@ -27,10 +29,6 @@ func TestResponseResend(t *testing.T) {
 	sas.Route = msg.MATCHER_RESPONSE
 	sas.Kind = msg.FULL
 	// We expect that we will keep receiving the MATCHER_RESPONSE messages, because we didn't ack them
-	mt.ExpectOneOf_NoAck(t, sab, sas)
-	mt.ExpectOneOf_NoAck(t, sab, sas)
-	mt.ExpectOneOf_NoAck(t, sab, sas)
-	mt.ExpectOneOf_NoAck(t, sab, sas)
 	mt.ExpectOneOf_NoAck(t, sab, sas)
 	mt.ExpectOneOf_NoAck(t, sab, sas)
 	mt.ExpectOneOf_NoAck(t, sab, sas)

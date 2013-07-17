@@ -1,4 +1,4 @@
-package guid
+package msgutil
 
 func MkGuid(traderId, tradeId uint32) int64 {
 	return (int64(traderId) << 32) | int64(tradeId)

@@ -1,4 +1,4 @@
-package guid
+package msgutil
 
 import (
 	"math/rand"

@@ -5,8 +5,6 @@ import (
 	"testing"
 )
 
-var mkr = newMatchTesterMaker()
-
 func TestRunTestSuite(t *testing.T) {
 	matcher.RunTestSuite(t, newMatchTesterMaker())
 }

@@ -1,8 +1,8 @@
 package netwk
 
 import (
-	"github.com/fmstephe/matching_engine/guid"
 	"github.com/fmstephe/matching_engine/msg"
+	"github.com/fmstephe/matching_engine/msg/msgutil"
 )
 
 type msgMap map[msg.MsgKind]map[int64]*msg.Message
@@ -21,7 +21,7 @@ func (s *MsgSet) Add(m *msg.Message) {
 		guidMap = make(map[int64]*msg.Message)
 		s.kindMap[m.Kind] = guidMap
 	}
-	g := guid.MkGuid(m.TraderId, m.TradeId)
+	g := msgutil.MkGuid(m.TraderId, m.TradeId)
 	guidMap[g] = m
 }
 
@@ -30,7 +30,7 @@ func (s *MsgSet) Remove(m *msg.Message) {
 	if guidMap == nil {
 		return
 	}
-	g := guid.MkGuid(m.TraderId, m.TradeId)
+	g := msgutil.MkGuid(m.TraderId, m.TradeId)
 	delete(guidMap, g)
 }
 

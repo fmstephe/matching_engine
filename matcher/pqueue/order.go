@@ -3,11 +3,10 @@ package pqueue
 import (
 	"fmt"
 	"github.com/fmstephe/fstrconv"
-	"github.com/fmstephe/matching_engine/guid"
 	"github.com/fmstephe/matching_engine/msg"
+	"github.com/fmstephe/matching_engine/msg/msgutil"
 )
 
-// Description of an OrderNode which can live inside a guid and price tree
 type OrderNode struct {
 	priceNode node
 	guidNode  node
@@ -21,7 +20,7 @@ func (o *OrderNode) CopyFrom(from *msg.Message) {
 	o.amount = from.Amount
 	o.stockId = from.StockId
 	o.kind = from.Kind
-	o.setup(from.Price, guid.MkGuid(from.TraderId, from.TradeId))
+	o.setup(from.Price, msgutil.MkGuid(from.TraderId, from.TradeId))
 }
 
 func (o *OrderNode) setup(price, guid int64) {
@@ -38,11 +37,11 @@ func (o *OrderNode) Guid() int64 {
 }
 
 func (o *OrderNode) TraderId() uint32 {
-	return guid.GetTraderId(o.guidNode.val)
+	return msgutil.GetTraderId(o.guidNode.val)
 }
 
 func (o *OrderNode) TradeId() uint32 {
-	return guid.GetTradeId(o.guidNode.val)
+	return msgutil.GetTradeId(o.guidNode.val)
 }
 
 func (o *OrderNode) Amount() uint32 {

@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-const RESEND_MILLIS = time.Duration(100) * time.Millisecond
+const RESEND_MILLIS = time.Duration(500) * time.Millisecond
 
 type Responder struct {
 	responses chan *msg.Message

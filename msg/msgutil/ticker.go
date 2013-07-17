@@ -1,4 +1,4 @@
-package guid
+package msgutil
 
 import (
 	"bytes"
@@ -13,21 +13,22 @@ const (
 	blockMask = blockSize - 1
 )
 
-type Store struct {
+type Ticker struct {
 	roots map[msg.MsgKind]*root
 }
 
-func NewStore() *Store {
-	return &Store{roots: make(map[msg.MsgKind]*root)}
+func NewTicker() *Ticker {
+	return &Ticker{roots: make(map[msg.MsgKind]*root)}
 }
 
-func (s *Store) Push(kind msg.MsgKind, val int64) (added bool) {
-	r := s.roots[kind]
+func (s *Ticker) Tick(m *msg.Message) (ticked bool) {
+	val := MkGuid(m.TraderId, m.TradeId)
+	r := s.roots[m.Kind]
 	if r == nil {
 		r = newRoot(val)
-		s.roots[kind] = r
+		s.roots[m.Kind] = r
 	}
-	return r.push(val)
+	return r.tick(val)
 }
 
 type root struct {
@@ -41,8 +42,8 @@ func newRoot(val int64) *root {
 	return r
 }
 
-func (r *root) push(val int64) bool {
-	return r.n.push(val)
+func (r *root) tick(val int64) bool {
+	return r.n.tick(val)
 }
 
 type node struct {
@@ -84,7 +85,7 @@ func newNode(val int64) *node {
 	return &node{min: min, max: max}
 }
 
-func (n *node) push(val int64) (added bool) {
+func (n *node) tick(val int64) (ticked bool) {
 	for {
 		switch {
 		case val >= n.min && val <= n.max:
@@ -121,7 +122,7 @@ func (n *node) isRed() bool {
 	return false
 }
 
-func (n *node) record(val int64) (added bool) {
+func (n *node) record(val int64) (ticked bool) {
 	idx := val - n.min
 	if n.block[idx] {
 		return false
@@ -207,7 +208,7 @@ func (n *node) flip() {
 	n.right.black = !n.right.black
 }
 
-func validateRBT(s *Store) (err error) {
+func validateRBT(s *Ticker) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = r.(error)
