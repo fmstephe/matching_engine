@@ -2,6 +2,7 @@ package netwk
 
 import (
 	"github.com/fmstephe/matching_engine/msg"
+	"github.com/fmstephe/matching_engine/msg/msgutil"
 	"io"
 	"net"
 	"os"
@@ -13,12 +14,12 @@ const RESEND_MILLIS = time.Duration(500) * time.Millisecond
 type Responder struct {
 	responses chan *msg.Message
 	dispatch  chan *msg.Message
-	unacked   *MsgSet
+	unacked   *msgutil.Set
 	writer    io.WriteCloser
 }
 
 func NewResponder(writer io.WriteCloser) *Responder {
-	return &Responder{unacked: NewMsgSet(), writer: writer}
+	return &Responder{unacked: msgutil.NewSet(), writer: writer}
 }
 
 func (r *Responder) SetResponses(responses chan *msg.Message) {

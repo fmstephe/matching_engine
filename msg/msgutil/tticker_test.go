@@ -8,7 +8,7 @@ import (
 
 func TestStructure(t *testing.T) {
 	tk := NewTicker()
-	msgs := randomMsgs()
+	msgs := randomUniqueMsgs()
 	for _, m := range msgs {
 		tk.Tick(m)
 		err := validateRBT(tk)
@@ -20,7 +20,7 @@ func TestStructure(t *testing.T) {
 
 func TestTickMany(t *testing.T) {
 	tk := NewTicker()
-	msgs := randomMsgs()
+	msgs := randomUniqueMsgs()
 	for _, m := range msgs {
 		ticked := tk.Tick(m)
 		if !ticked {
@@ -31,7 +31,7 @@ func TestTickMany(t *testing.T) {
 
 func TestTickRepeated(t *testing.T) {
 	tk := NewTicker()
-	msgs := randomMsgs()
+	msgs := randomUniqueMsgs()
 	for _, m := range msgs {
 		ticked := tk.Tick(m)
 		if !ticked {
@@ -50,7 +50,7 @@ func TestTickRandom(t *testing.T) {
 	r := rand.New(rand.NewSource(1))
 	st := &simpleTicker{make(map[msg.MsgKind]map[int64]bool)}
 	tk := NewTicker()
-	msgs := randomMsgs()
+	msgs := randomUniqueMsgs()
 	for i := 0; i < 1000; i++ {
 		idx := r.Int31n(int32(len(msgs)))
 		m := msgs[idx]
@@ -79,17 +79,4 @@ func (t *simpleTicker) tick(m *msg.Message) bool {
 	guidMap[g] = true
 	return true
 
-}
-
-func randomMsgs() []*msg.Message {
-	r := rand.New(rand.NewSource(1))
-	msgs := make([]*msg.Message, 0)
-	for i := 0; i < 100; i++ {
-		kind := msg.MsgKind(r.Int31n(msg.NUM_OF_KIND))
-		traderId := uint32(r.Int31())
-		tradeId := uint32(r.Int31())
-		m := &msg.Message{Kind: kind, TraderId: traderId, TradeId: tradeId}
-		msgs = append(msgs, m)
-	}
-	return msgs
 }
