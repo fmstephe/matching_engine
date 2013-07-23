@@ -1,72 +1,52 @@
 package netwk
 
 import (
-	"github.com/fmstephe/matching_engine/msg"
+	. "github.com/fmstephe/matching_engine/msg"
 	"testing"
 )
 
-var mkr = newMatchTesterMaker()
-
 func TestResponseResend(t *testing.T) {
-	mt := mkr.Make().(*netwkTester)
+	mt := testMkrUtil.Make().(*netwkTester)
 	defer mt.Cleanup(t)
 	// Add Sell
-	s := &msg.Message{TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
-	s.Route = msg.ORDER
-	s.Kind = msg.SELL
+	s := &Message{Route: APP, Direction: IN, Kind: SELL, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Send(t, s)
 	// Add Buy
-	b := &msg.Message{TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
-	b.Route = msg.ORDER
-	b.Kind = msg.BUY
+	b := &Message{Route: APP, Direction: IN, Kind: BUY, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Send(t, b)
 	// server ack buy
-	sab := &msg.Message{TraderId: 2, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
-	sab.Route = msg.MATCHER_RESPONSE
-	sab.Kind = msg.FULL
+	sab := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 2, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
 	// server ack sell
-	sas := &msg.Message{TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
-	sas.Route = msg.MATCHER_RESPONSE
-	sas.Kind = msg.FULL
-	// We expect that we will keep receiving the MATCHER_RESPONSE messages, because we didn't ack them
+	sas := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	// We expect that we will keep receiving the APP messages, because we didn't ack them
 	mt.ExpectOneOf_NoAck(t, sab, sas)
 	mt.ExpectOneOf_NoAck(t, sab, sas)
 	mt.ExpectOneOf_NoAck(t, sab, sas)
 	mt.ExpectOneOf_NoAck(t, sab, sas)
+	mt.Cleanup(t)
 }
 
 func TestClientAck(t *testing.T) {
-	mt := mkr.Make().(*netwkTester)
+	mt := testMkrUtil.Make().(*netwkTester)
 	defer mt.Cleanup(t)
 	// Add Sell
-	s := &msg.Message{TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
-	s.Route = msg.ORDER
-	s.Kind = msg.SELL
+	s := &Message{Route: APP, Direction: IN, Kind: SELL, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Send(t, s)
 	// Add buy
-	b := &msg.Message{TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
-	b.Route = msg.ORDER
-	b.Kind = msg.BUY
+	b := &Message{Route: APP, Direction: IN, Kind: BUY, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Send(t, b)
 	// server ack buy
-	sab := &msg.Message{TraderId: 2, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
-	sab.Route = msg.MATCHER_RESPONSE
-	sab.Kind = msg.FULL
+	sab := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 2, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
 	// server ack sell
-	sas := &msg.Message{TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
-	sas.Route = msg.MATCHER_RESPONSE
-	sas.Kind = msg.FULL
-	// We expect that we will keep receiving the MATCHER_RESPONSE messages, until we ack them
+	sas := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	// We expect that we will keep receiving the APP messages, until we ack them
+	mt.ExpectOneOf_NoAck(t, sab, sas)
 	mt.ExpectOneOf_NoAck(t, sab, sas)
 	// client ack buy
-	cab := &msg.Message{TraderId: 2, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
-	cab.Route = msg.CLIENT_ACK
-	cab.Kind = msg.FULL
+	cab := &Message{Route: ACK, Direction: OUT, Kind: FULL, TraderId: 2, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
 	mt.SendNoAck(t, cab)
 	// client ack sell
-	cas := &msg.Message{TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
-	cas.Route = msg.CLIENT_ACK
-	cas.Kind = msg.FULL
+	cas := &Message{Route: ACK, Direction: OUT, Kind: FULL, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.SendNoAck(t, cas)
 	// We expect that after we send the client acks we will no longer receive resends
 	mt.ExpectEmpty(t, sab.TraderId)
@@ -74,11 +54,11 @@ func TestClientAck(t *testing.T) {
 }
 
 type chanWriter struct {
-	out chan *msg.Message
+	out chan *Message
 }
 
 func (c chanWriter) Write(b []byte) (int, error) {
-	r := &msg.Message{}
+	r := &Message{}
 	r.WriteFrom(b)
 	c.out <- r
 	return len(b), nil
@@ -91,11 +71,11 @@ func (c chanWriter) Close() error {
 // Two response messages with the same traderId/tradeId should both be resent (until acked)
 // When this test was written the CANCELLED message would overwrite the PARTIAL, and only the CANCELLED would be resent
 func TestServerAckNotOverwrittenByCancel(t *testing.T) {
-	out := make(chan *msg.Message, 100)
+	out := make(chan *Message, 100)
 	w := chanWriter{out}
 	r := NewResponder(w)
-	p := &msg.Message{TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1, Route: msg.MATCHER_RESPONSE, Kind: msg.PARTIAL}
-	c := &msg.Message{TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1, Route: msg.MATCHER_RESPONSE, Kind: msg.CANCELLED}
+	p := &Message{Route: APP, Direction: IN, Kind: PARTIAL, TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1}
+	c := &Message{Route: APP, Direction: IN, Kind: CANCELLED, TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1}
 	// Add buy server-ack to unacked list
 	r.addToUnacked(p)
 	r.resend()
@@ -107,25 +87,25 @@ func TestServerAckNotOverwrittenByCancel(t *testing.T) {
 }
 
 func TestUnackedInDetail(t *testing.T) {
-	out := make(chan *msg.Message, 100)
+	out := make(chan *Message, 100)
 	w := chanWriter{out}
 	r := NewResponder(w)
 	// Pre-canned message/ack pairs
-	m1 := &msg.Message{TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1, Route: msg.MATCHER_RESPONSE, Kind: msg.FULL}
-	a1 := &msg.Message{TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1, Route: msg.CLIENT_ACK, Kind: msg.FULL}
-	m2 := &msg.Message{TraderId: 123, TradeId: 2000, StockId: 1, Price: 1, Amount: 1, Route: msg.MATCHER_RESPONSE, Kind: msg.FULL}
-	a2 := &msg.Message{TraderId: 123, TradeId: 2000, StockId: 1, Price: 1, Amount: 1, Route: msg.CLIENT_ACK, Kind: msg.FULL}
-	m3 := &msg.Message{TraderId: 777, TradeId: 5432, StockId: 1, Price: 1, Amount: 1, Route: msg.MATCHER_RESPONSE, Kind: msg.FULL}
-	a3 := &msg.Message{TraderId: 777, TradeId: 5432, StockId: 1, Price: 1, Amount: 1, Route: msg.CLIENT_ACK, Kind: msg.FULL}
-	m4 := &msg.Message{TraderId: 371, TradeId: 999, StockId: 1, Price: 1, Amount: 1, Route: msg.MATCHER_RESPONSE, Kind: msg.FULL}
-	a4 := &msg.Message{TraderId: 371, TradeId: 999, StockId: 1, Price: 1, Amount: 1, Route: msg.CLIENT_ACK, Kind: msg.FULL}
-	m5 := &msg.Message{TraderId: 87, TradeId: 50, StockId: 1, Price: 1, Amount: 1, Route: msg.MATCHER_RESPONSE, Kind: msg.FULL}
-	a5 := &msg.Message{TraderId: 87, TradeId: 50, StockId: 1, Price: 1, Amount: 1, Route: msg.CLIENT_ACK, Kind: msg.FULL}
-	m6 := &msg.Message{TraderId: 40, TradeId: 499, StockId: 1, Price: 1, Amount: 1, Route: msg.MATCHER_RESPONSE, Kind: msg.FULL}
-	a6 := &msg.Message{TraderId: 40, TradeId: 499, StockId: 1, Price: 1, Amount: 1, Route: msg.CLIENT_ACK, Kind: msg.FULL}
-	m7 := &msg.Message{TraderId: 99, TradeId: 700000, StockId: 1, Price: 1, Amount: 1, Route: msg.MATCHER_RESPONSE, Kind: msg.FULL}
-	a7 := &msg.Message{TraderId: 99, TradeId: 700000, StockId: 1, Price: 1, Amount: 1, Route: msg.CLIENT_ACK, Kind: msg.FULL}
-	aUnkown := &msg.Message{TraderId: 1, TradeId: 1, StockId: 1, Price: 1, Amount: 1, Route: msg.CLIENT_ACK, Kind: msg.FULL}
+	m1 := &Message{TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1, Route: APP, Kind: FULL}
+	a1 := &Message{TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1, Route: ACK, Kind: FULL}
+	m2 := &Message{TraderId: 123, TradeId: 2000, StockId: 1, Price: 1, Amount: 1, Route: APP, Kind: FULL}
+	a2 := &Message{TraderId: 123, TradeId: 2000, StockId: 1, Price: 1, Amount: 1, Route: ACK, Kind: FULL}
+	m3 := &Message{TraderId: 777, TradeId: 5432, StockId: 1, Price: 1, Amount: 1, Route: APP, Kind: FULL}
+	a3 := &Message{TraderId: 777, TradeId: 5432, StockId: 1, Price: 1, Amount: 1, Route: ACK, Kind: FULL}
+	m4 := &Message{TraderId: 371, TradeId: 999, StockId: 1, Price: 1, Amount: 1, Route: APP, Kind: FULL}
+	a4 := &Message{TraderId: 371, TradeId: 999, StockId: 1, Price: 1, Amount: 1, Route: ACK, Kind: FULL}
+	m5 := &Message{TraderId: 87, TradeId: 50, StockId: 1, Price: 1, Amount: 1, Route: APP, Kind: FULL}
+	a5 := &Message{TraderId: 87, TradeId: 50, StockId: 1, Price: 1, Amount: 1, Route: ACK, Kind: FULL}
+	m6 := &Message{TraderId: 40, TradeId: 499, StockId: 1, Price: 1, Amount: 1, Route: APP, Kind: FULL}
+	a6 := &Message{TraderId: 40, TradeId: 499, StockId: 1, Price: 1, Amount: 1, Route: ACK, Kind: FULL}
+	m7 := &Message{TraderId: 99, TradeId: 700000, StockId: 1, Price: 1, Amount: 1, Route: APP, Kind: FULL}
+	a7 := &Message{TraderId: 99, TradeId: 700000, StockId: 1, Price: 1, Amount: 1, Route: ACK, Kind: FULL}
+	aUnkown := &Message{TraderId: 1, TradeId: 1, StockId: 1, Price: 1, Amount: 1, Route: ACK, Kind: FULL}
 
 	// Add m1-5 to unacked list
 	r.addToUnacked(m1)
@@ -181,8 +161,8 @@ func TestUnackedInDetail(t *testing.T) {
 	}
 }
 
-func allResent(t *testing.T, out chan *msg.Message, expect ...*msg.Message) {
-	received := make([]*msg.Message, 0)
+func allResent(t *testing.T, out chan *Message, expect ...*Message) {
+	received := make([]*Message, 0)
 	for len(out) > 0 {
 		received = append(received, <-out)
 	}
@@ -193,7 +173,7 @@ func allResent(t *testing.T, out chan *msg.Message, expect ...*msg.Message) {
 	allOfIn(t, received, expect)
 }
 
-func allOfIn(t *testing.T, first, second []*msg.Message) {
+func allOfIn(t *testing.T, first, second []*Message) {
 	for _, f := range first {
 		found := false
 		for _, s := range second {

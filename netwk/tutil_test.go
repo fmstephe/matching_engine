@@ -13,6 +13,8 @@ import (
 
 // Because we are communicating via UDP, messages could arrive out of order, in practice they travel in-order via localhost
 
+var testMkrUtil = newMatchTesterMaker()
+
 type netwkTesterMaker struct {
 	ip       [4]byte
 	freePort int
@@ -52,7 +54,8 @@ func (nt *netwkTester) Send(t *testing.T, m *msg.Message) {
 		t.Errorf("\n%s\n%s:%d", err.Error(), fname, lnum)
 	}
 	ref := &msg.Message{}
-	ref.WriteServerAckFor(m)
+	ref.WriteAckFor(m)
+	ref.Direction = msg.IN
 	nt.simpleExpect(t, ref)
 }
 
@@ -76,7 +79,7 @@ func (nt *netwkTester) simpleExpect(t *testing.T, e *msg.Message) {
 func (nt *netwkTester) Expect(t *testing.T, e *msg.Message) {
 	nt.simpleExpect(t, e)
 	ca := &msg.Message{}
-	ca.WriteClientAckFor(e)
+	ca.WriteAckFor(e)
 	if err := nt.writeMsg(ca); err != nil {
 		_, fname, lnum, _ := runtime.Caller(1)
 		t.Errorf("\n%s\n%s:%d", err.Error(), fname, lnum)
@@ -126,11 +129,11 @@ func expectTimeoutErr(t *testing.T, err error) {
 func (nt *netwkTester) Cleanup(t *testing.T) {
 	m := &msg.Message{}
 	m.WriteShutdown()
-	nt.writeMsg(m)
-	return
+	nt.SendNoAck(t, m)
 }
 
 func (nt *netwkTester) writeMsg(m *msg.Message) error {
+	m.Direction = msg.IN
 	b := make([]byte, msg.SizeofMessage)
 	m.WriteTo(b)
 	_, err := nt.write.Write(b)

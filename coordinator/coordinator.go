@@ -71,6 +71,7 @@ type dispatcher struct {
 }
 
 func (d *dispatcher) Run() {
+	defer d.shutdown()
 	for {
 		m := <-d.dispatch
 		if d.log {
@@ -81,16 +82,13 @@ func (d *dispatcher) Run() {
 			d.resubmitErr(m)
 		case m.Status != msg.NORMAL:
 			d.responses <- m
-		case m.Route == msg.ORDER:
-			d.orders <- m
-		case m.Route == msg.MATCHER_RESPONSE, m.Route == msg.SERVER_ACK, m.Route == msg.CLIENT_ACK:
+		case m.Direction == msg.OUT, m.Route == msg.ACK:
 			d.responses <- m
-		case m.Route == msg.COMMAND:
-			d.orders <- m
-			d.responses <- m
-			if m.Kind == msg.SHUTDOWN {
+			if m.Route == msg.SHUTDOWN {
 				return
 			}
+		case m.Direction == msg.IN:
+			d.orders <- m
 		default:
 			panic(fmt.Sprintf("Dispatcher - Unkown object: %v", m))
 		}
@@ -100,6 +98,10 @@ func (d *dispatcher) Run() {
 func (d *dispatcher) resubmitErr(m *msg.Message) {
 	em := &msg.Message{}
 	*em = *m
-	em.WriteStatus(msg.INVALID_MSG_ERROR)
+	em.Status = msg.INVALID_MSG_ERROR
+	em.Direction = msg.OUT
 	d.dispatch <- em
+}
+
+func (d *dispatcher) shutdown() {
 }

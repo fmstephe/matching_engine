@@ -45,53 +45,53 @@ func startMockedListener(shouldErr bool, writeN int) (in chan *Message, dispatch
 
 func TestSmallReadError(t *testing.T) {
 	in, dispatch := startMockedListener(false, SizeofMessage-1)
-	m := &Message{Status: NORMAL, Route: ORDER, Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
+	m := &Message{Status: NORMAL, Route: APP, Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
 	in <- m
 	// Expected server ack
 	a := &Message{}
-	a.WriteServerAckFor(m)
-	a.WriteStatus(SMALL_READ_ERROR)
+	a.WriteAckFor(m)
+	a.Status = SMALL_READ_ERROR
 	// Expected response
 	r := &Message{}
 	*r = *m
-	r.WriteStatus(SMALL_READ_ERROR)
+	r.Status = SMALL_READ_ERROR
 	validate(t, <-dispatch, a, 1)
 	validate(t, <-dispatch, r, 1)
 }
 
 func TestReadError(t *testing.T) {
 	in, dispatch := startMockedListener(true, SizeofMessage)
-	m := &Message{Status: NORMAL, Route: ORDER, Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
+	m := &Message{Status: NORMAL, Route: APP, Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
 	in <- m
 	// Expected server ack
 	a := &Message{}
-	a.WriteServerAckFor(m)
-	a.WriteStatus(READ_ERROR)
+	a.WriteAckFor(m)
+	a.Status = READ_ERROR
 	// Expected response
 	r := &Message{}
 	*r = *m
-	r.WriteStatus(READ_ERROR)
+	r.Status = READ_ERROR
 	validate(t, <-dispatch, a, 1)
 	validate(t, <-dispatch, r, 1)
 }
 
 func TestDuplicate(t *testing.T) {
 	in, dispatch := startMockedListener(false, SizeofMessage)
-	m := &Message{Status: NORMAL, Route: ORDER, Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
+	m := &Message{Status: NORMAL, Route: APP, Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
 	in <- m
 	in <- m
 	// Expected server ack
 	a := &Message{}
-	a.WriteServerAckFor(m)
+	a.WriteAckFor(m)
 	// Expect an ack for both messages but the message is only forwarded on once
 	validate(t, <-dispatch, a, 1)
 	validate(t, <-dispatch, m, 1)
 	validate(t, <-dispatch, a, 1)
-	m2 := &Message{Status: NORMAL, Route: ORDER, Kind: SELL, Price: 7, Amount: 1, TraderId: 2, TradeId: 1, StockId: 1}
+	m2 := &Message{Status: NORMAL, Route: APP, Kind: SELL, Price: 7, Amount: 1, TraderId: 2, TradeId: 1, StockId: 1}
 	in <- m2
 	// Expected server ack 2
 	a2 := &Message{}
-	a2.WriteServerAckFor(m2)
+	a2.WriteAckFor(m2)
 	// An ack for m2 and m2 (but nothing relating to m)
 	validate(t, <-dispatch, a2, 1)
 	validate(t, <-dispatch, m2, 1)

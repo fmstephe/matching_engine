@@ -36,12 +36,13 @@ func (r *Responder) Run() {
 	for {
 		select {
 		case resp := <-r.responses:
+			// TODO add some handling here for illegal message states
 			switch {
-			case resp.Status != msg.NORMAL, resp.Route == msg.MATCHER_RESPONSE, resp.Route == msg.SERVER_ACK:
-				r.writeResponse(resp)
-			case resp.Route == msg.CLIENT_ACK:
+			case resp.Direction == msg.IN && resp.Route == msg.ACK:
 				r.handleClientAck(resp)
-			case resp.Route == msg.COMMAND && resp.Kind == msg.SHUTDOWN:
+			case resp.Direction == msg.OUT && (resp.Status != msg.NORMAL || resp.Route == msg.APP || resp.Route == msg.ACK):
+				r.writeResponse(resp)
+			case resp.Route == msg.SHUTDOWN:
 				return
 			}
 		case <-t.C:
@@ -56,12 +57,13 @@ func (r *Responder) handleClientAck(ca *msg.Message) {
 }
 
 func (r *Responder) writeResponse(resp *msg.Message) {
+	resp.Direction = msg.IN
 	r.addToUnacked(resp)
 	r.write(resp)
 }
 
 func (r *Responder) addToUnacked(resp *msg.Message) {
-	if resp.Route == msg.MATCHER_RESPONSE {
+	if resp.Route == msg.APP {
 		r.unacked.Add(resp)
 	}
 }
@@ -88,7 +90,7 @@ func (r *Responder) write(resp *msg.Message) {
 func (r *Responder) handleError(resp *msg.Message, err error, s msg.MsgStatus) {
 	em := &msg.Message{}
 	*em = *resp
-	em.WriteStatus(s)
+	em.Status = s
 	r.dispatch <- em
 	println(err.Error())
 	if e, ok := err.(net.Error); ok && !e.Temporary() {

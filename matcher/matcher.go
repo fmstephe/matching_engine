@@ -39,7 +39,7 @@ func (m *M) getMatchQueues(stockId uint32) *pqueue.MatchQueues {
 func (m *M) Run() {
 	for {
 		o := <-m.orders
-		if o.Kind == msg.SHUTDOWN {
+		if o.Route == msg.SHUTDOWN {
 			r := &msg.Message{}
 			r.WriteShutdown()
 			m.dispatch <- r
@@ -175,22 +175,22 @@ func price(bPrice, sPrice int64) int64 {
 
 func completeTrade(dispatch chan *msg.Message, brk, srk msg.MsgKind, b, s *pqueue.OrderNode, price int64, amount uint32) {
 	br := &msg.Message{Price: -price, Amount: amount, TraderId: b.TraderId(), TradeId: b.TradeId(), StockId: b.StockId()}
-	br.WriteResponse(brk)
+	br.WriteApp(brk)
 	sr := &msg.Message{Price: price, Amount: amount, TraderId: s.TraderId(), TradeId: s.TradeId(), StockId: s.StockId()}
-	sr.WriteResponse(srk)
+	sr.WriteApp(srk)
 	dispatch <- br
 	dispatch <- sr
 }
 
 func completeCancelled(dispatch chan *msg.Message, c *pqueue.OrderNode) {
 	cr := writeMessage(c)
-	cr.WriteCancelled()
+	cr.WriteApp(msg.CANCELLED)
 	dispatch <- cr
 }
 
 func completeNotCancelled(dispatch chan *msg.Message, nc *pqueue.OrderNode) {
 	ncr := writeMessage(nc)
-	ncr.WriteNotCancelled()
+	ncr.WriteApp(msg.NOT_CANCELLED)
 	dispatch <- ncr
 }
 

@@ -37,7 +37,8 @@ func (mm *MessageMaker) MkPricedOrder(price int64, kind MsgKind) *Message {
 func (mm *MessageMaker) writePricedOrder(price int64, kind MsgKind, m *Message) {
 	mm.traderId++
 	*m = Message{Price: price, Amount: 1, TraderId: mm.traderId, TradeId: 1, StockId: 1}
-	m.Route = ORDER
+	m.Route = APP
+	m.Direction = IN
 	m.Kind = kind
 }
 
@@ -72,8 +73,9 @@ func (mm *MessageMaker) MkOrders(prices []int64, stockId uint32, kind MsgKind) [
 	for i, price := range prices {
 		mm.traderId++
 		msgs[i] = Message{Price: price, Amount: 1, TraderId: mm.traderId, TradeId: uint32(i + 1), StockId: stockId}
-		msgs[i].Route = ORDER
+		msgs[i].Route = APP
 		msgs[i].Kind = kind
+		msgs[i].Direction = IN
 	}
 	return msgs
 }

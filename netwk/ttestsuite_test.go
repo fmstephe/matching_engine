@@ -6,5 +6,5 @@ import (
 )
 
 func TestRunTestSuite(t *testing.T) {
-	matcher.RunTestSuite(t, newMatchTesterMaker())
+	matcher.RunTestSuite(t, testMkrUtil)
 }

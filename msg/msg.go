@@ -36,34 +36,46 @@ func (s MsgStatus) String() string {
 	panic("Unreachable")
 }
 
+type MsgDirection byte
+
+const (
+	NO_DIRECTION = MsgDirection(iota)
+	OUT          = MsgDirection(iota)
+	IN           = MsgDirection(iota)
+)
+
+func (d MsgDirection) String() string {
+	switch d {
+	case NO_DIRECTION:
+		return "NO_DIRECTION"
+	case IN:
+		return "IN"
+	case OUT:
+		return "OUT"
+	}
+	panic("unreachable")
+}
+
 type MsgRoute byte
 
 const (
-	NO_ROUTE = MsgRoute(iota)
-	// Incoming
-	ORDER      = MsgRoute(iota)
-	CLIENT_ACK = MsgRoute(iota)
-	COMMAND    = MsgRoute(iota)
-	// Outgoing
-	MATCHER_RESPONSE = MsgRoute(iota)
-	SERVER_ACK       = MsgRoute(iota)
-	NUM_OF_ROUTE     = int32(iota)
+	NO_ROUTE     = MsgRoute(iota)
+	APP          = MsgRoute(iota)
+	ACK          = MsgRoute(iota)
+	SHUTDOWN     = MsgRoute(iota)
+	NUM_OF_ROUTE = int32(iota)
 )
 
 func (r MsgRoute) String() string {
 	switch r {
 	case NO_ROUTE:
 		return "NO_ROUTE"
-	case ORDER:
-		return "ORDER"
-	case CLIENT_ACK:
-		return "CLIENT_ACK"
-	case COMMAND:
-		return "COMMAND"
-	case MATCHER_RESPONSE:
-		return "MATCHER_RESPONSE"
-	case SERVER_ACK:
-		return "SERVER_ACK"
+	case APP:
+		return "APP"
+	case ACK:
+		return "ACK"
+	case SHUTDOWN:
+		return "SHUTDOWN"
 	}
 	panic("Uncreachable")
 }
@@ -71,17 +83,15 @@ func (r MsgRoute) String() string {
 type MsgKind byte
 
 const (
-	NO_KIND = MsgKind(iota)
-	// Incoming messages
-	BUY      = MsgKind(iota)
-	SELL     = MsgKind(iota)
-	CANCEL   = MsgKind(iota)
-	SHUTDOWN = MsgKind(iota)
-	// Outgoing messages
+	NO_KIND       = MsgKind(iota)
+	BUY           = MsgKind(iota)
+	SELL          = MsgKind(iota)
+	CANCEL        = MsgKind(iota)
 	PARTIAL       = MsgKind(iota)
 	FULL          = MsgKind(iota)
 	CANCELLED     = MsgKind(iota)
 	NOT_CANCELLED = MsgKind(iota)
+	REJECTED      = MsgKind(iota)
 	NUM_OF_KIND   = int32(iota)
 )
 
@@ -95,8 +105,6 @@ func (k MsgKind) String() string {
 		return "SELL"
 	case CANCEL:
 		return "CANCEL"
-	case SHUTDOWN:
-		return "SHUTDOWN"
 	case PARTIAL:
 		return "PARTIAL"
 	case FULL:
@@ -114,27 +122,18 @@ const (
 	MARKET_PRICE = 0
 )
 
-var routesToKinds = map[MsgRoute]map[MsgKind]bool{
-	NO_ROUTE:         map[MsgKind]bool{},
-	ORDER:            map[MsgKind]bool{BUY: true, SELL: true, CANCEL: true},
-	CLIENT_ACK:       map[MsgKind]bool{PARTIAL: true, FULL: true, CANCELLED: true, NOT_CANCELLED: true},
-	COMMAND:          map[MsgKind]bool{SHUTDOWN: true},
-	MATCHER_RESPONSE: map[MsgKind]bool{PARTIAL: true, FULL: true, CANCELLED: true, NOT_CANCELLED: true},
-	SERVER_ACK:       map[MsgKind]bool{BUY: true, SELL: true, CANCEL: true, SHUTDOWN: true},
-}
-
 // Flat description of an incoming message
 type Message struct {
-	pad8     byte
-	Status   MsgStatus
-	Route    MsgRoute
-	Kind     MsgKind
-	pad32    uint32
-	Price    int64
-	Amount   uint32
-	TraderId uint32
-	TradeId  uint32
-	StockId  uint32
+	Status    MsgStatus
+	Direction MsgDirection
+	Route     MsgRoute
+	Kind      MsgKind
+	pad32     uint32
+	Price     int64
+	Amount    uint32
+	TraderId  uint32
+	TradeId   uint32
+	StockId   uint32
 	// I think we need a checksum here
 }
 
@@ -143,71 +142,64 @@ const (
 )
 
 func (m *Message) Valid() bool {
+	// A message must always have a direction
+	if m.Direction == NO_DIRECTION {
+		return false
+	}
+	// Any message in an error status is valid
 	if m.Status != NORMAL {
 		return true
 	}
-	kinds := routesToKinds[m.Route]
-	if !kinds[m.Kind] {
+	// Shutdown messages must be blank
+	if m.Route == SHUTDOWN {
+		return m.Kind == NO_KIND && m.Price == 0 && m.Amount == 0 && m.TraderId == 0 && m.TradeId == 0 && m.StockId == 0
+	}
+	// (Ack, APP) must have a Kind
+	if (m.Route != ACK && m.Route != APP) || m.Kind == NO_KIND {
 		return false
 	}
-	if m.Kind == SHUTDOWN {
-		return m.Price == 0 && m.Amount == 0 && m.TraderId == 0 && m.TradeId == 0 && m.StockId == 0
-	} else {
-		isValid := (m.Price != 0 || m.Kind == SELL || m.Kind == CANCEL || m.Kind == CANCELLED || m.Kind == NOT_CANCELLED)
-		isValid = isValid && m.Amount != 0 && m.TraderId != 0 && m.TradeId != 0 && m.StockId != 0
-		return isValid
-	}
-	panic("Unreachable")
+	// Only sells (and messages cancelling sells) are allowed to have a price of 0
+	isValid := (m.Price != 0 || m.Kind == SELL || m.Kind == CANCEL || m.Kind == CANCELLED || m.Kind == NOT_CANCELLED)
+	// Remaining fields are never allowed to be 0
+	isValid = isValid && m.Amount != 0 && m.TraderId != 0 && m.TradeId != 0 && m.StockId != 0
+	return isValid
 }
 
-func (m *Message) WriteBuy() {
-	m.Route = ORDER
-	m.Kind = BUY
-}
-
-func (m *Message) WriteSell() {
-	m.Route = ORDER
-	m.Kind = SELL
+func (m *Message) WriteApp(kind MsgKind) {
+	m.Route = APP
+	m.Kind = kind
+	m.Direction = OUT
 }
 
 func (m *Message) WriteCancelFor(om *Message) {
 	*m = *om
-	m.Route = ORDER
+	m.Route = APP
 	m.Kind = CANCEL
+	m.Direction = OUT
 }
 
-func (m *Message) WriteResponse(kind MsgKind) {
-	m.Route = MATCHER_RESPONSE
-	m.Kind = kind
-}
-
-func (m *Message) WriteCancelled() {
-	m.Route = MATCHER_RESPONSE
-	m.Kind = CANCELLED
-}
-
-func (m *Message) WriteNotCancelled() {
-	m.Route = MATCHER_RESPONSE
-	m.Kind = NOT_CANCELLED
+func (m *Message) WriteAckFor(om *Message) {
+	*m = *om
+	m.Route = ACK
+	m.Direction = OUT
 }
 
 func (m *Message) WriteShutdown() {
-	m.Route = COMMAND
-	m.Kind = SHUTDOWN
+	m.Route = SHUTDOWN
+	m.Kind = NO_KIND
+	m.Direction = OUT
 }
 
-func (m *Message) WriteServerAckFor(om *Message) {
-	*m = *om
-	m.Route = SERVER_ACK
+func (m *Message) WriteTo(b []byte) {
+	p := unsafe.Pointer(m)
+	mb := (*([SizeofMessage]byte))(p)[:]
+	copy(b, mb)
 }
 
-func (m *Message) WriteClientAckFor(om *Message) {
-	*m = *om
-	m.Route = CLIENT_ACK
-}
-
-func (m *Message) WriteStatus(status MsgStatus) {
-	m.Status = status
+func (m *Message) WriteFrom(b []byte) {
+	p := unsafe.Pointer(m)
+	mb := (*([SizeofMessage]byte))(p)[:]
+	copy(mb, b)
 }
 
 func (m *Message) String() string {
@@ -223,17 +215,5 @@ func (m *Message) String() string {
 	if m.Status != NORMAL {
 		status = m.Status.String() + "! "
 	}
-	return fmt.Sprintf("%s(%v %v), price %v, amount %s, trader %s, trade %s, stock %s", status, m.Route, m.Kind, price, amount, traderId, tradeId, stockId)
-}
-
-func (m *Message) WriteTo(b []byte) {
-	p := unsafe.Pointer(m)
-	mb := (*([SizeofMessage]byte))(p)[:]
-	copy(b, mb)
-}
-
-func (m *Message) WriteFrom(b []byte) {
-	p := unsafe.Pointer(m)
-	mb := (*([SizeofMessage]byte))(p)[:]
-	copy(mb, b)
+	return fmt.Sprintf("%s(%v %v %v), price %v, amount %s, trader %s, trade %s, stock %s", status, m.Direction, m.Route, m.Kind, price, amount, traderId, tradeId, stockId)
 }

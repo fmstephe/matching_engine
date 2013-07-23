@@ -93,10 +93,10 @@ func mkMessage(line string) (o *msg.Message, err error) {
 	}
 	switch useful[3] {
 	case "B":
-		o.WriteBuy()
+		o.WriteApp(msg.BUY)
 		return
 	case "S":
-		o.WriteSell()
+		o.WriteApp(msg.SELL)
 		return
 	case "D":
 		o.WriteCancelFor(o)

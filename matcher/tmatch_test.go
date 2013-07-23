@@ -72,6 +72,7 @@ func (lt *localTester) Send(t *testing.T, m *msg.Message) {
 }
 
 func (lt *localTester) Expect(t *testing.T, ref *msg.Message) {
+	ref.Direction = msg.OUT
 	m := <-lt.dispatch
 	if *ref != *m {
 		_, fname, lnum, _ := runtime.Caller(1)
