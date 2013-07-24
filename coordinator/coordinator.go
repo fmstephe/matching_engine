@@ -9,8 +9,8 @@ type dispatchChan interface {
 	SetDispatch(chan *msg.Message)
 }
 
-type orderChan interface {
-	SetOrders(chan *msg.Message)
+type appChan interface {
+	SetAppMsgs(chan *msg.Message)
 }
 
 type responseChan interface {
@@ -32,31 +32,31 @@ type responder interface {
 	responseChan
 }
 
-type matcher interface {
+type app interface {
 	runner
 	dispatchChan
-	orderChan
+	appChan
 }
 
-func Coordinate(l listener, r responder, m matcher, log bool) {
-	d := connect(l, r, m, log)
-	run(l, r, m, d)
+func Coordinate(l listener, r responder, a app, log bool) {
+	d := connect(l, r, a, log)
+	run(l, r, a, d)
 }
 
-func connect(l listener, r responder, m matcher, log bool) *dispatcher {
+func connect(l listener, r responder, a app, log bool) *dispatcher {
 	dispatch := make(chan *msg.Message, 100)
-	orders := make(chan *msg.Message, 100)
+	appMsgs := make(chan *msg.Message, 100)
 	responses := make(chan *msg.Message, 100)
-	d := &dispatcher{dispatch: dispatch, orders: orders, responses: responses, log: log}
+	d := &dispatcher{dispatch: dispatch, appMsgs: appMsgs, responses: responses, log: log}
 	l.SetDispatch(dispatch)
 	r.SetResponses(responses)
 	r.SetDispatch(dispatch)
-	m.SetOrders(orders)
-	m.SetDispatch(dispatch)
+	a.SetAppMsgs(appMsgs)
+	a.SetDispatch(dispatch)
 	return d
 }
 
-func run(l listener, r responder, m matcher, d *dispatcher) {
+func run(l listener, r responder, m app, d *dispatcher) {
 	go l.Run()
 	go r.Run()
 	go m.Run()
@@ -65,7 +65,7 @@ func run(l listener, r responder, m matcher, d *dispatcher) {
 
 type dispatcher struct {
 	dispatch  chan *msg.Message
-	orders    chan *msg.Message
+	appMsgs   chan *msg.Message
 	responses chan *msg.Message
 	log       bool
 }
@@ -87,8 +87,8 @@ func (d *dispatcher) Run() {
 			if m.Route == msg.SHUTDOWN {
 				return
 			}
-		case m.Direction == msg.IN:
-			d.orders <- m
+		case m.Direction == msg.IN: // Includes APP and SHUTDOWN messages
+			d.appMsgs <- m
 		default:
 			panic(fmt.Sprintf("Dispatcher - Unkown object: %v", m))
 		}

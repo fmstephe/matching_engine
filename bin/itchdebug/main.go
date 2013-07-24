@@ -45,7 +45,7 @@ func loop() {
 		orders := make(chan *msg.Message)
 		m := matcher.NewMatcher(1000)
 		m.SetDispatch(dispatch)
-		m.SetOrders(orders)
+		m.SetAppMsgs(appMsgs)
 		go m.Run()
 		//
 		var o *msg.OrderNode

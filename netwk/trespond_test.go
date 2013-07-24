@@ -125,17 +125,17 @@ func TestUnackedInDetail(t *testing.T) {
 	allResent(t, out, m1, m2, m3, m4, m5)
 
 	// ack m3
-	r.handleClientAck(a3)
+	r.handleInAck(a3)
 	r.resend()
 	allResent(t, out, m1, m2, m4, m5)
 
 	// ack m1
-	r.handleClientAck(a1)
+	r.handleInAck(a1)
 	r.resend()
 	allResent(t, out, m2, m4, m5)
 
 	// ack unknown
-	r.handleClientAck(aUnkown)
+	r.handleInAck(aUnkown)
 	r.resend()
 	allResent(t, out, m2, m4, m5)
 
@@ -145,16 +145,16 @@ func TestUnackedInDetail(t *testing.T) {
 	allResent(t, out, m2, m4, m5, m6)
 
 	// ack m4 and m6, and add m7
-	r.handleClientAck(a4)
-	r.handleClientAck(a6)
+	r.handleInAck(a4)
+	r.handleInAck(a6)
 	r.addToUnacked(m7)
 	r.resend()
 	allResent(t, out, m2, m5, m7)
 
 	// ack m2, m5 and m7
-	r.handleClientAck(a2)
-	r.handleClientAck(a5)
-	r.handleClientAck(a7)
+	r.handleInAck(a2)
+	r.handleInAck(a5)
+	r.handleInAck(a7)
 	r.resend()
 	if len(out) != 0 {
 		t.Errorf("Expecting no messages re-sent, found %d", len(out))

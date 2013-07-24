@@ -37,16 +37,16 @@ func doPerf(log bool) {
 		println(orderCount, "OrderNodes Built")
 	}
 	dispatch := make(chan *msg.Message, len(orderData))
-	orders := make(chan *msg.Message)
+	appMsgs := make(chan *msg.Message)
 	m := matcher.NewMatcher(*delDelay * 2)
 	m.SetDispatch(dispatch)
-	m.SetOrders(orders)
+	m.SetAppMsgs(appMsgs)
 	go m.Run()
 	startProfile()
 	defer endProfile()
 	start := time.Now().UnixNano()
 	for i := range orderData {
-		orders <- &orderData[i]
+		appMsgs <- &orderData[i]
 	}
 	if log {
 		println("Buffer Writes: ", len(dispatch))

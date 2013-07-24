@@ -124,16 +124,18 @@ const (
 
 // Flat description of an incoming message
 type Message struct {
+	// Headers
 	Status    MsgStatus
 	Direction MsgDirection
 	Route     MsgRoute
-	Kind      MsgKind
-	pad32     uint32
-	Price     int64
-	Amount    uint32
-	TraderId  uint32
-	TradeId   uint32
-	StockId   uint32
+	// Body
+	Kind     MsgKind
+	pad32    uint32
+	Price    int64
+	Amount   uint32
+	TraderId uint32
+	TradeId  uint32
+	StockId  uint32
 	// I think we need a checksum here
 }
 

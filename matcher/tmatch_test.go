@@ -54,21 +54,21 @@ type testerMaker struct {
 
 func (tm *testerMaker) Make() MatchTester {
 	dispatch := make(chan *msg.Message, 30)
-	orders := make(chan *msg.Message, 20)
+	appMsgs := make(chan *msg.Message, 20)
 	m := NewMatcher(100)
 	m.SetDispatch(dispatch)
-	m.SetOrders(orders)
+	m.SetAppMsgs(appMsgs)
 	go m.Run()
-	return &localTester{dispatch: dispatch, orders: orders}
+	return &localTester{dispatch: dispatch, appMsgs: appMsgs}
 }
 
 type localTester struct {
 	dispatch chan *msg.Message
-	orders   chan *msg.Message
+	appMsgs  chan *msg.Message
 }
 
 func (lt *localTester) Send(t *testing.T, m *msg.Message) {
-	lt.orders <- m
+	lt.appMsgs <- m
 }
 
 func (lt *localTester) Expect(t *testing.T, ref *msg.Message) {

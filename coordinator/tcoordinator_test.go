@@ -35,7 +35,7 @@ func (r *tResponder) SetResponses(responses chan *Message) {
 }
 
 type tMatcher struct {
-	orders   chan *Message
+	appMsgs  chan *Message
 	dispatch chan *Message
 }
 
@@ -47,8 +47,8 @@ func (m *tMatcher) SetDispatch(dispatch chan *Message) {
 	m.dispatch = dispatch
 }
 
-func (m *tMatcher) SetOrders(orders chan *Message) {
-	m.orders = orders
+func (m *tMatcher) SetAppMsgs(appMsgs chan *Message) {
+	m.appMsgs = appMsgs
 }
 
 func setup() (*tListener, *tResponder, *tMatcher) {
@@ -71,7 +71,7 @@ func TestInAppGoToMatcher(t *testing.T) {
 	listener, _, matcher := setup()
 	m := &Message{Direction: IN, Route: APP, Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
 	listener.dispatch <- m
-	validate(t, <-matcher.orders, m)
+	validate(t, <-matcher.appMsgs, m)
 }
 
 func TestOutAppGoesToResponder(t *testing.T) {
@@ -106,7 +106,7 @@ func TestInCommandGoesToMatcher(t *testing.T) {
 	listener, _, matcher := setup()
 	m := &Message{Direction: IN, Route: SHUTDOWN}
 	listener.dispatch <- m
-	validate(t, <-matcher.orders, m)
+	validate(t, <-matcher.appMsgs, m)
 }
 
 func TestOutCommandGoesToResponder(t *testing.T) {

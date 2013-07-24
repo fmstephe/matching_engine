@@ -27,13 +27,13 @@ func TestCompareMatchers(t *testing.T) {
 
 func compareMatchers(t *testing.T, orderPairs, depth int, lowPrice, highPrice int64) {
 	refdispatch := make(chan *msg.Message, orderPairs*2)
-	reforders := make(chan *msg.Message, 10)
-	refm := newRefmatcher(lowPrice, highPrice, refdispatch, reforders)
+	refAppMsgs := make(chan *msg.Message, 10)
+	refm := newRefmatcher(lowPrice, highPrice, refdispatch, refAppMsgs)
 	dispatch := make(chan *msg.Message, orderPairs*2)
-	orders := make(chan *msg.Message, 10)
+	appMsgs := make(chan *msg.Message, 10)
 	m := NewMatcher(orderPairs * 2)
 	m.SetDispatch(dispatch)
-	m.SetOrders(orders)
+	m.SetAppMsgs(appMsgs)
 	testSet, err := cmprMaker.RndTradeSet(orderPairs, depth, lowPrice, highPrice)
 	go refm.Run()
 	go m.Run()
@@ -42,10 +42,10 @@ func compareMatchers(t *testing.T, orderPairs, depth int, lowPrice, highPrice in
 	}
 	for i := 0; i < len(testSet); i++ {
 		o := &testSet[i]
-		reforders <- o
-		reforders <- o
-		orders <- o
-		orders <- o
+		refAppMsgs <- o
+		refAppMsgs <- o
+		appMsgs <- o
+		appMsgs <- o
 		checkBuffers(t, refdispatch, dispatch)
 	}
 }

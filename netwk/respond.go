@@ -1,6 +1,7 @@
 package netwk
 
 import (
+	"fmt"
 	"github.com/fmstephe/matching_engine/msg"
 	"github.com/fmstephe/matching_engine/msg/msgutil"
 	"io"
@@ -36,14 +37,15 @@ func (r *Responder) Run() {
 	for {
 		select {
 		case resp := <-r.responses:
-			// TODO add some handling here for illegal message states
 			switch {
 			case resp.Direction == msg.IN && resp.Route == msg.ACK:
-				r.handleClientAck(resp)
+				r.handleInAck(resp)
 			case resp.Direction == msg.OUT && (resp.Status != msg.NORMAL || resp.Route == msg.APP || resp.Route == msg.ACK):
 				r.writeResponse(resp)
 			case resp.Route == msg.SHUTDOWN:
 				return
+			default:
+				panic(fmt.Sprintf("Unhandleable response %v", resp))
 			}
 		case <-t.C:
 			r.resend()
@@ -52,7 +54,7 @@ func (r *Responder) Run() {
 	}
 }
 
-func (r *Responder) handleClientAck(ca *msg.Message) {
+func (r *Responder) handleInAck(ca *msg.Message) {
 	r.unacked.Remove(ca)
 }
 

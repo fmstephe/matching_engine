@@ -10,7 +10,7 @@ type M struct {
 	matchQueues map[uint32]*pqueue.MatchQueues
 	slab        *pqueue.Slab
 	dispatch    chan *msg.Message
-	orders      chan *msg.Message
+	appMsgs     chan *msg.Message
 }
 
 func NewMatcher(slabSize int) *M {
@@ -23,8 +23,8 @@ func (m *M) SetDispatch(dispatch chan *msg.Message) {
 	m.dispatch = dispatch
 }
 
-func (m *M) SetOrders(orders chan *msg.Message) {
-	m.orders = orders
+func (m *M) SetAppMsgs(appMsgs chan *msg.Message) {
+	m.appMsgs = appMsgs
 }
 
 func (m *M) getMatchQueues(stockId uint32) *pqueue.MatchQueues {
@@ -38,7 +38,7 @@ func (m *M) getMatchQueues(stockId uint32) *pqueue.MatchQueues {
 
 func (m *M) Run() {
 	for {
-		o := <-m.orders
+		o := <-m.appMsgs
 		if o.Route == msg.SHUTDOWN {
 			r := &msg.Message{}
 			r.WriteShutdown()
