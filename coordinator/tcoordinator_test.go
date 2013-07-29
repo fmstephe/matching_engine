@@ -55,7 +55,7 @@ func setup() (*tListener, *tResponder, *tMatcher) {
 	l := &tListener{}
 	r := &tResponder{}
 	m := &tMatcher{}
-	d := connect(l, r, m, false)
+	d := connect(l, r, m, "Test System", false)
 	go d.Run()
 	return l, r, m
 }

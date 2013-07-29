@@ -38,16 +38,16 @@ type app interface {
 	appChan
 }
 
-func Coordinate(l listener, r responder, a app, log bool) {
-	d := connect(l, r, a, log)
+func Coordinate(l listener, r responder, a app, name string, log bool) {
+	d := connect(l, r, a, name, log)
 	run(l, r, a, d)
 }
 
-func connect(l listener, r responder, a app, log bool) *dispatcher {
+func connect(l listener, r responder, a app, name string, log bool) *dispatcher {
 	dispatch := make(chan *msg.Message, 100)
 	appMsgs := make(chan *msg.Message, 100)
 	responses := make(chan *msg.Message, 100)
-	d := &dispatcher{dispatch: dispatch, appMsgs: appMsgs, responses: responses, log: log}
+	d := &dispatcher{dispatch: dispatch, appMsgs: appMsgs, responses: responses, name: name, log: log}
 	l.SetDispatch(dispatch)
 	r.SetResponses(responses)
 	r.SetDispatch(dispatch)
@@ -67,6 +67,7 @@ type dispatcher struct {
 	dispatch  chan *msg.Message
 	appMsgs   chan *msg.Message
 	responses chan *msg.Message
+	name      string
 	log       bool
 }
 
@@ -75,7 +76,7 @@ func (d *dispatcher) Run() {
 	for {
 		m := <-d.dispatch
 		if d.log {
-			println(fmt.Sprintf("Dispatcher - %v", m))
+			println(fmt.Sprintf("%s - %v", d.name, m))
 		}
 		switch {
 		case !m.Valid():

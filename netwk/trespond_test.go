@@ -5,54 +5,6 @@ import (
 	"testing"
 )
 
-func TestResponseResend(t *testing.T) {
-	mt := testMkrUtil.Make().(*netwkTester)
-	defer mt.Cleanup(t)
-	// Add Sell
-	s := &Message{Route: APP, Direction: IN, Kind: SELL, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
-	mt.Send(t, s)
-	// Add Buy
-	b := &Message{Route: APP, Direction: IN, Kind: BUY, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
-	mt.Send(t, b)
-	// server ack buy
-	sab := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 2, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
-	// server ack sell
-	sas := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
-	// We expect that we will keep receiving the APP messages, because we didn't ack them
-	mt.ExpectOneOf_NoAck(t, sab, sas)
-	mt.ExpectOneOf_NoAck(t, sab, sas)
-	mt.ExpectOneOf_NoAck(t, sab, sas)
-	mt.ExpectOneOf_NoAck(t, sab, sas)
-	mt.Cleanup(t)
-}
-
-func TestClientAck(t *testing.T) {
-	mt := testMkrUtil.Make().(*netwkTester)
-	defer mt.Cleanup(t)
-	// Add Sell
-	s := &Message{Route: APP, Direction: IN, Kind: SELL, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
-	mt.Send(t, s)
-	// Add buy
-	b := &Message{Route: APP, Direction: IN, Kind: BUY, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
-	mt.Send(t, b)
-	// server ack buy
-	sab := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 2, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
-	// server ack sell
-	sas := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
-	// We expect that we will keep receiving the APP messages, until we ack them
-	mt.ExpectOneOf_NoAck(t, sab, sas)
-	mt.ExpectOneOf_NoAck(t, sab, sas)
-	// client ack buy
-	cab := &Message{Route: ACK, Direction: OUT, Kind: FULL, TraderId: 2, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
-	mt.SendNoAck(t, cab)
-	// client ack sell
-	cas := &Message{Route: ACK, Direction: OUT, Kind: FULL, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
-	mt.SendNoAck(t, cas)
-	// We expect that after we send the client acks we will no longer receive resends
-	mt.ExpectEmpty(t, sab.TraderId)
-	mt.ExpectEmpty(t, sas.TraderId)
-}
-
 type chanWriter struct {
 	out chan *Message
 }
@@ -67,6 +19,8 @@ func (c chanWriter) Write(b []byte) (int, error) {
 func (c chanWriter) Close() error {
 	return nil
 }
+
+// TODO We need some tests around msg resends in the face of unreliable networking
 
 // Two response messages with the same traderId/tradeId should both be resent (until acked)
 // When this test was written the CANCELLED message would overwrite the PARTIAL, and only the CANCELLED would be resent
