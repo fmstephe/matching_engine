@@ -1,7 +1,6 @@
-package netwk
+package coordinator
 
 import (
-	"github.com/fmstephe/matching_engine/coordinator"
 	"github.com/fmstephe/matching_engine/matcher"
 	"github.com/fmstephe/matching_engine/msg"
 	"net"
@@ -30,20 +29,12 @@ func (tm *netwkTesterMaker) Make() matcher.MatchTester {
 	tm.freePort++
 	// Build matcher
 	m := matcher.NewMatcher(100)
-	matcherRead := mkReadConn(serverPort)
-	matcherWrite := mkWriteConn(clientPort)
-	matcherListener := NewListener(matcherRead)
-	matcherResponder := NewResponder(matcherWrite)
-	coordinator.Coordinate(matcherListener, matcherResponder, m, "Matching Engine", false)
+	Coordinate(mkReadConn(serverPort), mkWriteConn(clientPort), m, "Matching Engine", false)
 	// Build client
-	clientRead := mkReadConn(clientPort)
-	clientWrite := mkWriteConn(serverPort)
-	clientListener := NewListener(clientRead)
-	clientResponder := NewResponder(clientWrite)
 	receivedMsgs := make(chan *msg.Message, 1000)
 	toSendMsgs := make(chan *msg.Message, 1000)
 	c := newClient(receivedMsgs, toSendMsgs)
-	coordinator.Coordinate(clientListener, clientResponder, c, "Test Client    ", false)
+	Coordinate(mkReadConn(clientPort), mkWriteConn(serverPort), c, "Test Client    ", false)
 	return &netwkTester{receivedMsgs: receivedMsgs, toSendMsgs: toSendMsgs}
 }
 

@@ -1,4 +1,4 @@
-package netwk
+package coordinator
 
 import (
 	"errors"
@@ -37,7 +37,7 @@ func startMockedListener(shouldErr bool, writeN int) (in chan *Message, dispatch
 	in = make(chan *Message, 100)
 	dispatch = make(chan *Message, 100)
 	cr := newChanReader(in, shouldErr, writeN)
-	l := NewListener(cr)
+	l := newListener(cr)
 	l.SetDispatch(dispatch)
 	go l.Run()
 	return in, dispatch

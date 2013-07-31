@@ -1,4 +1,4 @@
-package netwk
+package coordinator
 
 import (
 	"fmt"
@@ -7,21 +7,21 @@ import (
 	"io"
 )
 
-type Listener struct {
+type stdListener struct {
 	reader   io.ReadCloser
 	ticker   *msgutil.Ticker
 	dispatch chan *msg.Message
 }
 
-func NewListener(reader io.ReadCloser) *Listener {
-	return &Listener{reader: reader, ticker: msgutil.NewTicker()}
+func newListener(reader io.ReadCloser) listener {
+	return &stdListener{reader: reader, ticker: msgutil.NewTicker()}
 }
 
-func (l *Listener) SetDispatch(dispatch chan *msg.Message) {
+func (l *stdListener) SetDispatch(dispatch chan *msg.Message) {
 	l.dispatch = dispatch
 }
 
-func (l *Listener) Run() {
+func (l *stdListener) Run() {
 	defer l.shutdown()
 	for {
 		m := l.deserialise()
@@ -32,7 +32,7 @@ func (l *Listener) Run() {
 	}
 }
 
-func (l *Listener) deserialise() *msg.Message {
+func (l *stdListener) deserialise() *msg.Message {
 	b := make([]byte, msg.SizeofMessage)
 	m := &msg.Message{}
 	n, err := l.reader.Read(b)
@@ -47,7 +47,7 @@ func (l *Listener) deserialise() *msg.Message {
 	return m
 }
 
-func (l *Listener) forward(o *msg.Message) (shutdown bool) {
+func (l *stdListener) forward(o *msg.Message) (shutdown bool) {
 	if o.Route != msg.ACK && o.Route != msg.SHUTDOWN {
 		a := &msg.Message{}
 		a.WriteAckFor(o)
@@ -59,6 +59,6 @@ func (l *Listener) forward(o *msg.Message) (shutdown bool) {
 	return o.Route == msg.SHUTDOWN
 }
 
-func (l *Listener) shutdown() {
+func (l *stdListener) shutdown() {
 	l.reader.Close()
 }

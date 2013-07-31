@@ -1,4 +1,4 @@
-package netwk
+package coordinator
 
 import (
 	"github.com/fmstephe/matching_engine/matcher"

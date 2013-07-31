@@ -1,4 +1,4 @@
-package netwk
+package coordinator
 
 import (
 	"fmt"
@@ -12,26 +12,26 @@ import (
 
 const RESEND_MILLIS = time.Duration(10) * time.Millisecond
 
-type Responder struct {
+type stdResponder struct {
 	responses chan *msg.Message
 	dispatch  chan *msg.Message
 	unacked   *msgutil.Set
 	writer    io.WriteCloser
 }
 
-func NewResponder(writer io.WriteCloser) *Responder {
-	return &Responder{unacked: msgutil.NewSet(), writer: writer}
+func newResponder(writer io.WriteCloser) responder {
+	return &stdResponder{unacked: msgutil.NewSet(), writer: writer}
 }
 
-func (r *Responder) SetResponses(responses chan *msg.Message) {
+func (r *stdResponder) SetResponses(responses chan *msg.Message) {
 	r.responses = responses
 }
 
-func (r *Responder) SetDispatch(dispatch chan *msg.Message) {
+func (r *stdResponder) SetDispatch(dispatch chan *msg.Message) {
 	r.dispatch = dispatch
 }
 
-func (r *Responder) Run() {
+func (r *stdResponder) Run() {
 	defer r.shutdown()
 	t := time.NewTimer(RESEND_MILLIS)
 	for {
@@ -54,30 +54,30 @@ func (r *Responder) Run() {
 	}
 }
 
-func (r *Responder) handleInAck(ca *msg.Message) {
+func (r *stdResponder) handleInAck(ca *msg.Message) {
 	r.unacked.Remove(ca)
 }
 
-func (r *Responder) writeResponse(resp *msg.Message) {
+func (r *stdResponder) writeResponse(resp *msg.Message) {
 	resp.Direction = msg.IN
 	r.addToUnacked(resp)
 	r.write(resp)
 }
 
-func (r *Responder) addToUnacked(resp *msg.Message) {
+func (r *stdResponder) addToUnacked(resp *msg.Message) {
 	if resp.Route == msg.APP {
 		r.unacked.Add(resp)
 	}
 }
 
-func (r *Responder) resend() {
+func (r *stdResponder) resend() {
 	// There is a way to turn r.Write into a closure directly - but needs go 1.1
 	r.unacked.Do(func(m *msg.Message) {
 		r.write(m)
 	})
 }
 
-func (r *Responder) write(resp *msg.Message) {
+func (r *stdResponder) write(resp *msg.Message) {
 	b := make([]byte, msg.SizeofMessage)
 	resp.WriteTo(b)
 	n, err := r.writer.Write(b)
@@ -89,7 +89,7 @@ func (r *Responder) write(resp *msg.Message) {
 	}
 }
 
-func (r *Responder) handleError(resp *msg.Message, err error, s msg.MsgStatus) {
+func (r *stdResponder) handleError(resp *msg.Message, err error, s msg.MsgStatus) {
 	em := &msg.Message{}
 	*em = *resp
 	em.Status = s
@@ -100,6 +100,6 @@ func (r *Responder) handleError(resp *msg.Message, err error, s msg.MsgStatus) {
 	}
 }
 
-func (r *Responder) shutdown() {
+func (r *stdResponder) shutdown() {
 	r.writer.Close()
 }

@@ -60,63 +60,56 @@ func setup() (*tListener, *tResponder, *tMatcher) {
 	return l, r, m
 }
 
-func validate(t *testing.T, e, m *Message) {
-	if *e != *m {
-		t.Errorf("Expecting %v, found %v", e, m)
-	}
-}
-
-// TODO we need to rename the matcher channel to the app channel
 func TestInAppGoToMatcher(t *testing.T) {
 	listener, _, matcher := setup()
 	m := &Message{Direction: IN, Route: APP, Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
 	listener.dispatch <- m
-	validate(t, <-matcher.appMsgs, m)
+	validate(t, <-matcher.appMsgs, m, 1)
 }
 
-func TestOutAppGoesToResponder(t *testing.T) {
+func TestOutAppGoesToresponder(t *testing.T) {
 	listener, responder, _ := setup()
 	m := &Message{Direction: OUT, Route: APP, Kind: FULL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
 	listener.dispatch <- m
-	validate(t, <-responder.responses, m)
+	validate(t, <-responder.responses, m, 1)
 }
 
-func TestErrorsGoToResponder(t *testing.T) {
+func TestErrorsGoToresponder(t *testing.T) {
 	listener, responder, _ := setup()
 	m := &Message{Status: READ_ERROR, Direction: OUT}
 	listener.dispatch <- m
-	validate(t, <-responder.responses, m)
+	validate(t, <-responder.responses, m, 1)
 }
 
-func TestOutAckGoesToResponder(t *testing.T) {
+func TestOutAckGoesToresponder(t *testing.T) {
 	listener, responder, _ := setup()
 	m := &Message{Direction: OUT, Route: ACK, Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
 	listener.dispatch <- m
-	validate(t, <-responder.responses, m)
+	validate(t, <-responder.responses, m, 1)
 }
 
-func TestInAckGoesToResponder(t *testing.T) {
+func TestInAckGoesToresponder(t *testing.T) {
 	listener, responder, _ := setup()
 	m := &Message{Direction: OUT, Route: ACK, Kind: FULL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
 	listener.dispatch <- m
-	validate(t, <-responder.responses, m)
+	validate(t, <-responder.responses, m, 1)
 }
 
 func TestInCommandGoesToMatcher(t *testing.T) {
 	listener, _, matcher := setup()
 	m := &Message{Direction: IN, Route: SHUTDOWN}
 	listener.dispatch <- m
-	validate(t, <-matcher.appMsgs, m)
+	validate(t, <-matcher.appMsgs, m, 1)
 }
 
-func TestOutCommandGoesToResponder(t *testing.T) {
+func TestOutCommandGoesToresponder(t *testing.T) {
 	listener, responder, _ := setup()
 	m := &Message{Direction: OUT, Route: SHUTDOWN}
 	listener.dispatch <- m
-	validate(t, <-responder.responses, m)
+	validate(t, <-responder.responses, m, 1)
 }
 
-func TestInvalidMessageGoesToResponder(t *testing.T) {
+func TestInvalidMessageGoesToresponder(t *testing.T) {
 	listener, responder, _ := setup()
 	m := &Message{Route: APP, Kind: BUY}
 	listener.dispatch <- m
@@ -124,5 +117,5 @@ func TestInvalidMessageGoesToResponder(t *testing.T) {
 	*im = *m
 	im.Status = INVALID_MSG_ERROR
 	im.Direction = OUT
-	validate(t, <-responder.responses, im)
+	validate(t, <-responder.responses, im, 1)
 }

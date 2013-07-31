@@ -1,4 +1,4 @@
-package netwk
+package coordinator
 
 import (
 	. "github.com/fmstephe/matching_engine/msg"
@@ -27,7 +27,7 @@ func (c chanWriter) Close() error {
 func TestServerAckNotOverwrittenByCancel(t *testing.T) {
 	out := make(chan *Message, 100)
 	w := chanWriter{out}
-	r := NewResponder(w)
+	r := newResponder(w).(*stdResponder)
 	p := &Message{Route: APP, Direction: IN, Kind: PARTIAL, TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1}
 	c := &Message{Route: APP, Direction: IN, Kind: CANCELLED, TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1}
 	// Add buy server-ack to unacked list
@@ -43,7 +43,7 @@ func TestServerAckNotOverwrittenByCancel(t *testing.T) {
 func TestUnackedInDetail(t *testing.T) {
 	out := make(chan *Message, 100)
 	w := chanWriter{out}
-	r := NewResponder(w)
+	r := newResponder(w).(*stdResponder)
 	// Pre-canned message/ack pairs
 	m1 := &Message{TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1, Route: APP, Kind: FULL}
 	a1 := &Message{TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1, Route: ACK, Kind: FULL}
