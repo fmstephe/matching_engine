@@ -71,7 +71,6 @@ func (r *stdResponder) addToUnacked(resp *msg.Message) {
 }
 
 func (r *stdResponder) resend() {
-	// There is a way to turn r.Write into a closure directly - but needs go 1.1
 	r.unacked.Do(func(m *msg.Message) {
 		r.write(m)
 	})

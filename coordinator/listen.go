@@ -53,7 +53,7 @@ func (l *stdListener) forward(o *msg.Message) (shutdown bool) {
 		a.WriteAckFor(o)
 		l.dispatch <- a
 	}
-	if o.Route == msg.SHUTDOWN || l.ticker.Tick(o) {
+	if o.Route == msg.SHUTDOWN || o.Route == msg.ACK || l.ticker.Tick(o) {
 		l.dispatch <- o
 	}
 	return o.Route == msg.SHUTDOWN

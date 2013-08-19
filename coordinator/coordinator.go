@@ -46,9 +46,9 @@ func Coordinate(reader io.ReadCloser, writer io.WriteCloser, a app, name string,
 }
 
 func connect(l listener, r responder, a app, name string, log bool) *dispatcher {
-	dispatch := make(chan *msg.Message, 100)
-	appMsgs := make(chan *msg.Message, 100)
-	responses := make(chan *msg.Message, 100)
+	dispatch := make(chan *msg.Message, 10)
+	appMsgs := make(chan *msg.Message, 10)
+	responses := make(chan *msg.Message, 10)
 	d := &dispatcher{dispatch: dispatch, appMsgs: appMsgs, responses: responses, name: name, log: log}
 	l.SetDispatch(dispatch)
 	r.SetResponses(responses)
@@ -58,9 +58,9 @@ func connect(l listener, r responder, a app, name string, log bool) *dispatcher 
 	return d
 }
 
-func run(l listener, r responder, m app, d *dispatcher) {
+func run(l listener, r responder, a app, d *dispatcher) {
 	go l.Run()
 	go r.Run()
-	go m.Run()
+	go a.Run()
 	go d.Run()
 }

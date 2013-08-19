@@ -96,3 +96,52 @@ func TestDuplicate(t *testing.T) {
 	validate(t, <-dispatch, a2, 1)
 	validate(t, <-dispatch, m2, 1)
 }
+
+// Test ACK sent in, twice, expect ACK both times
+func TestDuplicateAck(t *testing.T) {
+	in, dispatch := startMockedListener(false, SizeofMessage)
+	m := &Message{Status: NORMAL, Route: ACK, Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
+	in <- m
+	in <- m
+	// Expect the ack to be passed through both times
+	validate(t, <-dispatch, m, 1)
+	validate(t, <-dispatch, m, 1)
+}
+
+func TestOrdersAckedSentAndDeduped(t *testing.T) {
+	// Test BUY sent in, twice, expect ACK, BUY and just ACK for the duplicate
+	m := &Message{Status: NORMAL, Route: APP, Kind: BUY, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
+	sendTwiceAckMsgAck(t, m)
+	// Test SELL sent in, twice, expect ACK, SELL and just ACK for the duplicate
+	m = &Message{Status: NORMAL, Route: APP, Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
+	sendTwiceAckMsgAck(t, m)
+	// Test PARTIAL sent in, twice, expect ACK, PARTIAL and just ACK for the duplicate
+	m = &Message{Status: NORMAL, Route: APP, Kind: PARTIAL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
+	sendTwiceAckMsgAck(t, m)
+	// Test FULL sent in, twice, expect ACK, FULL and just ACK for the duplicate
+	m = &Message{Status: NORMAL, Route: APP, Kind: FULL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
+	sendTwiceAckMsgAck(t, m)
+	// Test CANCELLED sent in, twice, expect ACK, CANCELLEd and just ACK for the duplicate
+	m = &Message{Status: NORMAL, Route: APP, Kind: CANCELLED, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
+	sendTwiceAckMsgAck(t, m)
+	// Test NOT_CANCELLED sent in, twice, expect ACK, NOT_CANCELLED and just ACK for the duplicate
+	m = &Message{Status: NORMAL, Route: APP, Kind: NOT_CANCELLED, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
+	sendTwiceAckMsgAck(t, m)
+	// Test CANCEL sent in, twice, expect ACK, CANCEL and just ACK for the duplicate
+	m = &Message{Status: NORMAL, Route: APP, Kind: CANCEL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
+	sendTwiceAckMsgAck(t, m)
+}
+
+func sendTwiceAckMsgAck(t *testing.T, m *Message) {
+	in, dispatch := startMockedListener(false, SizeofMessage)
+	in <- m
+	in <- m
+	in <- m
+	// Ack
+	a := &Message{}
+	a.WriteAckFor(m)
+	validate(t, <-dispatch, a, 2)
+	validate(t, <-dispatch, m, 2)
+	validate(t, <-dispatch, a, 2)
+	validate(t, <-dispatch, a, 2)
+}
