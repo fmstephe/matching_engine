@@ -81,7 +81,7 @@ func mkWriteConn(port int) *net.UDPConn {
 }
 
 func mkReadConn(port int) *net.UDPConn {
-	addr, err := net.ResolveUDPAddr("upd", ":"+strconv.Itoa(port))
+	addr, err := net.ResolveUDPAddr("udp", ":"+strconv.Itoa(port))
 	if err != nil {
 		panic(err)
 	}

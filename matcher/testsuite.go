@@ -25,8 +25,8 @@ func RunTestSuite(t *testing.T, mkr MatchTesterMaker) {
 	testMidPrice(t, mkr)
 	testMidPriceBigSell(t, mkr)
 	testMidPriceBigBuy(t, mkr)
-	testTradeSeparateStocks(t, mkr)
-	testSeparateStocksNotMatched(t, mkr)
+	testTradeSeparateStocksI(t, mkr)
+	testTradeSeparateStocksII(t, mkr)
 	testSellCancelBuyNoMatch(t, mkr)
 	testBuyCancelSellNoMatch(t, mkr)
 	testBadCancelNotCancelled(t, mkr)
@@ -177,7 +177,7 @@ func testMidPriceBigBuy(t *testing.T, mkr MatchTesterMaker) {
 	mt.Expect(t, es)
 }
 
-func testTradeSeparateStocks(t *testing.T, mkr MatchTesterMaker) {
+func testTradeSeparateStocksI(t *testing.T, mkr MatchTesterMaker) {
 	mt := mkr.Make()
 	defer mt.Cleanup(t)
 	addLowBuys(t, mt, 5, 1)
@@ -206,25 +206,33 @@ func testTradeSeparateStocks(t *testing.T, mkr MatchTesterMaker) {
 	mt.Expect(t, es1)
 }
 
-func testSeparateStocksNotMatched(t *testing.T, mkr MatchTesterMaker) {
+func  testTradeSeparateStocksII(t *testing.T, mkr MatchTesterMaker) {
 	mt := mkr.Make()
 	defer mt.Cleanup(t)
 	addLowBuys(t, mt, 5, 1)
 	addHighSells(t, mt, 10, 1)
-	// Add Sell
-	s1 := &Message{Route: APP, Direction: OUT, Kind: SELL, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	// Add Sell stock 1
+	s1 := &Message{Route: APP, Direction: OUT, Kind: SELL, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Send(t, s1)
-	// Add Sell
-	// Add Buy
-	b1 := &Message{Route: APP, Direction: OUT, Kind: BUY, TraderId: 1, TradeId: 1, StockId: 2, Price: 7, Amount: 1}
+	// Add Buy stock 2
+	b1 := &Message{Route: APP, Direction: OUT, Kind: BUY, TraderId: 2, TradeId: 1, StockId: 2, Price: 7, Amount: 1}
 	mt.Send(t, b1)
-	// Expect empty message flushing
-	// Add Trader 2 order to flush trader 2 messages
-	s2 := &Message{Route: APP, Direction: OUT, Kind: SELL, TraderId: 2, TradeId: 2, StockId: 1, Price: 70, Amount: 1}
+	// Add buy stock 1
+	s2 := &Message{Route: APP, Direction: OUT, Kind: BUY, TraderId: 3, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Send(t, s2)
-	// Add Trader 1 order to flush trader 1 messages
-	b2 := &Message{Route: APP, Direction: OUT, Kind: BUY, TraderId: 1, TradeId: 2, StockId: 1, Price: 1, Amount: 1}
+	// Expect match on stock 1
+	eb1 := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 3, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
+	mt.Expect(t, eb1)
+	es1 := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	mt.Expect(t, es1)
+	// Add sell stock 2
+	b2 := &Message{Route: APP, Direction: OUT, Kind: SELL, TraderId: 4, TradeId: 1, StockId: 2, Price: 7, Amount: 1}
 	mt.Send(t, b2)
+	// Expect match on stock 2
+	eb2 := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 2, TradeId: 1, StockId: 2, Price: -7, Amount: 1}
+	mt.Expect(t, eb2)
+	es2 := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 4, TradeId: 1, StockId: 2, Price: 7, Amount: 1}
+	mt.Expect(t, es2)
 }
 
 func testSellCancelBuyNoMatch(t *testing.T, mkr MatchTesterMaker) {
@@ -233,23 +241,25 @@ func testSellCancelBuyNoMatch(t *testing.T, mkr MatchTesterMaker) {
 	addLowBuys(t, mt, 5, 1)
 	addHighSells(t, mt, 10, 1)
 	// Add Sell
-	s := &Message{Route: APP, Direction: OUT, Kind: SELL, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	s := &Message{Route: APP, Direction: OUT, Kind: SELL, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Send(t, s)
 	// Cancel Sell
-	cs := &Message{Route: APP, Direction: OUT, Kind: CANCEL, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	cs := &Message{Route: APP, Direction: OUT, Kind: CANCEL, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Send(t, cs)
 	// Expect Cancelled
-	ec := &Message{Route: APP, Direction: IN, Kind: CANCELLED, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	ec := &Message{Route: APP, Direction: IN, Kind: CANCELLED, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Expect(t, ec)
 	// Add Buy
-	b := &Message{Route: APP, Direction: OUT, Kind: BUY, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	b := &Message{Route: APP, Direction: OUT, Kind: BUY, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Send(t, b)
-	// Add Trader 1 order to flush trader 1 messages
-	b2 := &Message{Route: APP, Direction: OUT, Kind: BUY, TraderId: 1, TradeId: 2, StockId: 1, Price: 1, Amount: 1}
-	mt.Send(t, b2)
-	// Add Trader 2 order to flush trader 2 messages
-	s2 := &Message{Route: APP, Direction: OUT, Kind: SELL, TraderId: 2, TradeId: 2, StockId: 1, Price: 70, Amount: 1}
+	// Add Sell
+	s2 := &Message{Route: APP, Direction: OUT, Kind: SELL, TraderId: 3, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Send(t, s2)
+	// Expect match for traders 1 and 3
+	eb := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 2, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
+	mt.Expect(t, eb)
+	es := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 3, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	mt.Expect(t, es)
 }
 
 func testBuyCancelSellNoMatch(t *testing.T, mkr MatchTesterMaker) {
@@ -269,13 +279,14 @@ func testBuyCancelSellNoMatch(t *testing.T, mkr MatchTesterMaker) {
 	// Add Sell
 	s := &Message{Route: APP, Direction: OUT, Kind: SELL, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Send(t, s)
-	// Expect empty message flushing
-	// Add Trader 1 order to flush trader 1 messages
-	b2 := &Message{Route: APP, Direction: OUT, Kind: BUY, TraderId: 1, TradeId: 2, StockId: 1, Price: 1, Amount: 1}
+	// Add Buy
+	b2 := &Message{Route: APP, Direction: OUT, Kind: BUY, TraderId: 3, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Send(t, b2)
-	// Add Trader 2 order to flush trader 2 messages
-	s2 := &Message{Route: APP, Direction: OUT, Kind: SELL, TraderId: 2, TradeId: 2, StockId: 1, Price: 70, Amount: 1}
-	mt.Send(t, s2)
+	// Expect match for traders 1 and 3
+	eb := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 3, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
+	mt.Expect(t, eb)
+	es := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	mt.Expect(t, es)
 }
 
 func testBadCancelNotCancelled(t *testing.T, mkr MatchTesterMaker) {

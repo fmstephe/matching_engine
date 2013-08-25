@@ -1,5 +1,6 @@
 bin/perf/perf
 bin/itchdebug/itchdebug
+bin/svr/svr
 *.swp
 *.prof
 *.odat
