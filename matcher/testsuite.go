@@ -206,7 +206,7 @@ func testTradeSeparateStocksI(t *testing.T, mkr MatchTesterMaker) {
 	mt.Expect(t, es1)
 }
 
-func  testTradeSeparateStocksII(t *testing.T, mkr MatchTesterMaker) {
+func testTradeSeparateStocksII(t *testing.T, mkr MatchTesterMaker) {
 	mt := mkr.Make()
 	defer mt.Cleanup(t)
 	addLowBuys(t, mt, 5, 1)

@@ -26,27 +26,27 @@ func TestCompareMatchers(t *testing.T) {
 }
 
 func compareMatchers(t *testing.T, orderPairs, depth int, lowPrice, highPrice int64) {
-	refdispatch := make(chan *msg.Message, orderPairs*2)
-	refAppMsgs := make(chan *msg.Message, 10)
-	refm := newRefmatcher(lowPrice, highPrice, refdispatch, refAppMsgs)
-	dispatch := make(chan *msg.Message, orderPairs*2)
-	appMsgs := make(chan *msg.Message, 10)
+	refIn := make(chan *msg.Message)
+	refOut := make(chan *msg.Message, orderPairs*2)
+	refm := newRefmatcher(lowPrice, highPrice)
+	refm.Config("Reference Matcher", refIn, refOut)
+	in := make(chan *msg.Message)
+	out := make(chan *msg.Message, orderPairs*2)
 	m := NewMatcher(orderPairs * 2)
-	m.SetDispatch(dispatch)
-	m.SetAppMsgs(appMsgs)
+	m.Config("Real Matcher", in, out)
 	testSet, err := cmprMaker.RndTradeSet(orderPairs, depth, lowPrice, highPrice)
-	go refm.Run()
 	go m.Run()
+	go refm.Run()
 	if err != nil {
 		panic(err.Error())
 	}
 	for i := 0; i < len(testSet); i++ {
 		o := &testSet[i]
-		refAppMsgs <- o
-		refAppMsgs <- o
-		appMsgs <- o
-		appMsgs <- o
-		checkBuffers(t, refdispatch, dispatch)
+		refIn <- o
+		refIn <- o
+		in <- o
+		in <- o
+		checkBuffers(t, refOut, out)
 	}
 }
 

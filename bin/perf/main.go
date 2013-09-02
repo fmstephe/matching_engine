@@ -36,20 +36,20 @@ func doPerf(log bool) {
 	if log {
 		println(orderCount, "OrderNodes Built")
 	}
-	dispatch := make(chan *msg.Message, len(orderData))
-	appMsgs := make(chan *msg.Message)
+	in := make(chan *msg.Message, len(orderData))
+	out := make(chan *msg.Message, len(orderData))
 	m := matcher.NewMatcher(*delDelay * 2)
-	m.SetDispatch(dispatch)
-	m.SetAppMsgs(appMsgs)
+	m.Config("Perf Matcher", in, out)
 	go m.Run()
 	startProfile()
 	defer endProfile()
 	start := time.Now().UnixNano()
 	for i := range orderData {
-		appMsgs <- &orderData[i]
+		in <- &orderData[i]
 	}
+	// TODO this is only testing how fast we can push messages into the matcher, not useful
 	if log {
-		println("Buffer Writes: ", len(dispatch))
+		println("Buffer Writes: ", len(out))
 		total := time.Now().UnixNano() - start
 		println("Nanos\t", fstrconv.Itoa64Comma(total))
 		println("Micros\t", fstrconv.Itoa64Comma(total/1000))

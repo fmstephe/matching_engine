@@ -20,14 +20,12 @@ func (c chanWriter) Close() error {
 	return nil
 }
 
-// TODO We need some tests around msg resends in the face of unreliable networking
-
 // Two response messages with the same traderId/tradeId should both be resent (until acked)
 // When this test was written the CANCELLED message would overwrite the PARTIAL, and only the CANCELLED would be resent
 func TestServerAckNotOverwrittenByCancel(t *testing.T) {
 	out := make(chan *Message, 100)
 	w := chanWriter{out}
-	r := newResponder(w).(*stdResponder)
+	r := newResponder(w)
 	p := &Message{Route: APP, Direction: IN, Kind: PARTIAL, TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1}
 	c := &Message{Route: APP, Direction: IN, Kind: CANCELLED, TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1}
 	// Add buy server-ack to unacked list
@@ -43,7 +41,7 @@ func TestServerAckNotOverwrittenByCancel(t *testing.T) {
 func TestUnackedInDetail(t *testing.T) {
 	out := make(chan *Message, 100)
 	w := chanWriter{out}
-	r := newResponder(w).(*stdResponder)
+	r := newResponder(w)
 	// Pre-canned message/ack pairs
 	m1 := &Message{TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1, Route: APP, Kind: FULL}
 	a1 := &Message{TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1, Route: ACK, Kind: FULL}

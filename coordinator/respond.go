@@ -13,22 +13,13 @@ import (
 const RESEND_MILLIS = time.Duration(10) * time.Millisecond
 
 type stdResponder struct {
-	responses chan *msg.Message
-	dispatch  chan *msg.Message
-	unacked   *msgutil.Set
-	writer    io.WriteCloser
+	unacked *msgutil.Set
+	writer  io.WriteCloser
+	msgHelper
 }
 
-func newResponder(writer io.WriteCloser) responder {
+func newResponder(writer io.WriteCloser) *stdResponder {
 	return &stdResponder{unacked: msgutil.NewSet(), writer: writer}
-}
-
-func (r *stdResponder) SetResponses(responses chan *msg.Message) {
-	r.responses = responses
-}
-
-func (r *stdResponder) SetDispatch(dispatch chan *msg.Message) {
-	r.dispatch = dispatch
 }
 
 func (r *stdResponder) Run() {
@@ -36,7 +27,7 @@ func (r *stdResponder) Run() {
 	t := time.NewTimer(RESEND_MILLIS)
 	for {
 		select {
-		case resp := <-r.responses:
+		case resp := <-r.msgs:
 			switch {
 			case resp.Direction == msg.IN && resp.Route == msg.ACK:
 				r.handleInAck(resp)
@@ -92,8 +83,7 @@ func (r *stdResponder) handleError(resp *msg.Message, err error, s msg.MsgStatus
 	em := &msg.Message{}
 	*em = *resp
 	em.Status = s
-	r.dispatch <- em
-	println(err.Error())
+	println(resp.String(), err.Error())
 	if e, ok := err.(net.Error); ok && !e.Temporary() {
 		os.Exit(1)
 	}

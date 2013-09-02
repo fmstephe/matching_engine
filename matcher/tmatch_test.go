@@ -53,27 +53,26 @@ type testerMaker struct {
 }
 
 func (tm *testerMaker) Make() MatchTester {
-	dispatch := make(chan *msg.Message, 30)
-	appMsgs := make(chan *msg.Message, 20)
+	in := make(chan *msg.Message, 30)
+	out := make(chan *msg.Message, 30)
 	m := NewMatcher(100)
-	m.SetDispatch(dispatch)
-	m.SetAppMsgs(appMsgs)
+	m.Config("Matcher", in, out)
 	go m.Run()
-	return &localTester{dispatch: dispatch, appMsgs: appMsgs}
+	return &localTester{in: in, out: out}
 }
 
 type localTester struct {
-	dispatch chan *msg.Message
-	appMsgs  chan *msg.Message
+	in  chan *msg.Message
+	out chan *msg.Message
 }
 
 func (lt *localTester) Send(t *testing.T, m *msg.Message) {
-	lt.appMsgs <- m
+	lt.in <- m
 }
 
 func (lt *localTester) Expect(t *testing.T, ref *msg.Message) {
 	ref.Direction = msg.OUT
-	m := <-lt.dispatch
+	m := <-lt.out
 	if *ref != *m {
 		_, fname, lnum, _ := runtime.Caller(1)
 		t.Errorf("\nExpecting: %v\nFound:     %v\n%s:%d", ref, m, fname, lnum)
@@ -81,16 +80,12 @@ func (lt *localTester) Expect(t *testing.T, ref *msg.Message) {
 }
 
 func (lt *localTester) ExpectEmpty(t *testing.T, traderId uint32) {
-	if len(lt.dispatch) != 0 {
-		t.Errorf("\nExpecting Empty:\nFound: %v", <-lt.dispatch)
+	if len(lt.out) != 0 {
+		t.Errorf("\nExpecting Empty:\nFound: %v", <-lt.out)
 	}
 }
 
-func (lt *localTester) Cleanup(t *testing.T) {
-	m := &msg.Message{}
-	m.WriteShutdown()
-	lt.Send(t, m)
-}
+func (lt *localTester) Cleanup(t *testing.T) {}
 
 func TestRunTestSuite(t *testing.T) {
 	RunTestSuite(t, &testerMaker{})

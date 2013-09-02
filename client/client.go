@@ -2,20 +2,20 @@ package client
 
 import (
 	"fmt"
+	"github.com/fmstephe/matching_engine/coordinator"
 	"github.com/fmstephe/matching_engine/msg"
 )
 
 const OUT_BUF_SIZE = 100
 const IN_BUF_SIZE = 100
 
-type registerTrader struct {
+type traderRegMsg struct {
 	traderId    uint32
 	outOfClient chan *msg.Message
 }
 
 type Client struct {
-	dispatch   chan *msg.Message
-	appMsgs    chan *msg.Message
+	coordinator.AppMsgHelper
 	clientMap  map[uint32]chan *msg.Message
 	intoClient chan interface{}
 }
@@ -25,33 +25,31 @@ func NewClient() (*Client, *TraderMaker) {
 	return &Client{intoClient: intoClient, clientMap: make(map[uint32]chan *msg.Message)}, &TraderMaker{intoClient: intoClient}
 }
 
-func (c *Client) SetDispatch(dispatch chan *msg.Message) {
-	c.dispatch = dispatch
-}
-
-func (c *Client) SetAppMsgs(appMsgs chan *msg.Message) {
-	c.appMsgs = appMsgs
-}
-
 func (c *Client) Run() {
 	for {
 		select {
-		case m := <-c.appMsgs:
-			clientChan := c.clientMap[m.TraderId]
-			if clientChan == nil {
-				println("Missing traderid", m.TraderId)
-				continue
+		case m := <-c.In:
+			m, shutdown := c.Process(m)
+			if shutdown {
+				return
 			}
-			clientChan <- m
+			if m != nil {
+				clientChan := c.clientMap[m.TraderId]
+				if clientChan == nil {
+					println("Missing traderId", m.TraderId)
+					continue
+				}
+				clientChan <- m
+			}
 		case i := <-c.intoClient:
 			switch i := i.(type) {
-			case *registerTrader:
+			case *traderRegMsg:
 				if c.clientMap[i.traderId] != nil {
 					panic(fmt.Sprintf("Attempted to register a trader (%i) twice", i.traderId))
 				}
 				c.clientMap[i.traderId] = i.outOfClient
 			case *msg.Message:
-				c.dispatch <- i
+				c.Out <- i
 			default:
 				panic(fmt.Sprintf("%T is not a legal type", i))
 			}
@@ -65,7 +63,7 @@ type TraderMaker struct {
 
 func (tm *TraderMaker) Make(traderId uint32) *Trader {
 	outOfClient := make(chan *msg.Message, OUT_BUF_SIZE)
-	cr := &registerTrader{traderId: traderId, outOfClient: outOfClient}
+	cr := &traderRegMsg{traderId: traderId, outOfClient: outOfClient}
 	tm.intoClient <- cr // Performs the registration of this trader
 	return &Trader{traderId: traderId, intoClient: tm.intoClient, outOfClient: outOfClient}
 }

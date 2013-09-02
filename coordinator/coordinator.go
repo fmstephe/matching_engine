@@ -5,62 +5,70 @@ import (
 	"io"
 )
 
-type dispatchChan interface {
-	SetDispatch(chan *msg.Message)
-}
-
-type appChan interface {
-	SetAppMsgs(chan *msg.Message)
-}
-
-type responseChan interface {
-	SetResponses(chan *msg.Message)
-}
-
-type runner interface {
+type msgRunner interface {
+	Config(string, chan *msg.Message)
 	Run()
 }
 
-type listener interface {
-	runner
-	dispatchChan
+type msgHelper struct {
+	name string
+	msgs chan *msg.Message
 }
 
-type responder interface {
-	runner
-	dispatchChan
-	responseChan
+func (h *msgHelper) Config(name string, msgs chan *msg.Message) {
+	h.name = name
+	h.msgs = msgs
 }
 
-type app interface {
-	runner
-	dispatchChan
-	appChan
+type AppMsgRunner interface {
+	Config(string, chan *msg.Message, chan *msg.Message)
+	Run()
 }
 
-func Coordinate(reader io.ReadCloser, writer io.WriteCloser, a app, name string, log bool) {
-	l := newListener(reader)
-	r := newResponder(writer)
-	d := connect(l, r, a, name, log)
-	run(l, r, a, d)
+type AppMsgHelper struct {
+	Name string
+	In   <-chan *msg.Message
+	Out  chan<- *msg.Message
 }
 
-func connect(l listener, r responder, a app, name string, log bool) *dispatcher {
-	dispatch := make(chan *msg.Message, 10)
-	appMsgs := make(chan *msg.Message, 10)
-	responses := make(chan *msg.Message, 10)
-	d := &dispatcher{dispatch: dispatch, appMsgs: appMsgs, responses: responses, name: name, log: log}
-	l.SetDispatch(dispatch)
-	r.SetResponses(responses)
-	r.SetDispatch(dispatch)
-	a.SetAppMsgs(appMsgs)
-	a.SetDispatch(dispatch)
-	return d
+func (a *AppMsgHelper) Config(name string, in, out chan *msg.Message) {
+	a.Name = name
+	a.In = in
+	a.Out = out
 }
 
-func run(l listener, r responder, a app, d *dispatcher) {
-	go l.Run()
-	go r.Run()
-	go a.Run()
-	go d.Run()
+func (a *AppMsgHelper) Process(m *msg.Message) (AppMsg *msg.Message, shutdown bool) {
+	for {
+		switch {
+		case m.Route == msg.APP && m.Status == msg.NORMAL:
+			return m, false
+		case m.Route == msg.SHUTDOWN:
+			a.Out <- m
+			return nil, true
+		default:
+			a.Out <- m
+			return nil, false
+		}
+	}
+}
+
+func Coordinate(reader io.ReadCloser, writer io.WriteCloser, app AppMsgRunner, name string, log bool) {
+	listener := newListener(reader)
+	responder := newResponder(writer)
+	connect(listener, responder, app, name, log)
+	run(listener, responder, app)
+}
+
+func connect(listener, responder msgRunner, app AppMsgRunner, name string, log bool) {
+	fromListener := make(chan *msg.Message)
+	fromApp := make(chan *msg.Message)
+	listener.Config(name, fromListener)
+	responder.Config(name, fromApp)
+	app.Config(name, fromListener, fromApp)
+}
+
+func run(listener msgRunner, responder msgRunner, app AppMsgRunner) {
+	go listener.Run()
+	go responder.Run()
+	go app.Run()
 }

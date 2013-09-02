@@ -8,17 +8,13 @@ import (
 )
 
 type stdListener struct {
-	reader   io.ReadCloser
-	ticker   *msgutil.Ticker
-	dispatch chan *msg.Message
+	reader io.ReadCloser
+	ticker *msgutil.Ticker
+	msgHelper
 }
 
-func newListener(reader io.ReadCloser) listener {
+func newListener(reader io.ReadCloser) *stdListener {
 	return &stdListener{reader: reader, ticker: msgutil.NewTicker()}
-}
-
-func (l *stdListener) SetDispatch(dispatch chan *msg.Message) {
-	l.dispatch = dispatch
 }
 
 func (l *stdListener) Run() {
@@ -51,10 +47,10 @@ func (l *stdListener) forward(o *msg.Message) (shutdown bool) {
 	if o.Route != msg.ACK && o.Route != msg.SHUTDOWN {
 		a := &msg.Message{}
 		a.WriteAckFor(o)
-		l.dispatch <- a
+		l.msgs <- a
 	}
 	if o.Route == msg.SHUTDOWN || o.Route == msg.ACK || l.ticker.Tick(o) {
-		l.dispatch <- o
+		l.msgs <- o
 	}
 	return o.Route == msg.SHUTDOWN
 }
