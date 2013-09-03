@@ -9,7 +9,12 @@ type Meddler interface {
 	Meddle(*list.List)
 }
 
+type notMeddler struct{}
+
+func (m *notMeddler) Meddle(l *list.List) {}
+
 type meddleQ struct {
+	name      string
 	writeChan chan []byte
 	readChan  chan []byte
 	shutdown  chan bool
@@ -17,8 +22,16 @@ type meddleQ struct {
 	meddler   Meddler
 }
 
-func NewNetSim(meddler Meddler) *meddleQ {
-	return &meddleQ{writeChan: make(chan []byte), readChan: make(chan []byte), shutdown: make(chan bool), buf: list.New(), meddler: meddler}
+func NewMeddleQ(name string, meddler Meddler) *meddleQ {
+	q := &meddleQ{name: name, writeChan: make(chan []byte, 100), readChan: make(chan []byte, 100), shutdown: make(chan bool), buf: list.New(), meddler: meddler}
+	go q.run()
+	return q
+}
+
+func NewSimpleQ(name string) *meddleQ {
+	q := &meddleQ{name: name, writeChan: make(chan []byte, 100), readChan: make(chan []byte, 100), shutdown: make(chan bool), buf: list.New(), meddler: &notMeddler{}}
+	go q.run()
+	return q
 }
 
 func (q *meddleQ) Read(p []byte) (int, error) {
@@ -67,7 +80,12 @@ func (q *meddleQ) read() {
 func (q *meddleQ) write() {
 	if q.buf.Len() > 0 {
 		head := q.buf.Front()
-		q.buf.Remove(head)
-		q.readChan <- head.Value.([]byte)
+		val := head.Value.([]byte)
+		select {
+		case q.readChan <- val:
+			q.buf.Remove(head)
+		default:
+		}
+
 	}
 }

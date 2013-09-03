@@ -5,21 +5,29 @@ import (
 	. "github.com/fmstephe/matching_engine/msg"
 	"github.com/fmstephe/matching_engine/q"
 	"testing"
-	"time"
 )
 
-type badNetMeddler struct {
-	lastMeddle time.Time
+type dropMeddler struct {
+	trigger  int
+	msgCount int
 }
 
-func newBadNetMeddler() *badNetMeddler {
-	return &badNetMeddler{time.Now()}
+func newDropMeddler(trigger int) *dropMeddler {
+	if trigger < 1 {
+		trigger = 1
+	}
+	return &dropMeddler{trigger: trigger, msgCount: 0}
 }
 
-func (m *badNetMeddler) meddle(buf *list.List) {
+func (m *dropMeddler) Meddle(buf *list.List) {
+	m.msgCount++
+	if buf.Len() > 0 && m.msgCount > m.trigger {
+		buf.Remove(buf.Front())
+		m.msgCount = 0
+	}
 }
 
-const msgsToSend = 10 * 1000
+const TO_SEND = 1000
 
 type echoClient struct {
 	AppMsgHelper
@@ -28,7 +36,7 @@ type echoClient struct {
 }
 
 func newEchoClient(complete chan bool) *echoClient {
-	return &echoClient{received: make([]*Message, msgsToSend), complete: complete}
+	return &echoClient{received: make([]*Message, TO_SEND), complete: complete}
 }
 
 func (c *echoClient) Run() {
@@ -61,7 +69,7 @@ func full(received []*Message) bool {
 }
 
 func sendAll(out chan<- *Message) {
-	for i := uint32(1); i <= msgsToSend; i++ {
+	for i := uint32(1); i <= TO_SEND; i++ {
 		m := &Message{Route: APP, Direction: OUT, Kind: SELL, TraderId: 1, TradeId: i, StockId: 1, Price: 7, Amount: 1}
 		out <- m
 	}
@@ -90,9 +98,8 @@ func TestBadNetwork(t *testing.T) {
 	complete := make(chan bool)
 	c := newEchoClient(complete)
 	s := &echoServer{}
-	// TODO with the use of simpleQ this doesn't actually test a bad network
-	clientToServer := q.NewSimpleQ("clientToServer", msgsToSend*2)
-	serverToClient := q.NewSimpleQ("serverToClient", msgsToSend*2)
+	clientToServer := q.NewMeddleQ("clientToServer", newDropMeddler(1))
+	serverToClient := q.NewMeddleQ("serverToClient", newDropMeddler(1))
 	Coordinate(serverToClient, clientToServer, c, "Echo Client", true)
 	Coordinate(clientToServer, serverToClient, s, "Echo Server", true)
 	<-complete
