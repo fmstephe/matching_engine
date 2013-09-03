@@ -38,17 +38,14 @@ func (a *AppMsgHelper) Config(name string, in, out chan *msg.Message) {
 }
 
 func (a *AppMsgHelper) Process(m *msg.Message) (AppMsg *msg.Message, shutdown bool) {
-	for {
-		switch {
-		case m.Route == msg.APP && m.Status == msg.NORMAL:
-			return m, false
-		case m.Route == msg.SHUTDOWN:
-			a.Out <- m
-			return nil, true
-		default:
-			a.Out <- m
-			return nil, false
-		}
+	a.Out <- m
+	switch {
+	case m.Route == msg.APP && m.Status == msg.NORMAL:
+		return m, false
+	case m.Route == msg.SHUTDOWN:
+		return nil, true
+	default:
+		return nil, false
 	}
 }
 

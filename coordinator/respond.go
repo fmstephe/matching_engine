@@ -33,6 +33,8 @@ func (r *stdResponder) Run() {
 				r.handleInAck(resp)
 			case resp.Direction == msg.OUT && (resp.Status != msg.NORMAL || resp.Route == msg.APP || resp.Route == msg.ACK):
 				r.writeResponse(resp)
+			case resp.Direction == msg.IN && resp.Route == msg.APP && resp.Status == msg.NORMAL:
+				continue
 			case resp.Route == msg.SHUTDOWN:
 				return
 			default:
