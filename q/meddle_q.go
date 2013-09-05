@@ -65,15 +65,20 @@ func (q *meddleQ) run() {
 			return
 		default:
 		}
-		runtime.Gosched()
 	}
 }
 
 func (q *meddleQ) read() {
-	select {
-	case r := <-q.writeChan:
+	if q.buf.Len() == 0 {
+		r := <-q.writeChan
 		q.buf.PushBack(r)
-	default:
+	} else {
+		select {
+		case r := <-q.writeChan:
+			q.buf.PushBack(r)
+		default:
+			runtime.Gosched()
+		}
 	}
 }
 
@@ -85,6 +90,7 @@ func (q *meddleQ) write() {
 		case q.readChan <- val:
 			q.buf.Remove(head)
 		default:
+			runtime.Gosched()
 		}
 
 	}

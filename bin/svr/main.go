@@ -4,6 +4,7 @@ import (
 	"github.com/fmstephe/matching_engine/client"
 	"github.com/fmstephe/matching_engine/coordinator"
 	"github.com/fmstephe/matching_engine/matcher"
+	"github.com/fmstephe/matching_engine/q"
 	"github.com/fmstephe/simpleid"
 	"net/http"
 	"os"
@@ -15,46 +16,6 @@ var traderMap map[uint32]*client.Trader
 var tradeId = uint32(0)
 var idMaker = simpleid.NewIdMaker()
 
-type chanReadCloser struct {
-	read chan []byte
-}
-
-func newChanReadCloser(read chan []byte) *chanReadCloser {
-	return &chanReadCloser{read: read}
-}
-
-func (r *chanReadCloser) Read(p []byte) (int, error) {
-	b := <-r.read
-	copy(p, b)
-	if len(p) < len(b) {
-		return len(p), nil
-	}
-	return len(b), nil
-}
-
-func (r *chanReadCloser) Close() error {
-	return nil
-}
-
-type chanWriteCloser struct {
-	write chan []byte
-}
-
-func newChanWriteCloser(write chan []byte) *chanWriteCloser {
-	return &chanWriteCloser{write: write}
-}
-
-func (w *chanWriteCloser) Write(p []byte) (int, error) {
-	b := make([]byte, len(p))
-	copy(b, p)
-	w.write <- b
-	return len(b), nil
-}
-
-func (w *chanWriteCloser) Close() error {
-	return nil
-}
-
 func main() {
 	pwd, err := os.Getwd()
 	if err != nil {
@@ -62,19 +23,15 @@ func main() {
 		return
 	}
 	// Create matching engine + client
-	clientToMatcher := make(chan []byte, 100)
-	matcherToClient := make(chan []byte, 100)
-	clientReader := newChanReadCloser(matcherToClient)
-	clientWriter := newChanWriteCloser(clientToMatcher)
-	matcherReader := newChanReadCloser(clientToMatcher)
-	matcherWriter := newChanWriteCloser(matcherToClient)
+	clientToServer := q.NewSimpleQ("Client To Server")
+	serverToClient := q.NewSimpleQ("Server To Client")
 	// Matching Engine
 	m := matcher.NewMatcher(100)
 	c, tm := client.NewClient()
 	traderMap = make(map[uint32]*client.Trader)
 	traderMaker = tm
-	coordinator.Coordinate(clientReader, clientWriter, c, "Client.........", true)
-	coordinator.Coordinate(matcherReader, matcherWriter, m, "Matching Engine", true)
+	coordinator.Coordinate(serverToClient, clientToServer, c, "Client.........", true)
+	coordinator.Coordinate(clientToServer, serverToClient, m, "Matching Engine", true)
 	http.HandleFunc("/buy", handleBuy)
 	http.HandleFunc("/sell", handleSell)
 	http.HandleFunc("/cancel", handleCancel)
