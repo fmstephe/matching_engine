@@ -28,7 +28,9 @@ func (r *stdResponder) Run() {
 	for {
 		select {
 		case resp := <-r.msgs:
-			// TODO add some logging here
+			if r.log {
+				println(r.name + ": " + resp.String())
+			}
 			switch {
 			case resp.Direction == msg.IN && resp.Route == msg.ACK:
 				r.handleInAck(resp)

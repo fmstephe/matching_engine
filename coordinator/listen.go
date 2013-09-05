@@ -35,12 +35,18 @@ func (l *stdListener) deserialise() *msg.Message {
 	m.WriteFrom(b[:n])
 	if err != nil {
 		m.Status = msg.READ_ERROR
-		println("Listener - UDP Read: ", err.Error())
+		l.logErr("Listener - UDP Read: " + err.Error())
 	} else if n != msg.SizeofMessage {
 		m.Status = msg.SMALL_READ_ERROR
-		println(fmt.Sprintf("Listener: Error incorrect number of bytes. Expecting %d, found %d in %v", msg.SizeofMessage, n, b))
+		l.logErr(fmt.Sprintf("Listener: Error incorrect number of bytes. Expecting %d, found %d in %v", msg.SizeofMessage, n, b))
 	}
 	return m
+}
+
+func (l *stdListener) logErr(errStr string) {
+	if l.log {
+		println(errStr)
+	}
 }
 
 func (l *stdListener) forward(o *msg.Message) (shutdown bool) {

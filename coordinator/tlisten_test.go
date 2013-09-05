@@ -39,7 +39,7 @@ func startMockedListener(shouldErr bool, writeN int) (in chan *Message, out chan
 	out = make(chan *Message, 100)
 	cr := newChanReader(in, shouldErr, writeN)
 	l := newListener(cr)
-	l.Config("test listener", out)
+	l.Config(false, "test listener", out)
 	go l.Run()
 	return in, out
 }

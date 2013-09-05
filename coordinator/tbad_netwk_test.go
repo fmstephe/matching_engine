@@ -100,7 +100,7 @@ func TestBadNetwork(t *testing.T) {
 	s := &echoServer{}
 	clientToServer := q.NewMeddleQ("clientToServer", newDropMeddler(1))
 	serverToClient := q.NewMeddleQ("serverToClient", newDropMeddler(1))
-	Coordinate(serverToClient, clientToServer, c, "Echo Client", true)
-	Coordinate(clientToServer, serverToClient, s, "Echo Server", true)
+	Coordinate(serverToClient, clientToServer, c, "Echo Client", false)
+	Coordinate(clientToServer, serverToClient, s, "Echo Server", false)
 	<-complete
 }

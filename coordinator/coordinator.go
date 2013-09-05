@@ -6,22 +6,24 @@ import (
 )
 
 type msgRunner interface {
-	Config(string, chan *msg.Message)
+	Config(log bool, name string, msgs chan *msg.Message)
 	Run()
 }
 
 type msgHelper struct {
+	log  bool
 	name string
 	msgs chan *msg.Message
 }
 
-func (h *msgHelper) Config(name string, msgs chan *msg.Message) {
+func (h *msgHelper) Config(log bool, name string, msgs chan *msg.Message) {
+	h.log = log
 	h.name = name
 	h.msgs = msgs
 }
 
 type AppMsgRunner interface {
-	Config(string, chan *msg.Message, chan *msg.Message)
+	Config(name string, in, out chan *msg.Message)
 	Run()
 }
 
@@ -59,8 +61,8 @@ func Coordinate(reader io.ReadCloser, writer io.WriteCloser, app AppMsgRunner, n
 func connect(listener, responder msgRunner, app AppMsgRunner, name string, log bool) {
 	fromListener := make(chan *msg.Message)
 	fromApp := make(chan *msg.Message)
-	listener.Config(name, fromListener)
-	responder.Config(name, fromApp)
+	listener.Config(log, name, fromListener)
+	responder.Config(log, name, fromApp)
 	app.Config(name, fromListener, fromApp)
 }
 
