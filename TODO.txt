@@ -1,0 +1,4 @@
+: Download the server sent events code base and hack it
+: Look into memory mapped files for logging
+: Get the server to recreate its internal state after a restart (from the logs)
+: Rewrite the ITCH file debugger
