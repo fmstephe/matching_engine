@@ -65,13 +65,13 @@ func (tm *TraderMaker) Make(traderId uint32) *Trader {
 	outOfClient := make(chan *msg.Message, OUT_BUF_SIZE)
 	cr := &traderRegMsg{traderId: traderId, outOfClient: outOfClient}
 	tm.intoClient <- cr // Performs the registration of this trader
-	return &Trader{traderId: traderId, intoClient: tm.intoClient, outOfClient: outOfClient}
+	return &Trader{traderId: traderId, intoClient: tm.intoClient, OutOfClient: outOfClient}
 }
 
 type Trader struct {
 	traderId    uint32
 	intoClient  chan interface{}
-	outOfClient chan *msg.Message
+	OutOfClient chan *msg.Message
 }
 
 func (t *Trader) Buy(price int64, tradeId, amount, stockId uint32) {
@@ -92,9 +92,4 @@ func (t *Trader) submit(kind msg.MsgKind, price int64, tradeId, amount, stockId 
 		panic(fmt.Sprintf("Invalid Message %v", m))
 	}
 	t.intoClient <- m
-}
-
-func (t *Trader) Retrieve() *msg.Message {
-	m := <-t.outOfClient
-	return m
 }

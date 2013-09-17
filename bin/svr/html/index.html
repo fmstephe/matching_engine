@@ -5,60 +5,44 @@
 				return document.getElementById(arguments[0]);
 			}
 
-			function setJsonValue() {
-				var route = $("route");
-				alert(route.value);
-				var kind = $("kind");
-				alert(kind.value);
+			function setJsonValue(kind) {
 				var price = $("price");
-				alert(price.value);
 				var amount = $("amount");
-				alert(amount.value);
-				var traderId = $("traderId");
-				alert(traderId.value);
-				var tradeId = $("tradeId");
-				alert(tradeId.value);
 				var stockId = $("stockId");
-				alert(stockId.value);
 				var jsonValue = $("jsonValue");
 				var obj = new Object();
-				obj.route = route.value;
-				obj.kind = kind.value;
-				obj.price = price.value;
-				obj.amount = amount.value;
-				obj.traderId = traderId.value;
-				obj.tradeId = tradeId.value;
-				obj.stockId = stockId.value;
-				alert(JSON.stringify(obj));
+				obj.kind = kind;
+				obj.price = price.value * 1;
+				obj.amount = amount.value * 1;
+				obj.stockId = stockId.value * 1;
+				console.log(JSON.stringify(obj));
+				ws.send(JSON.stringify(obj));
+			}
+
+			function doWebsocket() {
+				ws = new WebSocket("ws://localhost:8081/test");
+				ws.onopen = function() {
+					console.log("open");
+				}
+				ws.onmessage = function(m) {
+					console.log(m.data)
+				}
+				ws.onclose = function() {
+					console.log("closed");
+				}
 			}
 		</script>
 	</head>
-	<body>
-		<p>Hello There</p>
-		<a href="http://localhost:8081/do">DO!</a>
+
+	<body onload="doWebsocket()">
 		<form name="buy-form" action="http://localhost:8081/buy" method="get">
-			Trader: <input type="text" name="traderId" id="traderId"></input><br/>
-			Trade: <input type="text" name="tradeId" id="tradeId"></input><br/>
 			Price: <input type="text" name="price" id="price"></input><br/>
 			Amount: <input type="text" name="amount" id="amount"></input><br/>
 			StockId: <input type="text" name="stockId" id="stockId"></input><br/>
-			<input type="submit" value="submit">submit</input>
 		</form>
-		<form name="sell-form" action="http://localhost:8081/sell" method="get">
-			Trader: <input type="text" name="traderId" id="traderId"></input><br/>
-			Trade: <input type="text" name="tradeId" id="tradeId"></input><br/>
-			Price: <input type="text" name="price" id="price"></input><br/>
-			Amount: <input type="text" name="amount" id="amount"></input><br/>
-			StockId: <input type="text" name="stockId" id="stockId"></input><br/>
-			<input type="submit" value="submit">submit</input>
-		</form>
-		<form name="cancel-form" action="http://localhost:8081/cancel" method="get">
-			Trader: <input type="text" name="traderId" id="traderId"></input><br/>
-			Trade: <input type="text" name="tradeId" id="tradeId"></input><br/>
-			Price: <input type="text" name="price" id="price"></input><br/>
-			Amount: <input type="text" name="amount" id="amount"></input><br/>
-			StockId: <input type="text" name="stockId" id="stockId"></input><br/>
-			<input type="submit" value="submit">submit</input>
-		</form>
+		<button onClick="setJsonValue('BUY')">BUY</button>
+		<button onClick="setJsonValue('SELL')">SELL</button>
+
 	</body>
+
 </html>

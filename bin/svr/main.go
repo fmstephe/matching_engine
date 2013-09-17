@@ -1,9 +1,13 @@
 package main
 
 import (
+	"code.google.com/p/go.net/websocket"
+	"encoding/json"
+	"fmt"
 	"github.com/fmstephe/matching_engine/client"
 	"github.com/fmstephe/matching_engine/coordinator"
 	"github.com/fmstephe/matching_engine/matcher"
+	"github.com/fmstephe/matching_engine/msg"
 	"github.com/fmstephe/matching_engine/q"
 	"github.com/fmstephe/simpleid"
 	"net/http"
@@ -35,9 +39,68 @@ func main() {
 	http.HandleFunc("/buy", handleBuy)
 	http.HandleFunc("/sell", handleSell)
 	http.HandleFunc("/cancel", handleCancel)
+	http.Handle("/test", websocket.Handler(handleTrader))
 	http.Handle("/", http.FileServer(http.Dir(pwd+"/html/")))
 	if err := http.ListenAndServe("127.0.0.1:8081", nil); err != nil {
 		println(err.Error())
+	}
+}
+
+type register struct {
+	TraderId uint32 `json:"traderId"`
+}
+
+type order struct {
+	Kind    string `json:"kind"`
+	Price   int64  `json:"price"`
+	Amount  uint32 `json:"amount"`
+	StockId uint32 `json:"stockId"`
+}
+
+func handleTrader(ws *websocket.Conn) {
+	defer ws.Close()
+	traderId := uint32(idMaker.Id())
+	trader := traderMaker.Make(traderId)
+	println("New Trader", traderId)
+	go writer(ws, trader.OutOfClient)
+	tradeId := uint32(1)
+	for {
+		o := &order{}
+		if err := get(ws, o); err != nil {
+			println("error", err.Error())
+			return
+		}
+		println("Success!")
+		println(fmt.Sprintf("%v", o))
+		if o.Kind == "BUY" {
+			trader.Buy(o.Price, tradeId, o.Amount, o.StockId)
+		}
+		if o.Kind == "SELL" {
+			trader.Sell(o.Price, tradeId, o.Amount, o.StockId)
+		}
+		tradeId++
+	}
+}
+
+func get(ws *websocket.Conn, v interface{}) error {
+	var data string
+	if err := websocket.Message.Receive(ws, &data); err != nil {
+		return err
+	}
+	println(data)
+	if err := json.Unmarshal([]byte(data), v); err != nil {
+		return err
+	}
+	return nil
+}
+
+func writer(ws *websocket.Conn, writeChan chan *msg.Message) {
+	defer ws.Close()
+	for m := range writeChan {
+		if _, err := ws.Write([]byte(m.String())); err != nil {
+			println("Writer Error", err.Error())
+			return
+		}
 	}
 }
 
