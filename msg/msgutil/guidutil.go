@@ -1,5 +1,6 @@
 package msgutil
 
+// TODO rename these functions
 func MkGuid(traderId, tradeId uint32) int64 {
 	return (int64(traderId) << 32) | int64(tradeId)
 }

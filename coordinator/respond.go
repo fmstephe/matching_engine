@@ -16,10 +16,11 @@ type stdResponder struct {
 	unacked *msgutil.Set
 	writer  io.WriteCloser
 	msgHelper
+	msgId uint32
 }
 
 func newResponder(writer io.WriteCloser) *stdResponder {
-	return &stdResponder{unacked: msgutil.NewSet(), writer: writer}
+	return &stdResponder{unacked: msgutil.NewSet(), writer: writer, msgId: 1}
 }
 
 func (r *stdResponder) Run() {
@@ -56,6 +57,9 @@ func (r *stdResponder) handleInAck(ca *msg.Message) {
 
 func (r *stdResponder) writeResponse(resp *msg.Message) {
 	resp.Direction = msg.IN
+	resp.OriginId = r.originId
+	resp.MsgId = r.msgId
+	r.msgId++
 	r.addToUnacked(resp)
 	r.write(resp)
 }

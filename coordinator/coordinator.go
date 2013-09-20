@@ -6,17 +6,19 @@ import (
 )
 
 type msgRunner interface {
-	Config(log bool, name string, msgs chan *msg.Message)
+	Config(originId uint32, log bool, name string, msgs chan *msg.Message)
 	Run()
 }
 
 type msgHelper struct {
-	log  bool
-	name string
-	msgs chan *msg.Message
+	originId uint32
+	log      bool
+	name     string
+	msgs     chan *msg.Message
 }
 
-func (h *msgHelper) Config(log bool, name string, msgs chan *msg.Message) {
+func (h *msgHelper) Config(originId uint32, log bool, name string, msgs chan *msg.Message) {
+	h.originId = originId
 	h.log = log
 	h.name = name
 	h.msgs = msgs
@@ -51,18 +53,18 @@ func (a *AppMsgHelper) Process(m *msg.Message) (AppMsg *msg.Message, shutdown bo
 	}
 }
 
-func Coordinate(reader io.ReadCloser, writer io.WriteCloser, app AppMsgRunner, name string, log bool) {
+func Coordinate(reader io.ReadCloser, writer io.WriteCloser, app AppMsgRunner, originId uint32, name string, log bool) {
 	listener := newListener(reader)
 	responder := newResponder(writer)
-	connect(listener, responder, app, name, log)
+	connect(listener, responder, app, originId, name, log)
 	run(listener, responder, app)
 }
 
-func connect(listener, responder msgRunner, app AppMsgRunner, name string, log bool) {
+func connect(listener, responder msgRunner, app AppMsgRunner, originId uint32, name string, log bool) {
 	fromListener := make(chan *msg.Message)
 	fromApp := make(chan *msg.Message)
-	listener.Config(log, name, fromListener)
-	responder.Config(log, name, fromApp)
+	listener.Config(originId, log, name, fromListener)
+	responder.Config(originId, log, name, fromApp)
 	app.Config(name, fromListener, fromApp)
 }
 

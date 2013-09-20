@@ -11,17 +11,17 @@ func randomUniqueMsgs() []*msg.Message {
 	msgs := make([]*msg.Message, 0)
 	for i := 0; i < 100; i++ {
 		kind := msg.MsgKind(r.Int31n(msg.NUM_OF_KIND))
-		traderId := uint32(r.Int31())
-		tradeId := uint32(r.Int31())
-		setOnce(uniqueMap, kind, traderId, tradeId)
-		m := &msg.Message{Kind: kind, TraderId: traderId, TradeId: tradeId}
+		origin := uint32(r.Int31())
+		id := uint32(r.Int31())
+		setOnce(uniqueMap, kind, origin, id)
+		m := &msg.Message{Kind: kind, OriginId: origin, MsgId: id}
 		msgs = append(msgs, m)
 	}
 	return msgs
 }
 
-func setOnce(uniqueMap map[uint32]bool, kind msg.MsgKind, traderId, tradeId uint32) {
-	val := traderId + tradeId + uint32(kind)
+func setOnce(uniqueMap map[uint32]bool, kind msg.MsgKind, origin, id uint32) {
+	val := origin + id + uint32(kind)
 	if uniqueMap[val] == true {
 		panic("Generated non-unique message")
 	}

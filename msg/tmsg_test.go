@@ -8,15 +8,17 @@ var LOCALHOST = [4]byte{127, 0, 0, 1}
 
 var (
 	// A full message with every field set
-	fullMessage = Message{Direction: IN, Price: 1, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
+	fullMessage = Message{Direction: IN, OriginId: 1, MsgId: 1, Price: 1, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
 	// A full message but with the price set to 0, i.e. a sell that matches any buy price
-	openSellMessage = Message{Direction: IN, Price: 0, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
+	openSellMessage = Message{Direction: IN, OriginId: 1, MsgId: 1, Price: 0, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
 	// Collection of messages with misssing fields (skipping price)
 	partialBodyMessages = []Message{
-		Message{Direction: IN, Price: 1, Amount: 0, TraderId: 1, TradeId: 1, StockId: 1},
-		Message{Direction: IN, Price: 1, Amount: 1, TraderId: 0, TradeId: 1, StockId: 1},
-		Message{Direction: IN, Price: 1, Amount: 1, TraderId: 1, TradeId: 0, StockId: 1},
-		Message{Direction: IN, Price: 1, Amount: 1, TraderId: 1, TradeId: 1, StockId: 0},
+		Message{Direction: IN, OriginId: 0, MsgId: 1, Price: 1, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1},
+		Message{Direction: IN, OriginId: 1, MsgId: 0, Price: 1, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1},
+		Message{Direction: IN, OriginId: 1, MsgId: 1, Price: 1, Amount: 0, TraderId: 1, TradeId: 1, StockId: 1},
+		Message{Direction: IN, OriginId: 1, MsgId: 1, Price: 1, Amount: 1, TraderId: 0, TradeId: 1, StockId: 1},
+		Message{Direction: IN, OriginId: 1, MsgId: 1, Price: 1, Amount: 1, TraderId: 1, TradeId: 0, StockId: 1},
+		Message{Direction: IN, OriginId: 1, MsgId: 1, Price: 1, Amount: 1, TraderId: 1, TradeId: 1, StockId: 0},
 	}
 	// no fields set at all
 	blankMessage = Message{}

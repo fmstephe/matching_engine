@@ -39,7 +39,8 @@ func startMockedListener(shouldErr bool, writeN int) (in chan *Message, out chan
 	out = make(chan *Message, 100)
 	cr := newChanReader(in, shouldErr, writeN)
 	l := newListener(cr)
-	l.Config(false, "test listener", out)
+	originId := uint32(1)
+	l.Config(originId, false, "test listener", out)
 	go l.Run()
 	return in, out
 }
@@ -78,7 +79,7 @@ func TestReadError(t *testing.T) {
 
 func TestDuplicate(t *testing.T) {
 	in, out := startMockedListener(false, SizeofMessage)
-	m := &Message{Status: NORMAL, Route: APP, Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
+	m := &Message{Status: NORMAL, Route: APP, Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1, OriginId: 1, MsgId: 1}
 	in <- m
 	in <- m
 	// Expected server ack
@@ -88,7 +89,7 @@ func TestDuplicate(t *testing.T) {
 	validate(t, <-out, a, 1)
 	validate(t, <-out, m, 1)
 	validate(t, <-out, a, 1)
-	m2 := &Message{Status: NORMAL, Route: APP, Kind: SELL, Price: 7, Amount: 1, TraderId: 2, TradeId: 1, StockId: 1}
+	m2 := &Message{Status: NORMAL, Route: APP, Kind: SELL, Price: 7, Amount: 1, TraderId: 2, TradeId: 1, StockId: 1, OriginId: 1, MsgId: 2}
 	in <- m2
 	// Expected server ack 2
 	a2 := &Message{}

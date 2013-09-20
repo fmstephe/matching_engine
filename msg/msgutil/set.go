@@ -4,49 +4,32 @@ import (
 	"github.com/fmstephe/matching_engine/msg"
 )
 
-type msgMap map[msg.MsgKind]map[int64]*msg.Message
-
 type Set struct {
-	kindMap msgMap
+	msgMap map[int64]*msg.Message
 }
 
 func NewSet() *Set {
-	return &Set{kindMap: make(msgMap)}
+	return &Set{msgMap: make(map[int64]*msg.Message)}
 }
 
 func (s *Set) Add(m *msg.Message) {
-	guidMap := s.kindMap[m.Kind]
-	if guidMap == nil {
-		guidMap = make(map[int64]*msg.Message)
-		s.kindMap[m.Kind] = guidMap
-	}
-	g := MkGuid(m.TraderId, m.TradeId)
-	guidMap[g] = m
+	g := MkGuid(m.OriginId, m.MsgId)
+	s.msgMap[g] = m
 }
 
 func (s *Set) Remove(m *msg.Message) {
-	guidMap := s.kindMap[m.Kind]
-	if guidMap == nil {
-		return
-	}
-	g := MkGuid(m.TraderId, m.TradeId)
-	delete(guidMap, g)
+	g := MkGuid(m.OriginId, m.MsgId)
+	delete(s.msgMap, g)
 }
 
 func (s *Set) Contains(m *msg.Message) bool {
-	guidMap := s.kindMap[m.Kind]
-	if guidMap == nil {
-		return false
-	}
-	g := MkGuid(m.TraderId, m.TradeId)
-	_, ok := guidMap[g]
+	g := MkGuid(m.OriginId, m.MsgId)
+	_, ok := s.msgMap[g]
 	return ok
 }
 
 func (s *Set) Do(f func(*msg.Message)) {
-	for _, guidMap := range s.kindMap {
-		for _, m := range guidMap {
-			f(m)
-		}
+	for _, m := range s.msgMap {
+		f(m)
 	}
 }

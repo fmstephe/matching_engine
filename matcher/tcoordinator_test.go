@@ -11,6 +11,11 @@ import (
 
 // Because we are communicating via UDP, messages could arrive out of order, in practice they travel in-order via localhost
 
+const (
+	matcherOrigin = iota
+	clientOrigin  = iota
+)
+
 type netwkTesterMaker struct {
 	ip       [4]byte
 	freePort int
@@ -27,12 +32,12 @@ func (tm *netwkTesterMaker) Make() MatchTester {
 	tm.freePort++
 	// Build matcher
 	m := NewMatcher(100)
-	coordinator.Coordinate(mkReadConn(serverPort), mkWriteConn(clientPort), m, "Matching Engine", false)
+	coordinator.Coordinate(mkReadConn(serverPort), mkWriteConn(clientPort), m, matcherOrigin, "Matching Engine", false)
 	// Build client
 	receivedMsgs := make(chan *msg.Message, 1000)
 	toSendMsgs := make(chan *msg.Message, 1000)
 	c := newClient(receivedMsgs, toSendMsgs)
-	coordinator.Coordinate(mkReadConn(clientPort), mkWriteConn(serverPort), c, "Test Client    ", false)
+	coordinator.Coordinate(mkReadConn(clientPort), mkWriteConn(serverPort), c, clientOrigin, "Test Client    ", false)
 	return &netwkTester{receivedMsgs: receivedMsgs, toSendMsgs: toSendMsgs}
 }
 
@@ -42,10 +47,15 @@ type netwkTester struct {
 }
 
 func (nt *netwkTester) Send(t *testing.T, m *msg.Message) {
+	m.Direction = msg.OUT
+	m.Route = msg.APP
 	nt.toSendMsgs <- m
 }
 
 func (nt *netwkTester) Expect(t *testing.T, e *msg.Message) {
+	e.Direction = msg.IN
+	e.Route = msg.APP
+	e.OriginId = matcherOrigin
 	r := <-nt.receivedMsgs
 	validate(t, r, e, 2)
 }
@@ -118,6 +128,7 @@ func mkReadConn(port int) *net.UDPConn {
 }
 
 func validate(t *testing.T, m, e *msg.Message, stackOffset int) {
+	e.MsgId = m.MsgId // We don't assert on msgId
 	if *m != *e {
 		_, fname, lnum, _ := runtime.Caller(stackOffset)
 		t.Errorf("\nExpecting: %v\nFound:     %v \n%s:%d", e, m, fname, lnum)

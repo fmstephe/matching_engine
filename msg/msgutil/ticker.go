@@ -22,7 +22,7 @@ func NewTicker() *Ticker {
 }
 
 func (s *Ticker) Tick(m *msg.Message) (ticked bool) {
-	val := MkGuid(m.TraderId, m.TradeId)
+	val := MkGuid(m.OriginId, m.MsgId)
 	r := s.roots[m.Kind]
 	if r == nil {
 		r = newRoot(val)

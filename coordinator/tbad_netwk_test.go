@@ -28,6 +28,10 @@ func (m *dropMeddler) Meddle(buf *list.List) {
 }
 
 const TO_SEND = 1000
+const (
+	clientOriginId = iota
+	serverOriginId = iota
+)
 
 type echoClient struct {
 	AppMsgHelper
@@ -100,7 +104,7 @@ func TestBadNetwork(t *testing.T) {
 	s := &echoServer{}
 	clientToServer := q.NewMeddleQ("clientToServer", newDropMeddler(1))
 	serverToClient := q.NewMeddleQ("serverToClient", newDropMeddler(1))
-	Coordinate(serverToClient, clientToServer, c, "Echo Client", false)
-	Coordinate(clientToServer, serverToClient, s, "Echo Server", false)
+	Coordinate(serverToClient, clientToServer, c, clientOriginId, "Echo Client", false)
+	Coordinate(clientToServer, serverToClient, s, serverOriginId, "Echo Server", false)
 	<-complete
 }

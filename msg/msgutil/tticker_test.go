@@ -72,7 +72,7 @@ func (t *simpleTicker) tick(m *msg.Message) bool {
 		guidMap = make(map[int64]bool)
 		t.kindMap[m.Kind] = guidMap
 	}
-	g := MkGuid(m.TraderId, m.TradeId)
+	g := MkGuid(m.OriginId, m.MsgId)
 	if guidMap[g] {
 		return false
 	}

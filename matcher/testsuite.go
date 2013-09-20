@@ -30,6 +30,7 @@ func RunTestSuite(t *testing.T, mkr MatchTesterMaker) {
 	testSellCancelBuyNoMatch(t, mkr)
 	testBuyCancelSellNoMatch(t, mkr)
 	testBadCancelNotCancelled(t, mkr)
+	testThreeBuysMatchedToOneSell(t, mkr)
 }
 
 func testSellBuyMatch(t *testing.T, mkr MatchTesterMaker) {
@@ -38,15 +39,15 @@ func testSellBuyMatch(t *testing.T, mkr MatchTesterMaker) {
 	addLowBuys(t, mt, 5, 1)
 	addHighSells(t, mt, 10, 1)
 	// Add Sell
-	s := &Message{Route: APP, Direction: OUT, Kind: SELL, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	s := &Message{Kind: SELL, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Send(t, s)
 	// Add Buy
-	b := &Message{Route: APP, Direction: OUT, Kind: BUY, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	b := &Message{Kind: BUY, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Send(t, b)
 	// Full match
-	es := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 1, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
+	es := &Message{Kind: FULL, TraderId: 1, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
 	mt.Expect(t, es)
-	eb := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	eb := &Message{Kind: FULL, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	eb.Route = APP
 	eb.Kind = FULL
 	mt.Expect(t, eb)
@@ -58,15 +59,15 @@ func testBuySellMatch(t *testing.T, mkr MatchTesterMaker) {
 	addLowBuys(t, mt, 5, 1)
 	addHighSells(t, mt, 10, 1)
 	// Add Buy
-	b := &Message{Route: APP, Direction: OUT, Kind: BUY, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	b := &Message{Kind: BUY, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Send(t, b)
 	// Add Sell
-	s := &Message{Route: APP, Direction: OUT, Kind: SELL, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	s := &Message{Kind: SELL, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Send(t, s)
 	// Full match
-	eb := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 1, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
+	eb := &Message{Kind: FULL, TraderId: 1, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
 	mt.Expect(t, eb)
-	es := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	es := &Message{Kind: FULL, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Expect(t, es)
 }
 
@@ -76,23 +77,23 @@ func testBuyDoubleSellMatch(t *testing.T, mkr MatchTesterMaker) {
 	addLowBuys(t, mt, 5, 1)
 	addHighSells(t, mt, 10, 1)
 	// Add Buy
-	b := &Message{Route: APP, Direction: OUT, Kind: BUY, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 2}
+	b := &Message{Kind: BUY, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 2}
 	mt.Send(t, b)
 	// Add Sell1
-	s1 := &Message{Route: APP, Direction: OUT, Kind: SELL, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	s1 := &Message{Kind: SELL, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Send(t, s1)
 	// Full match
-	eb1 := &Message{Route: APP, Direction: IN, Kind: PARTIAL, TraderId: 1, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
+	eb1 := &Message{Kind: PARTIAL, TraderId: 1, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
 	mt.Expect(t, eb1)
-	es1 := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	es1 := &Message{Kind: FULL, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Expect(t, es1)
 	// Add Sell2
-	s2 := &Message{Route: APP, Direction: OUT, Kind: SELL, TraderId: 2, TradeId: 2, StockId: 1, Price: 7, Amount: 1}
+	s2 := &Message{Kind: SELL, TraderId: 2, TradeId: 2, StockId: 1, Price: 7, Amount: 1}
 	mt.Send(t, s2)
 	// Full Match II
-	eb2 := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 1, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
+	eb2 := &Message{Kind: FULL, TraderId: 1, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
 	mt.Expect(t, eb2)
-	es2 := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 2, TradeId: 2, StockId: 1, Price: 7, Amount: 1}
+	es2 := &Message{Kind: FULL, TraderId: 2, TradeId: 2, StockId: 1, Price: 7, Amount: 1}
 	mt.Expect(t, es2)
 }
 
@@ -102,24 +103,24 @@ func testSellDoubleBuyMatch(t *testing.T, mkr MatchTesterMaker) {
 	addLowBuys(t, mt, 5, 1)
 	addHighSells(t, mt, 10, 1)
 	// Add Sell
-	s := &Message{Route: APP, Direction: OUT, Kind: SELL, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 2}
+	s := &Message{Kind: SELL, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 2}
 	mt.Send(t, s)
 	// Add Buy1
-	b1 := &Message{Route: APP, Direction: OUT, Kind: BUY, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	b1 := &Message{Kind: BUY, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Send(t, b1)
 	// Full match on the buy
-	eb1 := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 2, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
+	eb1 := &Message{Kind: FULL, TraderId: 2, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
 	mt.Expect(t, eb1)
 	// Partial match on the sell
-	es1 := &Message{Route: APP, Direction: IN, Kind: PARTIAL, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	es1 := &Message{Kind: PARTIAL, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Expect(t, es1)
 	// Add Buy2
-	b2 := &Message{Route: APP, Direction: OUT, Kind: BUY, TraderId: 2, TradeId: 2, StockId: 1, Price: 7, Amount: 1}
+	b2 := &Message{Kind: BUY, TraderId: 2, TradeId: 2, StockId: 1, Price: 7, Amount: 1}
 	mt.Send(t, b2)
 	// Full Match II
-	eb2 := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 2, TradeId: 2, StockId: 1, Price: -7, Amount: 1}
+	eb2 := &Message{Kind: FULL, TraderId: 2, TradeId: 2, StockId: 1, Price: -7, Amount: 1}
 	mt.Expect(t, eb2)
-	es2 := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	es2 := &Message{Kind: FULL, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Expect(t, es2)
 }
 
@@ -129,15 +130,15 @@ func testMidPrice(t *testing.T, mkr MatchTesterMaker) {
 	addLowBuys(t, mt, 5, 1)
 	addHighSells(t, mt, 10, 1)
 	// Add Buy
-	b := &Message{Route: APP, Direction: OUT, Kind: BUY, TraderId: 1, TradeId: 1, StockId: 1, Price: 9, Amount: 1}
+	b := &Message{Kind: BUY, TraderId: 1, TradeId: 1, StockId: 1, Price: 9, Amount: 1}
 	mt.Send(t, b)
 	// Add Sell
-	s := &Message{Route: APP, Direction: OUT, Kind: SELL, TraderId: 2, TradeId: 1, StockId: 1, Price: 6, Amount: 1}
+	s := &Message{Kind: SELL, TraderId: 2, TradeId: 1, StockId: 1, Price: 6, Amount: 1}
 	mt.Send(t, s)
 	// Full match
-	eb := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 1, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
+	eb := &Message{Kind: FULL, TraderId: 1, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
 	mt.Expect(t, eb)
-	es := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	es := &Message{Kind: FULL, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Expect(t, es)
 }
 
@@ -147,15 +148,15 @@ func testMidPriceBigSell(t *testing.T, mkr MatchTesterMaker) {
 	addLowBuys(t, mt, 5, 1)
 	addHighSells(t, mt, 10, 1)
 	// Add Buy
-	b := &Message{Route: APP, Direction: OUT, Kind: BUY, TraderId: 1, TradeId: 1, StockId: 1, Price: 9, Amount: 1}
+	b := &Message{Kind: BUY, TraderId: 1, TradeId: 1, StockId: 1, Price: 9, Amount: 1}
 	mt.Send(t, b)
 	// Add Sell
-	s := &Message{Route: APP, Direction: OUT, Kind: SELL, TraderId: 2, TradeId: 1, StockId: 1, Price: 6, Amount: 10}
+	s := &Message{Kind: SELL, TraderId: 2, TradeId: 1, StockId: 1, Price: 6, Amount: 10}
 	mt.Send(t, s)
 	// Full match
-	eb := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 1, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
+	eb := &Message{Kind: FULL, TraderId: 1, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
 	mt.Expect(t, eb)
-	es := &Message{Route: APP, Direction: IN, Kind: PARTIAL, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	es := &Message{Kind: PARTIAL, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Expect(t, es)
 }
 
@@ -165,15 +166,15 @@ func testMidPriceBigBuy(t *testing.T, mkr MatchTesterMaker) {
 	addLowBuys(t, mt, 5, 1)
 	addHighSells(t, mt, 10, 1)
 	// Add Buy
-	b := &Message{Route: APP, Direction: OUT, Kind: BUY, TraderId: 1, TradeId: 1, StockId: 1, Price: 9, Amount: 10}
+	b := &Message{Kind: BUY, TraderId: 1, TradeId: 1, StockId: 1, Price: 9, Amount: 10}
 	mt.Send(t, b)
 	// Add Sell
-	s := &Message{Route: APP, Direction: OUT, Kind: SELL, TraderId: 2, TradeId: 1, StockId: 1, Price: 6, Amount: 1}
+	s := &Message{Kind: SELL, TraderId: 2, TradeId: 1, StockId: 1, Price: 6, Amount: 1}
 	mt.Send(t, s)
 	// Full match
-	eb := &Message{Route: APP, Direction: IN, Kind: PARTIAL, TraderId: 1, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
+	eb := &Message{Kind: PARTIAL, TraderId: 1, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
 	mt.Expect(t, eb)
-	es := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	es := &Message{Kind: FULL, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Expect(t, es)
 }
 
@@ -183,26 +184,26 @@ func testTradeSeparateStocksI(t *testing.T, mkr MatchTesterMaker) {
 	addLowBuys(t, mt, 5, 1)
 	addHighSells(t, mt, 10, 1)
 	// Add Sell stock 1
-	s1 := &Message{Route: APP, Direction: OUT, Kind: SELL, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	s1 := &Message{Kind: SELL, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Send(t, s1)
 	// Add Buy stock 2
-	b2 := &Message{Route: APP, Direction: OUT, Kind: BUY, TraderId: 1, TradeId: 1, StockId: 2, Price: 7, Amount: 1}
+	b2 := &Message{Kind: BUY, TraderId: 1, TradeId: 1, StockId: 2, Price: 7, Amount: 1}
 	mt.Send(t, b2)
 	// Add Sell stock 2
-	s2 := &Message{Route: APP, Direction: OUT, Kind: SELL, TraderId: 2, TradeId: 2, StockId: 2, Price: 7, Amount: 1}
+	s2 := &Message{Kind: SELL, TraderId: 2, TradeId: 2, StockId: 2, Price: 7, Amount: 1}
 	mt.Send(t, s2)
 	// Full match stock 2
-	es2 := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 1, TradeId: 1, StockId: 2, Price: -7, Amount: 1}
+	es2 := &Message{Kind: FULL, TraderId: 1, TradeId: 1, StockId: 2, Price: -7, Amount: 1}
 	mt.Expect(t, es2)
-	eb2 := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 2, TradeId: 2, StockId: 2, Price: 7, Amount: 1}
+	eb2 := &Message{Kind: FULL, TraderId: 2, TradeId: 2, StockId: 2, Price: 7, Amount: 1}
 	mt.Expect(t, eb2)
 	// Add Buy stock 1
-	b1 := &Message{Route: APP, Direction: OUT, Kind: BUY, TraderId: 1, TradeId: 2, StockId: 1, Price: 7, Amount: 1}
+	b1 := &Message{Kind: BUY, TraderId: 1, TradeId: 2, StockId: 1, Price: 7, Amount: 1}
 	mt.Send(t, b1)
 	// Full match stock 1
-	eb1 := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 1, TradeId: 2, StockId: 1, Price: -7, Amount: 1}
+	eb1 := &Message{Kind: FULL, TraderId: 1, TradeId: 2, StockId: 1, Price: -7, Amount: 1}
 	mt.Expect(t, eb1)
-	es1 := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	es1 := &Message{Kind: FULL, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Expect(t, es1)
 }
 
@@ -212,26 +213,26 @@ func testTradeSeparateStocksII(t *testing.T, mkr MatchTesterMaker) {
 	addLowBuys(t, mt, 5, 1)
 	addHighSells(t, mt, 10, 1)
 	// Add Sell stock 1
-	s1 := &Message{Route: APP, Direction: OUT, Kind: SELL, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	s1 := &Message{Kind: SELL, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Send(t, s1)
 	// Add Buy stock 2
-	b1 := &Message{Route: APP, Direction: OUT, Kind: BUY, TraderId: 2, TradeId: 1, StockId: 2, Price: 7, Amount: 1}
+	b1 := &Message{Kind: BUY, TraderId: 2, TradeId: 1, StockId: 2, Price: 7, Amount: 1}
 	mt.Send(t, b1)
 	// Add buy stock 1
-	s2 := &Message{Route: APP, Direction: OUT, Kind: BUY, TraderId: 3, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	s2 := &Message{Kind: BUY, TraderId: 3, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Send(t, s2)
 	// Expect match on stock 1
-	eb1 := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 3, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
+	eb1 := &Message{Kind: FULL, TraderId: 3, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
 	mt.Expect(t, eb1)
-	es1 := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	es1 := &Message{Kind: FULL, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Expect(t, es1)
 	// Add sell stock 2
-	b2 := &Message{Route: APP, Direction: OUT, Kind: SELL, TraderId: 4, TradeId: 1, StockId: 2, Price: 7, Amount: 1}
+	b2 := &Message{Kind: SELL, TraderId: 4, TradeId: 1, StockId: 2, Price: 7, Amount: 1}
 	mt.Send(t, b2)
 	// Expect match on stock 2
-	eb2 := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 2, TradeId: 1, StockId: 2, Price: -7, Amount: 1}
+	eb2 := &Message{Kind: FULL, TraderId: 2, TradeId: 1, StockId: 2, Price: -7, Amount: 1}
 	mt.Expect(t, eb2)
-	es2 := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 4, TradeId: 1, StockId: 2, Price: 7, Amount: 1}
+	es2 := &Message{Kind: FULL, TraderId: 4, TradeId: 1, StockId: 2, Price: 7, Amount: 1}
 	mt.Expect(t, es2)
 }
 
@@ -241,24 +242,24 @@ func testSellCancelBuyNoMatch(t *testing.T, mkr MatchTesterMaker) {
 	addLowBuys(t, mt, 5, 1)
 	addHighSells(t, mt, 10, 1)
 	// Add Sell
-	s := &Message{Route: APP, Direction: OUT, Kind: SELL, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	s := &Message{Kind: SELL, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Send(t, s)
 	// Cancel Sell
-	cs := &Message{Route: APP, Direction: OUT, Kind: CANCEL, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	cs := &Message{Kind: CANCEL, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Send(t, cs)
 	// Expect Cancelled
-	ec := &Message{Route: APP, Direction: IN, Kind: CANCELLED, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	ec := &Message{Kind: CANCELLED, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Expect(t, ec)
 	// Add Buy
-	b := &Message{Route: APP, Direction: OUT, Kind: BUY, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	b := &Message{Kind: BUY, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Send(t, b)
 	// Add Sell
-	s2 := &Message{Route: APP, Direction: OUT, Kind: SELL, TraderId: 3, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	s2 := &Message{Kind: SELL, TraderId: 3, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Send(t, s2)
 	// Expect match for traders 1 and 3
-	eb := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 2, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
+	eb := &Message{Kind: FULL, TraderId: 2, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
 	mt.Expect(t, eb)
-	es := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 3, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	es := &Message{Kind: FULL, TraderId: 3, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Expect(t, es)
 }
 
@@ -268,24 +269,24 @@ func testBuyCancelSellNoMatch(t *testing.T, mkr MatchTesterMaker) {
 	addLowBuys(t, mt, 5, 1)
 	addHighSells(t, mt, 10, 1)
 	// Add Buy
-	b := &Message{Route: APP, Direction: OUT, Kind: BUY, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	b := &Message{Kind: BUY, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Send(t, b)
 	// Cancel Buy
-	cb := &Message{Route: APP, Direction: OUT, Kind: CANCEL, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	cb := &Message{Kind: CANCEL, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Send(t, cb)
 	// Expect Cancelled
-	ec := &Message{Route: APP, Direction: IN, Kind: CANCELLED, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	ec := &Message{Kind: CANCELLED, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Expect(t, ec)
 	// Add Sell
-	s := &Message{Route: APP, Direction: OUT, Kind: SELL, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	s := &Message{Kind: SELL, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Send(t, s)
 	// Add Buy
-	b2 := &Message{Route: APP, Direction: OUT, Kind: BUY, TraderId: 3, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	b2 := &Message{Kind: BUY, TraderId: 3, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Send(t, b2)
 	// Expect match for traders 1 and 3
-	eb := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 3, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
+	eb := &Message{Kind: FULL, TraderId: 3, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
 	mt.Expect(t, eb)
-	es := &Message{Route: APP, Direction: IN, Kind: FULL, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	es := &Message{Kind: FULL, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Expect(t, es)
 }
 
@@ -295,11 +296,42 @@ func testBadCancelNotCancelled(t *testing.T, mkr MatchTesterMaker) {
 	addLowBuys(t, mt, 5, 1)
 	addHighSells(t, mt, 10, 1)
 	// Cancel Buy that doesn't exist
-	cb := &Message{Route: APP, Direction: OUT, Kind: CANCEL, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	cb := &Message{Kind: CANCEL, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Send(t, cb)
 	// Expect Not Cancelled
-	ec := &Message{Route: APP, Direction: IN, Kind: NOT_CANCELLED, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	ec := &Message{Kind: NOT_CANCELLED, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
 	mt.Expect(t, ec)
+}
+
+// Defect found where the second PARTIAL sell match is getting filtered because it is identical to the first
+func testThreeBuysMatchedToOneSell(t *testing.T, mkr MatchTesterMaker) {
+	mt := mkr.Make()
+	defer mt.Cleanup(t)
+	addLowBuys(t, mt, 5, 1)
+	addHighSells(t, mt, 10, 1)
+	// Three buys
+	b1 := &Message{Kind: BUY, TraderId: 1, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	mt.Send(t, b1)
+	b2 := &Message{Kind: BUY, TraderId: 1, TradeId: 2, StockId: 1, Price: 7, Amount: 1}
+	mt.Send(t, b2)
+	b3 := &Message{Kind: BUY, TraderId: 1, TradeId: 3, StockId: 1, Price: 7, Amount: 1}
+	mt.Send(t, b3)
+	// One big sell
+	s := &Message{Kind: SELL, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 3}
+	mt.Send(t, s)
+	// Expect full matches on all three buys
+	eb1 := &Message{Kind: FULL, TraderId: 1, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
+	mt.Expect(t, eb1)
+	es1 := &Message{Kind: PARTIAL, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	mt.Expect(t, es1)
+	eb2 := &Message{Kind: FULL, TraderId: 1, TradeId: 2, StockId: 1, Price: -7, Amount: 1}
+	mt.Expect(t, eb2)
+	es2 := &Message{Kind: PARTIAL, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	mt.Expect(t, es2)
+	eb3 := &Message{Kind: FULL, TraderId: 1, TradeId: 3, StockId: 1, Price: -7, Amount: 1}
+	mt.Expect(t, eb3)
+	es3 := &Message{Kind: FULL, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
+	mt.Expect(t, es3)
 }
 
 func addLowBuys(t *testing.T, mt MatchTester, highestPrice int64, stockId uint32) {

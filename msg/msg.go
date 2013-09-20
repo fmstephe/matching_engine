@@ -128,15 +128,15 @@ type Message struct {
 	Status    MsgStatus
 	Direction MsgDirection
 	Route     MsgRoute
+	OriginId  uint32
+	MsgId     uint32
 	// Body
 	Kind     MsgKind
-	pad32    uint32
 	Price    int64
 	Amount   uint32
 	TraderId uint32
 	TradeId  uint32
 	StockId  uint32
-	// I think we need a checksum here
 }
 
 const (
@@ -154,7 +154,11 @@ func (m *Message) Valid() bool {
 	}
 	// Shutdown messages must be blank
 	if m.Route == SHUTDOWN {
-		return m.Kind == NO_KIND && m.Price == 0 && m.Amount == 0 && m.TraderId == 0 && m.TradeId == 0 && m.StockId == 0
+		return m.Kind == NO_KIND && m.OriginId == 0 && m.MsgId == 0 && m.Price == 0 && m.Amount == 0 && m.TraderId == 0 && m.TradeId == 0 && m.StockId == 0
+	}
+	// Zero values for Origin and Id are not valid
+	if m.OriginId == 0 || m.MsgId == 0 {
+		return false
 	}
 	// (Ack, APP) must have a Kind
 	if (m.Route != ACK && m.Route != APP) || m.Kind == NO_KIND {
@@ -217,5 +221,5 @@ func (m *Message) String() string {
 	if m.Status != NORMAL {
 		status = m.Status.String() + "! "
 	}
-	return fmt.Sprintf("%s(%v %v %v), price %v, amount %s, trader %s, trade %s, stock %s", status, m.Direction, m.Route, m.Kind, price, amount, traderId, tradeId, stockId)
+	return fmt.Sprintf("%s(%v %v %v, %d, %d), price %v, amount %s, trader %s, trade %s, stock %s", status, m.Direction, m.Route, m.Kind, m.OriginId, m.MsgId, price, amount, traderId, tradeId, stockId)
 }

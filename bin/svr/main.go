@@ -20,6 +20,11 @@ var traderMap map[uint32]*client.Trader
 var tradeId = uint32(0)
 var idMaker = simpleid.NewIdMaker()
 
+const (
+	clientOriginId = iota
+	serverOriginId = iota
+)
+
 func main() {
 	pwd, err := os.Getwd()
 	if err != nil {
@@ -34,8 +39,8 @@ func main() {
 	c, tm := client.NewClient()
 	traderMap = make(map[uint32]*client.Trader)
 	traderMaker = tm
-	coordinator.Coordinate(serverToClient, clientToServer, c, "Client.........", true)
-	coordinator.Coordinate(clientToServer, serverToClient, m, "Matching Engine", true)
+	coordinator.Coordinate(serverToClient, clientToServer, c, clientOriginId, "Client.........", true)
+	coordinator.Coordinate(clientToServer, serverToClient, m, serverOriginId, "Matching Engine", true)
 	http.HandleFunc("/buy", handleBuy)
 	http.HandleFunc("/sell", handleSell)
 	http.HandleFunc("/cancel", handleCancel)
