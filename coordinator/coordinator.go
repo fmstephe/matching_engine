@@ -2,7 +2,6 @@ package coordinator
 
 import (
 	"github.com/fmstephe/matching_engine/msg"
-	"io"
 )
 
 type msgRunner interface {
@@ -59,25 +58,4 @@ func (a *AppMsgHelper) Config(name string, in, out chan *msg.Message, msgProcess
 	a.In = in
 	a.Out = out
 	a.MsgProcessor = msgProcessor
-}
-
-func Coordinate(reader io.ReadCloser, writer io.WriteCloser, app AppMsgRunner, originId uint32, name string, log bool) {
-	listener := newListener(reader)
-	responder := newResponder(writer)
-	connect(listener, responder, app, originId, name, log)
-	run(listener, responder, app)
-}
-
-func connect(listener, responder msgRunner, app AppMsgRunner, originId uint32, name string, log bool) {
-	fromListener := make(chan *msg.Message)
-	fromApp := make(chan *msg.Message)
-	listener.Config(originId, log, name, fromListener)
-	responder.Config(originId, log, name, fromApp)
-	app.Config(name, fromListener, fromApp, reliableMsgProcessor)
-}
-
-func run(listener msgRunner, responder msgRunner, app AppMsgRunner) {
-	go listener.Run()
-	go responder.Run()
-	go app.Run()
 }

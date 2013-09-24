@@ -1,31 +1,10 @@
 package coordinator
 
 import (
-	"container/list"
 	. "github.com/fmstephe/matching_engine/msg"
 	"github.com/fmstephe/matching_engine/q"
 	"testing"
 )
-
-type dropMeddler struct {
-	trigger  int
-	msgCount int
-}
-
-func newDropMeddler(trigger int) *dropMeddler {
-	if trigger < 1 {
-		trigger = 1
-	}
-	return &dropMeddler{trigger: trigger, msgCount: 0}
-}
-
-func (m *dropMeddler) Meddle(buf *list.List) {
-	m.msgCount++
-	if buf.Len() > 0 && m.msgCount > m.trigger {
-		buf.Remove(buf.Front())
-		m.msgCount = 0
-	}
-}
 
 const TO_SEND = 1000
 const (
@@ -102,9 +81,9 @@ func TestBadNetwork(t *testing.T) {
 	complete := make(chan bool)
 	c := newEchoClient(complete)
 	s := &echoServer{}
-	clientToServer := q.NewMeddleQ("clientToServer", newDropMeddler(1))
-	serverToClient := q.NewMeddleQ("serverToClient", newDropMeddler(1))
-	Coordinate(serverToClient, clientToServer, c, clientOriginId, "Echo Client", false)
-	Coordinate(clientToServer, serverToClient, s, serverOriginId, "Echo Server", false)
+	clientToServer := q.NewMeddleQ("clientToServer", q.NewDropMeddler(1))
+	serverToClient := q.NewMeddleQ("serverToClient", q.NewDropMeddler(1))
+	Reliable(serverToClient, clientToServer, c, clientOriginId, "Echo Client", false)
+	Reliable(clientToServer, serverToClient, s, serverOriginId, "Echo Server", false)
 	<-complete
 }
