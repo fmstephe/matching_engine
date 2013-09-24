@@ -24,25 +24,14 @@ func (h *msgHelper) Config(originId uint32, log bool, name string, msgs chan *ms
 	h.msgs = msgs
 }
 
-type AppMsgRunner interface {
-	Config(name string, in, out chan *msg.Message)
-	Run()
+type MsgProcessFunc func(m *msg.Message, out chan<- *msg.Message) (appMsg *msg.Message, shutdown bool)
+
+func DefaultMsgProcessor(m *msg.Message, out chan<- *msg.Message) (*msg.Message, bool) {
+	return m, (m.Route == msg.SHUTDOWN)
 }
 
-type AppMsgHelper struct {
-	Name string
-	In   <-chan *msg.Message
-	Out  chan<- *msg.Message
-}
-
-func (a *AppMsgHelper) Config(name string, in, out chan *msg.Message) {
-	a.Name = name
-	a.In = in
-	a.Out = out
-}
-
-func (a *AppMsgHelper) Process(m *msg.Message) (AppMsg *msg.Message, shutdown bool) {
-	a.Out <- m
+func reliableMsgProcessor(m *msg.Message, out chan<- *msg.Message) (AppMsg *msg.Message, shutdown bool) {
+	out <- m
 	switch {
 	case m.Route == msg.APP && m.Status == msg.NORMAL:
 		return m, false
@@ -51,6 +40,25 @@ func (a *AppMsgHelper) Process(m *msg.Message) (AppMsg *msg.Message, shutdown bo
 	default:
 		return nil, false
 	}
+}
+
+type AppMsgRunner interface {
+	Config(name string, in, out chan *msg.Message, msgProcessor MsgProcessFunc)
+	Run()
+}
+
+type AppMsgHelper struct {
+	Name         string
+	In           <-chan *msg.Message
+	Out          chan<- *msg.Message
+	MsgProcessor MsgProcessFunc
+}
+
+func (a *AppMsgHelper) Config(name string, in, out chan *msg.Message, msgProcessor MsgProcessFunc) {
+	a.Name = name
+	a.In = in
+	a.Out = out
+	a.MsgProcessor = msgProcessor
 }
 
 func Coordinate(reader io.ReadCloser, writer io.WriteCloser, app AppMsgRunner, originId uint32, name string, log bool) {
@@ -65,7 +73,7 @@ func connect(listener, responder msgRunner, app AppMsgRunner, originId uint32, n
 	fromApp := make(chan *msg.Message)
 	listener.Config(originId, log, name, fromListener)
 	responder.Config(originId, log, name, fromApp)
-	app.Config(name, fromListener, fromApp)
+	app.Config(name, fromListener, fromApp, reliableMsgProcessor)
 }
 
 func run(listener msgRunner, responder msgRunner, app AppMsgRunner) {

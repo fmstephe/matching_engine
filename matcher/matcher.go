@@ -22,7 +22,7 @@ func NewMatcher(slabSize int) *M {
 func (m *M) Run() {
 	for {
 		o := <-m.In
-		o, shutdown := m.Process(o)
+		o, shutdown := m.MsgProcessor(o, m.Out)
 		if shutdown {
 			return
 		}

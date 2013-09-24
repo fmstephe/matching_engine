@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"github.com/fmstephe/fstrconv"
+	"github.com/fmstephe/matching_engine/coordinator"
 	"github.com/fmstephe/matching_engine/matcher"
 	"github.com/fmstephe/matching_engine/msg"
 	"log"
@@ -19,8 +20,8 @@ const (
 var (
 	filePath   = flag.String("f", "", "Relative path to an ITCH file providing test data")
 	profile    = flag.String("p", "", "Write out a profile of this application, 'cpu' and 'mem' supported")
-	orderNum   = flag.Int("o", 1000, "The number of orders to generate. Ignored if -f is provided")
-	delDelay   = flag.Int("d", 100, "The number of orders generated before we begin deleting existing orders")
+	orderNum   = flag.Int("o", 100, "The number of orders to generate. Ignored if -f is provided")
+	delDelay   = flag.Int("d", 10, "The number of orders generated before we begin deleting existing orders")
 	perfRand   = rand.New(rand.NewSource(1))
 	orderMaker = msg.NewMessageMaker(1)
 )
@@ -39,7 +40,7 @@ func doPerf(log bool) {
 	in := make(chan *msg.Message, len(orderData))
 	out := make(chan *msg.Message, len(orderData))
 	m := matcher.NewMatcher(*delDelay * 2)
-	m.Config("Perf Matcher", in, out)
+	m.Config("Perf Matcher", in, out, coordinator.DefaultMsgProcessor)
 	go m.Run()
 	startProfile()
 	defer endProfile()

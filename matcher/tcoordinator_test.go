@@ -90,7 +90,7 @@ func (c *client) Run() {
 	for {
 		select {
 		case m := <-c.In:
-			m, shutdown := c.Process(m)
+			m, shutdown := c.MsgProcessor(m, c.Out)
 			if shutdown {
 				return
 			}

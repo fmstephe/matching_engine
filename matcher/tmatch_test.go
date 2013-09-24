@@ -1,6 +1,7 @@
 package matcher
 
 import (
+	"github.com/fmstephe/matching_engine/coordinator"
 	"github.com/fmstephe/matching_engine/msg"
 	"runtime"
 	"testing"
@@ -56,7 +57,7 @@ func (tm *testerMaker) Make() MatchTester {
 	in := make(chan *msg.Message, 30)
 	out := make(chan *msg.Message, 30)
 	m := NewMatcher(100)
-	m.Config("Matcher", in, out)
+	m.Config("Matcher", in, out, coordinator.DefaultMsgProcessor)
 	go m.Run()
 	return &localTester{in: in, out: out}
 }

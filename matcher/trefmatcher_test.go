@@ -19,7 +19,7 @@ func newRefmatcher(lowPrice, highPrice int64) *refmatcher {
 func (rm *refmatcher) Run() {
 	for {
 		m := <-rm.In
-		m, shutdown := rm.Process(m)
+		m, shutdown := rm.MsgProcessor(m, rm.Out)
 		if shutdown {
 			return
 		}

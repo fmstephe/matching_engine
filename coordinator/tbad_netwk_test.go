@@ -46,7 +46,7 @@ func newEchoClient(complete chan bool) *echoClient {
 func (c *echoClient) Run() {
 	go sendAll(c.Out)
 	for {
-		m, shutdown := c.Process(<-c.In)
+		m, shutdown := c.MsgProcessor(<-c.In, c.Out)
 		if shutdown {
 			return
 		}
@@ -85,7 +85,7 @@ type echoServer struct {
 
 func (s *echoServer) Run() {
 	for {
-		m, shutdown := s.Process(<-s.In)
+		m, shutdown := s.MsgProcessor(<-s.In, s.Out)
 		if shutdown {
 			return
 		}
