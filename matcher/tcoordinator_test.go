@@ -32,12 +32,12 @@ func (tm *netwkTesterMaker) Make() MatchTester {
 	tm.freePort++
 	// Build matcher
 	m := NewMatcher(100)
-	coordinator.Reliable(mkReadConn(serverPort), mkWriteConn(clientPort), m, matcherOrigin, "Matching Engine", false)
+	coordinator.InMemory(mkReadConn(serverPort), mkWriteConn(clientPort), m, matcherOrigin, "Matching Engine", false)
 	// Build client
 	receivedMsgs := make(chan *msg.Message, 1000)
 	toSendMsgs := make(chan *msg.Message, 1000)
 	c := newClient(receivedMsgs, toSendMsgs)
-	coordinator.Reliable(mkReadConn(clientPort), mkWriteConn(serverPort), c, clientOrigin, "Test Client    ", false)
+	coordinator.InMemory(mkReadConn(clientPort), mkWriteConn(serverPort), c, clientOrigin, "Test Client    ", false)
 	return &netwkTester{receivedMsgs: receivedMsgs, toSendMsgs: toSendMsgs}
 }
 

@@ -10,9 +10,11 @@ import (
 	"time"
 )
 
+// TODO I don't think direction is necessary any more. That is a leftover artifact of the central dispatcher approach
+
 func Reliable(reader io.ReadCloser, writer io.WriteCloser, app AppMsgRunner, originId uint32, name string, log bool) {
-	listener := newListener(reader)
-	responder := newResponder(writer)
+	listener := newReliableListener(reader)
+	responder := newReliableResponder(writer)
 	connect(listener, responder, app, originId, name, log)
 	run(listener, responder, app)
 }
@@ -49,7 +51,7 @@ type reliableListener struct {
 	msgHelper
 }
 
-func newListener(reader io.ReadCloser) *reliableListener {
+func newReliableListener(reader io.ReadCloser) *reliableListener {
 	return &reliableListener{reader: reader, ticker: msgutil.NewTicker()}
 }
 
@@ -110,7 +112,7 @@ type reliableResponder struct {
 	msgId uint32
 }
 
-func newResponder(writer io.WriteCloser) *reliableResponder {
+func newReliableResponder(writer io.WriteCloser) *reliableResponder {
 	return &reliableResponder{unacked: msgutil.NewSet(), writer: writer, msgId: 1}
 }
 

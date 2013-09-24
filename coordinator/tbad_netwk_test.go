@@ -7,6 +7,7 @@ import (
 )
 
 const TO_SEND = 1000
+
 const (
 	clientOriginId = iota
 	serverOriginId = iota
@@ -77,13 +78,13 @@ func (s *echoServer) Run() {
 	}
 }
 
-func TestBadNetwork(t *testing.T) {
+func testBadNetwork(t *testing.T, msgDropFreq int64, cFunc CoordinatorFunc) {
 	complete := make(chan bool)
 	c := newEchoClient(complete)
 	s := &echoServer{}
-	clientToServer := q.NewMeddleQ("clientToServer", q.NewDropMeddler(1))
-	serverToClient := q.NewMeddleQ("serverToClient", q.NewDropMeddler(1))
-	Reliable(serverToClient, clientToServer, c, clientOriginId, "Echo Client", false)
-	Reliable(clientToServer, serverToClient, s, serverOriginId, "Echo Server", false)
+	clientToServer := q.NewMeddleQ("clientToServer", q.NewDropMeddler(msgDropFreq))
+	serverToClient := q.NewMeddleQ("serverToClient", q.NewDropMeddler(msgDropFreq))
+	cFunc(serverToClient, clientToServer, c, clientOriginId, "Echo Client", false)
+	cFunc(clientToServer, serverToClient, s, serverOriginId, "Echo Server", false)
 	<-complete
 }

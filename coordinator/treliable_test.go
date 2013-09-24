@@ -27,7 +27,7 @@ func (c chanWriter) Close() error {
 func TestServerAckNotOverwrittenByCancel(t *testing.T) {
 	out := make(chan *Message, 100)
 	w := chanWriter{out}
-	r := newResponder(w)
+	r := newReliableResponder(w)
 	p := &Message{Route: APP, Direction: IN, Kind: PARTIAL, TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1, OriginId: 1, MsgId: 1}
 	c := &Message{Route: APP, Direction: IN, Kind: CANCELLED, TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1, OriginId: 1, MsgId: 2}
 	// Add buy server-ack to unacked list
@@ -43,7 +43,7 @@ func TestServerAckNotOverwrittenByCancel(t *testing.T) {
 func TestUnackedInDetail(t *testing.T) {
 	out := make(chan *Message, 100)
 	w := chanWriter{out}
-	r := newResponder(w)
+	r := newReliableResponder(w)
 	// Pre-canned message/ack pairs
 	m1 := &Message{TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1, Route: APP, Kind: FULL, OriginId: 1, MsgId: 1}
 	a1 := &Message{TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1, Route: ACK, Kind: FULL, OriginId: 1, MsgId: 1}
@@ -177,7 +177,7 @@ func startMockedListener(shouldErr bool, writeN int) (in chan *Message, out chan
 	in = make(chan *Message, 100)
 	out = make(chan *Message, 100)
 	cr := newChanReader(in, shouldErr, writeN)
-	l := newListener(cr)
+	l := newReliableListener(cr)
 	originId := uint32(1)
 	l.Config(originId, false, "test listener", out)
 	go l.Run()
@@ -292,4 +292,8 @@ func validate(t *testing.T, m, e *Message, stackOffset int) {
 		_, fname, lnum, _ := runtime.Caller(stackOffset)
 		t.Errorf("\nExpecting: %v\nFound:     %v \n%s:%d", e, m, fname, lnum)
 	}
+}
+
+func TestBadNetwork(t *testing.T) {
+	testBadNetwork(t, 1, Reliable)
 }

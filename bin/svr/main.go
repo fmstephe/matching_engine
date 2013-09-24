@@ -39,8 +39,8 @@ func main() {
 	c, tm := client.NewClient()
 	traderMap = make(map[uint32]*client.Trader)
 	traderMaker = tm
-	coordinator.Reliable(serverToClient, clientToServer, c, clientOriginId, "Client.........", true)
-	coordinator.Reliable(clientToServer, serverToClient, m, serverOriginId, "Matching Engine", true)
+	coordinator.InMemory(serverToClient, clientToServer, c, clientOriginId, "Client.........", true)
+	coordinator.InMemory(clientToServer, serverToClient, m, serverOriginId, "Matching Engine", true)
 	http.HandleFunc("/buy", handleBuy)
 	http.HandleFunc("/sell", handleSell)
 	http.HandleFunc("/cancel", handleCancel)

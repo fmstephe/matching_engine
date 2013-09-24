@@ -2,7 +2,10 @@ package coordinator
 
 import (
 	"github.com/fmstephe/matching_engine/msg"
+	"io"
 )
+
+type CoordinatorFunc func(reader io.ReadCloser, writer io.WriteCloser, app AppMsgRunner, originId uint32, name string, log bool)
 
 type msgRunner interface {
 	Config(originId uint32, log bool, name string, msgs chan *msg.Message)
