@@ -10,8 +10,6 @@ import (
 	"time"
 )
 
-// TODO I don't think direction is necessary any more. That is a leftover artifact of the central dispatcher approach
-
 func Reliable(reader io.ReadCloser, writer io.WriteCloser, app AppMsgRunner, originId uint32, name string, log bool) {
 	listener := newReliableListener(reader)
 	responder := newReliableResponder(writer)

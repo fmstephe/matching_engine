@@ -53,7 +53,7 @@ func (nt *netwkTester) Send(t *testing.T, m *msg.Message) {
 }
 
 func (nt *netwkTester) Expect(t *testing.T, e *msg.Message) {
-	e.Direction = msg.IN
+	e.Direction = msg.OUT
 	e.Route = msg.APP
 	e.OriginId = matcherOrigin
 	r := <-nt.receivedMsgs
