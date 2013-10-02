@@ -8,14 +8,12 @@ import (
 	"os"
 )
 
-func InMemory(reader io.ReadCloser, writer io.WriteCloser, app AppMsgRunner, originId uint32, name string, log bool) {
-	listener := newInMemoryListener(reader)
-	responder := newInMemoryResponder(writer)
-	fromListener := make(chan *msg.Message)
-	fromApp := make(chan *msg.Message)
-	listener.Config(originId, log, name, fromListener)
-	responder.Config(originId, log, name, fromApp)
-	app.Config(name, fromListener, fromApp, DefaultMsgProcessor)
+func InMemory(reader io.ReadCloser, writer io.WriteCloser, app AppMsgRunner, unused uint32, name string, log bool) {
+	toApp := make(chan *msg.Message)
+	toResponder := make(chan *msg.Message)
+	listener := newInMemoryListener(reader, toApp, name, log)
+	responder := newInMemoryResponder(writer, toResponder, name, log)
+	app.Config(name, toApp, toResponder)
 	go listener.Run()
 	go responder.Run()
 	go app.Run()
@@ -23,11 +21,18 @@ func InMemory(reader io.ReadCloser, writer io.WriteCloser, app AppMsgRunner, ori
 
 type inMemoryListener struct {
 	reader io.ReadCloser
-	msgHelper
+	toApp  chan *msg.Message
+	name   string
+	log    bool
 }
 
-func newInMemoryListener(reader io.ReadCloser) *inMemoryListener {
-	return &inMemoryListener{reader: reader}
+func newInMemoryListener(reader io.ReadCloser, toApp chan *msg.Message, name string, log bool) *inMemoryListener {
+	l := &inMemoryListener{}
+	l.reader = reader
+	l.toApp = toApp
+	l.name = name
+	l.log = log
+	return l
 }
 
 func (l *inMemoryListener) Run() {
@@ -63,7 +68,7 @@ func (l *inMemoryListener) logErr(errStr string) {
 }
 
 func (l *inMemoryListener) forward(o *msg.Message) (shutdown bool) {
-	l.msgs <- o
+	l.toApp <- o
 	return o.Route == msg.SHUTDOWN
 }
 
@@ -72,18 +77,25 @@ func (l *inMemoryListener) shutdown() {
 }
 
 type inMemoryResponder struct {
-	writer io.WriteCloser
-	msgHelper
+	writer  io.WriteCloser
+	fromApp <-chan *msg.Message
+	name    string
+	log     bool
 }
 
-func newInMemoryResponder(writer io.WriteCloser) *inMemoryResponder {
-	return &inMemoryResponder{writer: writer}
+func newInMemoryResponder(writer io.WriteCloser, fromApp chan *msg.Message, name string, log bool) *inMemoryResponder {
+	r := &inMemoryResponder{}
+	r.writer = writer
+	r.fromApp = fromApp
+	r.name = name
+	r.log = log
+	return r
 }
 
 func (r *inMemoryResponder) Run() {
 	defer r.shutdown()
 	for {
-		resp := <-r.msgs
+		resp := <-r.fromApp
 		if r.log {
 			println(r.name + ": " + resp.String())
 		}

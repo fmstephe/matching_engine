@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"github.com/fmstephe/fstrconv"
-	"github.com/fmstephe/matching_engine/coordinator"
 	"github.com/fmstephe/matching_engine/matcher"
 	"github.com/fmstephe/matching_engine/msg"
 	"log"
@@ -40,7 +39,7 @@ func doPerf(log bool) {
 	in := make(chan *msg.Message, len(orderData))
 	out := make(chan *msg.Message, len(orderData))
 	m := matcher.NewMatcher(*delDelay * 2)
-	m.Config("Perf Matcher", in, out, coordinator.DefaultMsgProcessor)
+	m.Config("Perf Matcher", in, out)
 	go m.Run()
 	startProfile()
 	defer endProfile()

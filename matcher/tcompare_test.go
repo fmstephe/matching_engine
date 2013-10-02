@@ -1,7 +1,6 @@
 package matcher
 
 import (
-	"github.com/fmstephe/matching_engine/coordinator"
 	"github.com/fmstephe/matching_engine/msg"
 	"testing"
 )
@@ -30,11 +29,11 @@ func compareMatchers(t *testing.T, orderPairs, depth int, lowPrice, highPrice in
 	refIn := make(chan *msg.Message)
 	refOut := make(chan *msg.Message, orderPairs*2)
 	refm := newRefmatcher(lowPrice, highPrice)
-	refm.Config("Reference Matcher", refIn, refOut, coordinator.DefaultMsgProcessor)
+	refm.Config("Reference Matcher", refIn, refOut)
 	in := make(chan *msg.Message)
 	out := make(chan *msg.Message, orderPairs*2)
 	m := NewMatcher(orderPairs * 2)
-	m.Config("Real Matcher", in, out, coordinator.DefaultMsgProcessor)
+	m.Config("Real Matcher", in, out)
 	testSet, err := cmprMaker.RndTradeSet(orderPairs, depth, lowPrice, highPrice)
 	go m.Run()
 	go refm.Run()

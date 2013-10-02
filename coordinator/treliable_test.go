@@ -3,6 +3,7 @@ package coordinator
 import (
 	"errors"
 	. "github.com/fmstephe/matching_engine/msg"
+	"github.com/fmstephe/matching_engine/msg/msgutil"
 	"runtime"
 	"testing"
 )
@@ -27,9 +28,9 @@ func (c chanWriter) Close() error {
 func TestServerAckNotOverwrittenByCancel(t *testing.T) {
 	out := make(chan *Message, 100)
 	w := chanWriter{out}
-	r := newReliableResponder(w)
-	p := &Message{Route: APP, Direction: IN, Kind: PARTIAL, TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1, OriginId: 1, MsgId: 1}
-	c := &Message{Route: APP, Direction: IN, Kind: CANCELLED, TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1, OriginId: 1, MsgId: 2}
+	r := &reliableResponder{writer: w, unacked: msgutil.NewSet()}
+	p := &Message{Route: APP, Kind: PARTIAL, TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1, OriginId: 1, MsgId: 1}
+	c := &Message{Route: APP, Kind: CANCELLED, TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1, OriginId: 1, MsgId: 2}
 	// Add buy server-ack to unacked list
 	r.addToUnacked(p)
 	r.resend()
@@ -43,7 +44,7 @@ func TestServerAckNotOverwrittenByCancel(t *testing.T) {
 func TestUnackedInDetail(t *testing.T) {
 	out := make(chan *Message, 100)
 	w := chanWriter{out}
-	r := newReliableResponder(w)
+	r := &reliableResponder{writer: w, unacked: msgutil.NewSet()}
 	// Pre-canned message/ack pairs
 	m1 := &Message{TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1, Route: APP, Kind: FULL, OriginId: 1, MsgId: 1}
 	a1 := &Message{TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1, Route: ACK, Kind: FULL, OriginId: 1, MsgId: 1}
@@ -173,19 +174,19 @@ func (r *chanReader) Close() error {
 	return nil
 }
 
-func startMockedListener(shouldErr bool, writeN int) (in chan *Message, out chan *Message) {
+func startMockedListener(shouldErr bool, writeN int) (in, outApp, outResponder chan *Message) {
 	in = make(chan *Message, 100)
-	out = make(chan *Message, 100)
-	cr := newChanReader(in, shouldErr, writeN)
-	l := newReliableListener(cr)
+	outApp = make(chan *Message, 100)
+	outResponder = make(chan *Message, 100)
+	r := newChanReader(in, shouldErr, writeN)
 	originId := uint32(1)
-	l.Config(originId, false, "test listener", out)
+	l := newReliableListener(r, outApp, outResponder, "Mocked Listener", originId, false)
 	go l.Run()
-	return in, out
+	return in, outApp, outResponder
 }
 
 func TestSmallReadError(t *testing.T) {
-	in, out := startMockedListener(false, SizeofMessage-1)
+	in, outApp, outResponder := startMockedListener(false, SizeofMessage-1)
 	m := &Message{Status: NORMAL, Route: APP, Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
 	in <- m
 	// Expected server ack
@@ -196,12 +197,12 @@ func TestSmallReadError(t *testing.T) {
 	r := &Message{}
 	*r = *m
 	r.Status = SMALL_READ_ERROR
-	validate(t, <-out, a, 1)
-	validate(t, <-out, r, 1)
+	validate(t, <-outResponder, a, 1)
+	validate(t, <-outApp, r, 1)
 }
 
 func TestReadError(t *testing.T) {
-	in, out := startMockedListener(true, SizeofMessage)
+	in, outApp, outResponder := startMockedListener(true, SizeofMessage)
 	m := &Message{Status: NORMAL, Route: APP, Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
 	in <- m
 	// Expected server ack
@@ -212,12 +213,12 @@ func TestReadError(t *testing.T) {
 	r := &Message{}
 	*r = *m
 	r.Status = READ_ERROR
-	validate(t, <-out, a, 1)
-	validate(t, <-out, r, 1)
+	validate(t, <-outResponder, a, 1)
+	validate(t, <-outApp, r, 1)
 }
 
 func TestDuplicate(t *testing.T) {
-	in, out := startMockedListener(false, SizeofMessage)
+	in, outApp, outResponder := startMockedListener(false, SizeofMessage)
 	m := &Message{Status: NORMAL, Route: APP, Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1, OriginId: 1, MsgId: 1}
 	in <- m
 	in <- m
@@ -225,28 +226,28 @@ func TestDuplicate(t *testing.T) {
 	a := &Message{}
 	a.WriteAckFor(m)
 	// Expect an ack for both messages but the message is only forwarded on once
-	validate(t, <-out, a, 1)
-	validate(t, <-out, m, 1)
-	validate(t, <-out, a, 1)
+	validate(t, <-outResponder, a, 1)
+	validate(t, <-outApp, m, 1)
+	validate(t, <-outResponder, a, 1)
 	m2 := &Message{Status: NORMAL, Route: APP, Kind: SELL, Price: 7, Amount: 1, TraderId: 2, TradeId: 1, StockId: 1, OriginId: 1, MsgId: 2}
 	in <- m2
 	// Expected server ack 2
 	a2 := &Message{}
 	a2.WriteAckFor(m2)
 	// An ack for m2 and m2 (but nothing relating to m)
-	validate(t, <-out, a2, 1)
-	validate(t, <-out, m2, 1)
+	validate(t, <-outResponder, a2, 1)
+	validate(t, <-outApp, m2, 1)
 }
 
 // Test ACK sent in, twice, expect ACK both times
 func TestDuplicateAck(t *testing.T) {
-	in, out := startMockedListener(false, SizeofMessage)
+	in, _, outResponder := startMockedListener(false, SizeofMessage)
 	m := &Message{Status: NORMAL, Route: ACK, Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
 	in <- m
 	in <- m
 	// Expect the ack to be passed through both times
-	validate(t, <-out, m, 1)
-	validate(t, <-out, m, 1)
+	validate(t, <-outResponder, m, 1)
+	validate(t, <-outResponder, m, 1)
 }
 
 func TestOrdersAckedSentAndDeduped(t *testing.T) {
@@ -274,17 +275,17 @@ func TestOrdersAckedSentAndDeduped(t *testing.T) {
 }
 
 func sendTwiceAckMsgAck(t *testing.T, m *Message) {
-	in, out := startMockedListener(false, SizeofMessage)
+	in, outApp, outResponder := startMockedListener(false, SizeofMessage)
 	in <- m
 	in <- m
 	in <- m
 	// Ack
 	a := &Message{}
 	a.WriteAckFor(m)
-	validate(t, <-out, a, 2)
-	validate(t, <-out, m, 2)
-	validate(t, <-out, a, 2)
-	validate(t, <-out, a, 2)
+	validate(t, <-outResponder, a, 2)
+	validate(t, <-outApp, m, 2)
+	validate(t, <-outResponder, a, 2)
+	validate(t, <-outResponder, a, 2)
 }
 
 func validate(t *testing.T, m, e *Message, stackOffset int) {
@@ -295,5 +296,5 @@ func validate(t *testing.T, m, e *Message, stackOffset int) {
 }
 
 func TestBadNetwork(t *testing.T) {
-	testBadNetwork(t, 1, Reliable)
+	testBadNetwork(t, 0.5, Reliable)
 }

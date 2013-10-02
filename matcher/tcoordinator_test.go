@@ -90,8 +90,7 @@ func (c *client) Run() {
 	for {
 		select {
 		case m := <-c.In:
-			m, shutdown := c.MsgProcessor(m, c.Out)
-			if shutdown {
+			if m.Route == msg.SHUTDOWN {
 				return
 			}
 			if m != nil {

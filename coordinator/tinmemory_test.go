@@ -5,5 +5,5 @@ import (
 )
 
 func TestGoodNetwork(t *testing.T) {
-	testBadNetwork(t, -1, InMemory)
+	testBadNetwork(t, 0.0, InMemory)
 }

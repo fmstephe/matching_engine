@@ -26,8 +26,8 @@ func newEchoClient(complete chan bool) *echoClient {
 func (c *echoClient) Run() {
 	go sendAll(c.Out)
 	for {
-		m, shutdown := c.MsgProcessor(<-c.In, c.Out)
-		if shutdown {
+		m := <-c.In
+		if m.Route == SHUTDOWN {
 			return
 		}
 		if m != nil {
@@ -54,7 +54,7 @@ func full(received []*Message) bool {
 
 func sendAll(out chan<- *Message) {
 	for i := uint32(1); i <= TO_SEND; i++ {
-		m := &Message{Route: APP, Direction: OUT, Kind: SELL, TraderId: 1, TradeId: i, StockId: 1, Price: 7, Amount: 1}
+		m := &Message{Route: APP, Kind: SELL, TraderId: 1, TradeId: i, StockId: 1, Price: 7, Amount: 1}
 		out <- m
 	}
 }
@@ -65,26 +65,25 @@ type echoServer struct {
 
 func (s *echoServer) Run() {
 	for {
-		m, shutdown := s.MsgProcessor(<-s.In, s.Out)
-		if shutdown {
+		m := <-s.In
+		if m.Route == SHUTDOWN {
 			return
 		}
-		if m != nil {
-			r := &Message{}
-			*r = *m
-			r.Direction = OUT
-			s.Out <- r
-		}
+		r := &Message{}
+		*r = *m
+		r.Kind = BUY
+		r.Direction = OUT
+		s.Out <- r
 	}
 }
 
-func testBadNetwork(t *testing.T, msgDropFreq int64, cFunc CoordinatorFunc) {
+func testBadNetwork(t *testing.T, dropProb float64, cFunc CoordinatorFunc) {
 	complete := make(chan bool)
 	c := newEchoClient(complete)
 	s := &echoServer{}
-	clientToServer := q.NewMeddleQ("clientToServer", q.NewDropMeddler(msgDropFreq))
-	serverToClient := q.NewMeddleQ("serverToClient", q.NewDropMeddler(msgDropFreq))
-	cFunc(serverToClient, clientToServer, c, clientOriginId, "Echo Client", false)
-	cFunc(clientToServer, serverToClient, s, serverOriginId, "Echo Server", false)
+	clientToServer := q.NewMeddleQ("clientToServer", q.NewProbDropMeddler(dropProb))
+	serverToClient := q.NewMeddleQ("serverToClient", q.NewProbDropMeddler(dropProb))
+	cFunc(serverToClient, clientToServer, c, clientOriginId, "Client", false)
+	cFunc(clientToServer, serverToClient, s, serverOriginId, "Server", false)
 	<-complete
 }

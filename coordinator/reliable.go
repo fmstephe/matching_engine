@@ -11,46 +11,37 @@ import (
 )
 
 func Reliable(reader io.ReadCloser, writer io.WriteCloser, app AppMsgRunner, originId uint32, name string, log bool) {
-	listener := newReliableListener(reader)
-	responder := newReliableResponder(writer)
-	connect(listener, responder, app, originId, name, log)
-	run(listener, responder, app)
-}
-
-func connect(listener, responder msgRunner, app AppMsgRunner, originId uint32, name string, log bool) {
-	fromListener := make(chan *msg.Message)
-	fromApp := make(chan *msg.Message)
-	listener.Config(originId, log, name, fromListener)
-	responder.Config(originId, log, name, fromApp)
-	app.Config(name, fromListener, fromApp, reliableMsgProcessor)
-}
-
-func run(listener msgRunner, responder msgRunner, app AppMsgRunner) {
+	listenerToApp := make(chan *msg.Message)
+	appToResponder := make(chan *msg.Message)
+	listenerToResponder := make(chan *msg.Message)
+	listener := newReliableListener(reader, listenerToApp, listenerToResponder, name, originId, log)
+	responder := newReliableResponder(writer, appToResponder, listenerToResponder, name, originId, log)
+	app.Config(name, listenerToApp, appToResponder)
 	go listener.Run()
 	go responder.Run()
 	go app.Run()
 }
 
-func reliableFilter(m *msg.Message, out chan<- *msg.Message) (AppMsg *msg.Message, shutdown bool) {
-	out <- m
-	switch {
-	case m.Route == msg.APP && m.Status == msg.NORMAL:
-		return m, false
-	case m.Route == msg.SHUTDOWN:
-		return nil, true
-	default:
-		return nil, false
-	}
-}
-
 type reliableListener struct {
-	reader io.ReadCloser
-	ticker *msgutil.Ticker
-	msgHelper
+	reader      io.ReadCloser
+	toApp       chan *msg.Message
+	toResponder chan *msg.Message
+	name        string
+	originId    uint32
+	log         bool
+	ticker      *msgutil.Ticker
 }
 
-func newReliableListener(reader io.ReadCloser) *reliableListener {
-	return &reliableListener{reader: reader, ticker: msgutil.NewTicker()}
+func newReliableListener(reader io.ReadCloser, toApp, toResponder chan *msg.Message, name string, originId uint32, log bool) *reliableListener {
+	l := &reliableListener{}
+	l.reader = reader
+	l.toApp = toApp
+	l.toResponder = toResponder
+	l.name = name
+	l.originId = originId
+	l.log = log
+	l.ticker = msgutil.NewTicker()
+	return l
 }
 
 func (l *reliableListener) Run() {
@@ -86,13 +77,18 @@ func (l *reliableListener) logErr(errStr string) {
 }
 
 func (l *reliableListener) forward(o *msg.Message) (shutdown bool) {
-	if o.Route != msg.ACK && o.Route != msg.SHUTDOWN {
+	if l.log {
+		println(l.name, "Listener:", o.String())
+	}
+	if o.Route != msg.ACK {
 		a := &msg.Message{}
 		a.WriteAckFor(o)
-		l.msgs <- a
+		l.toResponder <- a
 	}
-	if o.Route == msg.SHUTDOWN || o.Route == msg.ACK || l.ticker.Tick(o) {
-		l.msgs <- o
+	if o.Route == msg.ACK {
+		l.toResponder <- o
+	} else if l.ticker.Tick(o) {
+		l.toApp <- o
 	}
 	return o.Route == msg.SHUTDOWN
 }
@@ -104,14 +100,27 @@ func (l *reliableListener) shutdown() {
 const RESEND_MILLIS = time.Duration(10) * time.Millisecond
 
 type reliableResponder struct {
-	unacked *msgutil.Set
-	writer  io.WriteCloser
-	msgHelper
-	msgId uint32
+	writer       io.WriteCloser
+	fromApp      <-chan *msg.Message
+	fromListener <-chan *msg.Message
+	name         string
+	originId     uint32
+	msgId        uint32
+	log          bool
+	unacked      *msgutil.Set
 }
 
-func newReliableResponder(writer io.WriteCloser) *reliableResponder {
-	return &reliableResponder{unacked: msgutil.NewSet(), writer: writer, msgId: 1}
+func newReliableResponder(writer io.WriteCloser, fromApp, fromListener <-chan *msg.Message, name string, originId uint32, log bool) *reliableResponder {
+	r := &reliableResponder{}
+	r.writer = writer
+	r.fromApp = fromApp
+	r.fromListener = fromListener
+	r.name = name
+	r.originId = originId
+	r.msgId = 1
+	r.log = log
+	r.unacked = msgutil.NewSet()
+	return r
 }
 
 func (r *reliableResponder) Run() {
@@ -119,21 +128,28 @@ func (r *reliableResponder) Run() {
 	t := time.NewTimer(RESEND_MILLIS)
 	for {
 		select {
-		case resp := <-r.msgs:
+		case resp := <-r.fromApp:
 			if r.log {
-				println(r.name + ": " + resp.String())
+				println(r.name + " Responder (A): " + resp.String())
 			}
 			switch {
-			case resp.Direction == msg.IN && resp.Route == msg.ACK:
-				r.handleInAck(resp)
-			case resp.Direction == msg.OUT && (resp.Status != msg.NORMAL || resp.Route == msg.APP || resp.Route == msg.ACK):
+			case resp.Route == msg.APP:
 				r.writeResponse(resp)
-			case resp.Direction == msg.IN && resp.Route == msg.APP && resp.Status == msg.NORMAL:
-				continue
 			case resp.Route == msg.SHUTDOWN:
 				return
 			default:
 				panic(fmt.Sprintf("Unhandleable response %v", resp))
+			}
+		case resp := <-r.fromListener:
+			if r.log {
+				println(r.name + " Responder (L): " + resp.String()) // TODO code duplication
+			}
+			if resp.Route == msg.ACK {
+				if resp.Direction == msg.IN {
+					r.handleInAck(resp)
+				} else {
+					r.writeResponse(resp)
+				}
 			}
 		case <-t.C:
 			r.resend()
@@ -142,8 +158,8 @@ func (r *reliableResponder) Run() {
 	}
 }
 
-func (r *reliableResponder) handleInAck(ca *msg.Message) {
-	r.unacked.Remove(ca)
+func (r *reliableResponder) handleInAck(m *msg.Message) {
+	r.unacked.Remove(m)
 }
 
 func (r *reliableResponder) writeResponse(resp *msg.Message) {
