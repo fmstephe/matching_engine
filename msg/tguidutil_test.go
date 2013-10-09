@@ -1,4 +1,4 @@
-package msgutil
+package msg
 
 import (
 	"math/rand"

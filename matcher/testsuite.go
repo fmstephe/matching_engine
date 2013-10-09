@@ -48,8 +48,6 @@ func testSellBuyMatch(t *testing.T, mkr MatchTesterMaker) {
 	es := &Message{Kind: FULL, TraderId: 1, TradeId: 1, StockId: 1, Price: -7, Amount: 1}
 	mt.Expect(t, es)
 	eb := &Message{Kind: FULL, TraderId: 2, TradeId: 1, StockId: 1, Price: 7, Amount: 1}
-	eb.Route = APP
-	eb.Kind = FULL
 	mt.Expect(t, eb)
 }
 

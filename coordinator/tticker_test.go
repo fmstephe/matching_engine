@@ -1,4 +1,4 @@
-package msgutil
+package coordinator
 
 import (
 	"github.com/fmstephe/matching_engine/msg"
@@ -48,7 +48,7 @@ func TestTickRepeated(t *testing.T) {
 
 func TestTickRandom(t *testing.T) {
 	r := rand.New(rand.NewSource(1))
-	st := &simpleTicker{make(map[msg.MsgKind]map[int64]bool)}
+	st := &simpleTicker{make(map[int64]bool)}
 	tk := NewTicker()
 	msgs := randomUniqueMsgs()
 	for i := 0; i < 1000; i++ {
@@ -63,20 +63,15 @@ func TestTickRandom(t *testing.T) {
 }
 
 type simpleTicker struct {
-	kindMap map[msg.MsgKind]map[int64]bool
+	guidMap map[int64]bool
 }
 
-func (t *simpleTicker) tick(m *msg.Message) bool {
-	guidMap := t.kindMap[m.Kind]
-	if guidMap == nil {
-		guidMap = make(map[int64]bool)
-		t.kindMap[m.Kind] = guidMap
-	}
-	g := MkGuid(m.OriginId, m.MsgId)
-	if guidMap[g] {
+func (t *simpleTicker) tick(m *RMessage) bool {
+	g := msg.MkGuid(m.originId, m.msgId)
+	if t.guidMap[g] {
 		return false
 	}
-	guidMap[g] = true
+	t.guidMap[g] = true
 	return true
 
 }

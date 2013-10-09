@@ -1,6 +1,6 @@
-package msgutil
+package msg
 
-// TODO rename these functions
+// TODO rename these functions, msg doesn't seem like a good package for these functions anymore
 func MkGuid(traderId, tradeId uint32) int64 {
 	return (int64(traderId) << 32) | int64(tradeId)
 }

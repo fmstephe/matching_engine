@@ -19,7 +19,8 @@ func newRefmatcher(lowPrice, highPrice int64) *refmatcher {
 func (rm *refmatcher) Run() {
 	for {
 		m := <-rm.In
-		if m.Route == msg.SHUTDOWN {
+		if m.Kind == msg.SHUTDOWN {
+			rm.Out <- m
 			return
 		}
 		if m != nil {

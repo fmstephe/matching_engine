@@ -27,7 +27,7 @@ func (c *echoClient) Run() {
 	go sendAll(c.Out)
 	for {
 		m := <-c.In
-		if m.Route == SHUTDOWN {
+		if m.Kind == SHUTDOWN {
 			return
 		}
 		if m != nil {
@@ -54,7 +54,7 @@ func full(received []*Message) bool {
 
 func sendAll(out chan<- *Message) {
 	for i := uint32(1); i <= TO_SEND; i++ {
-		m := &Message{Route: APP, Kind: SELL, TraderId: 1, TradeId: i, StockId: 1, Price: 7, Amount: 1}
+		m := &Message{Kind: SELL, TraderId: 1, TradeId: i, StockId: 1, Price: 7, Amount: 1}
 		out <- m
 	}
 }
@@ -66,13 +66,12 @@ type echoServer struct {
 func (s *echoServer) Run() {
 	for {
 		m := <-s.In
-		if m.Route == SHUTDOWN {
+		if m.Kind == SHUTDOWN {
 			return
 		}
 		r := &Message{}
 		*r = *m
 		r.Kind = BUY
-		r.Direction = OUT
 		s.Out <- r
 	}
 }

@@ -1,4 +1,4 @@
-package msgutil
+package coordinator
 
 import (
 	"bytes"
@@ -14,21 +14,19 @@ const (
 )
 
 type Ticker struct {
-	roots map[msg.MsgKind]*root
+	r *root
 }
 
 func NewTicker() *Ticker {
-	return &Ticker{roots: make(map[msg.MsgKind]*root)}
+	return &Ticker{}
 }
 
-func (s *Ticker) Tick(m *msg.Message) (ticked bool) {
-	val := MkGuid(m.OriginId, m.MsgId)
-	r := s.roots[m.Kind]
-	if r == nil {
-		r = newRoot(val)
-		s.roots[m.Kind] = r
+func (t *Ticker) Tick(m *RMessage) (ticked bool) {
+	val := msg.MkGuid(m.originId, m.msgId)
+	if t.r == nil {
+		t.r = newRoot(val)
 	}
-	return r.tick(val)
+	return t.r.tick(val)
 }
 
 type root struct {
@@ -208,17 +206,15 @@ func (n *node) flip() {
 	n.right.black = !n.right.black
 }
 
-func validateRBT(s *Ticker) (err error) {
+func validateRBT(t *Ticker) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = r.(error)
 		}
 	}()
-	for _, r := range s.roots {
-		blackBalance(r.n, 0)
-		testReds(r.n, 0)
-		checkStructure(r.n)
-	}
+	blackBalance(t.r.n, 0)
+	testReds(t.r.n, 0)
+	checkStructure(t.r.n)
 	return nil
 }
 

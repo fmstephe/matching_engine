@@ -22,7 +22,8 @@ func NewMatcher(slabSize int) *M {
 func (m *M) Run() {
 	for {
 		o := <-m.In
-		if o.Route == msg.SHUTDOWN {
+		if o.Kind == msg.SHUTDOWN {
+			m.Out <- o
 			return
 		}
 		if o != nil {
@@ -165,26 +166,25 @@ func price(bPrice, sPrice int64) int64 {
 }
 
 func completeTrade(out chan<- *msg.Message, brk, srk msg.MsgKind, b, s *pqueue.OrderNode, price int64, amount uint32) {
-	br := &msg.Message{Price: -price, Amount: amount, TraderId: b.TraderId(), TradeId: b.TradeId(), StockId: b.StockId()}
-	br.WriteApp(brk)
-	sr := &msg.Message{Price: price, Amount: amount, TraderId: s.TraderId(), TradeId: s.TradeId(), StockId: s.StockId()}
-	sr.WriteApp(srk)
+	br := &msg.Message{Kind: brk, Price: -price, Amount: amount, TraderId: b.TraderId(), TradeId: b.TradeId(), StockId: b.StockId()}
+	sr := &msg.Message{Kind: srk, Price: price, Amount: amount, TraderId: s.TraderId(), TradeId: s.TradeId(), StockId: s.StockId()}
 	out <- br
 	out <- sr
 }
 
 func completeCancelled(out chan<- *msg.Message, c *pqueue.OrderNode) {
 	cr := writeMessage(c)
-	cr.WriteApp(msg.CANCELLED)
+	cr.Kind = msg.CANCELLED
 	out <- cr
 }
 
 func completeNotCancelled(out chan<- *msg.Message, nc *pqueue.OrderNode) {
 	ncr := writeMessage(nc)
-	ncr.WriteApp(msg.NOT_CANCELLED)
+	ncr.Kind = msg.NOT_CANCELLED
 	out <- ncr
 }
 
+// TODO this should be moved into OrderNode
 func writeMessage(on *pqueue.OrderNode) *msg.Message {
 	m := &msg.Message{Price: on.Price(), Amount: on.Amount(), TraderId: on.TraderId(), TradeId: on.TradeId(), StockId: on.StockId()}
 	return m

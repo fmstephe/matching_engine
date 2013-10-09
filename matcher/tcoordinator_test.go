@@ -47,15 +47,10 @@ type netwkTester struct {
 }
 
 func (nt *netwkTester) Send(t *testing.T, m *msg.Message) {
-	m.Direction = msg.OUT
-	m.Route = msg.APP
 	nt.toSendMsgs <- m
 }
 
 func (nt *netwkTester) Expect(t *testing.T, e *msg.Message) {
-	e.Direction = msg.OUT
-	e.Route = msg.APP
-	e.OriginId = matcherOrigin
 	r := <-nt.receivedMsgs
 	validate(t, r, e, 2)
 }
@@ -72,7 +67,7 @@ func (nt *netwkTester) ExpectOneOf(t *testing.T, es ...*msg.Message) {
 
 func (nt *netwkTester) Cleanup(t *testing.T) {
 	m := &msg.Message{}
-	m.WriteShutdown()
+	m.Kind = msg.SHUTDOWN
 	nt.toSendMsgs <- m
 }
 
@@ -90,7 +85,8 @@ func (c *client) Run() {
 	for {
 		select {
 		case m := <-c.In:
-			if m.Route == msg.SHUTDOWN {
+			if m.Kind == msg.SHUTDOWN {
+				c.Out <- m
 				return
 			}
 			if m != nil {
@@ -127,7 +123,6 @@ func mkReadConn(port int) *net.UDPConn {
 }
 
 func validate(t *testing.T, m, e *msg.Message, stackOffset int) {
-	e.MsgId = m.MsgId // We don't assert on msgId
 	if *m != *e {
 		_, fname, lnum, _ := runtime.Caller(stackOffset)
 		t.Errorf("\nExpecting: %v\nFound:     %v \n%s:%d", e, m, fname, lnum)

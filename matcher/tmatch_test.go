@@ -67,21 +67,12 @@ type localTester struct {
 }
 
 func (lt *localTester) Send(t *testing.T, m *msg.Message) {
-	m.Direction = msg.IN
-	m.Route = msg.APP
 	lt.in <- m
 }
 
 func (lt *localTester) Expect(t *testing.T, ref *msg.Message) {
-	ref.Direction = msg.OUT
-	ref.Route = msg.APP
 	var m *msg.Message
-	for {
-		m = <-lt.out
-		if m.Direction == msg.OUT {
-			break
-		}
-	}
+	m = <-lt.out
 	if *ref != *m {
 		_, fname, lnum, _ := runtime.Caller(1)
 		t.Errorf("\nExpecting: %v\nFound:     %v\n%s:%d", ref, m, fname, lnum)

@@ -3,17 +3,16 @@ package coordinator
 import (
 	"errors"
 	. "github.com/fmstephe/matching_engine/msg"
-	"github.com/fmstephe/matching_engine/msg/msgutil"
 	"runtime"
 	"testing"
 )
 
 type chanWriter struct {
-	out chan *Message
+	out chan *RMessage
 }
 
 func (c chanWriter) Write(b []byte) (int, error) {
-	r := &Message{}
+	r := &RMessage{}
 	r.WriteFrom(b)
 	c.out <- r
 	return len(b), nil
@@ -23,14 +22,15 @@ func (c chanWriter) Close() error {
 	return nil
 }
 
+// TODO we are creating RMessage structs in chaotic ways. This should be cleaned up
 // Two response messages with the same traderId/tradeId should both be resent (until acked)
 // When this test was written the CANCELLED message would overwrite the PARTIAL, and only the CANCELLED would be resent
 func TestServerAckNotOverwrittenByCancel(t *testing.T) {
-	out := make(chan *Message, 100)
+	out := make(chan *RMessage, 100)
 	w := chanWriter{out}
-	r := &reliableResponder{writer: w, unacked: msgutil.NewSet()}
-	p := &Message{Route: APP, Kind: PARTIAL, TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1, OriginId: 1, MsgId: 1}
-	c := &Message{Route: APP, Kind: CANCELLED, TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1, OriginId: 1, MsgId: 2}
+	r := &reliableResponder{writer: w, unacked: newSet()}
+	p := &RMessage{route: APP, originId: 1, msgId: 1, message: Message{Kind: PARTIAL, TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1}}
+	c := &RMessage{route: APP, originId: 1, msgId: 2, message: Message{Kind: CANCELLED, TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1}}
 	// Add buy server-ack to unacked list
 	r.addToUnacked(p)
 	r.resend()
@@ -42,25 +42,25 @@ func TestServerAckNotOverwrittenByCancel(t *testing.T) {
 }
 
 func TestUnackedInDetail(t *testing.T) {
-	out := make(chan *Message, 100)
+	out := make(chan *RMessage, 100)
 	w := chanWriter{out}
-	r := &reliableResponder{writer: w, unacked: msgutil.NewSet()}
+	r := &reliableResponder{writer: w, unacked: newSet()}
 	// Pre-canned message/ack pairs
-	m1 := &Message{TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1, Route: APP, Kind: FULL, OriginId: 1, MsgId: 1}
-	a1 := &Message{TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1, Route: ACK, Kind: FULL, OriginId: 1, MsgId: 1}
-	m2 := &Message{TraderId: 123, TradeId: 2000, StockId: 1, Price: 1, Amount: 1, Route: APP, Kind: FULL, OriginId: 1, MsgId: 2}
-	a2 := &Message{TraderId: 123, TradeId: 2000, StockId: 1, Price: 1, Amount: 1, Route: ACK, Kind: FULL, OriginId: 1, MsgId: 2}
-	m3 := &Message{TraderId: 777, TradeId: 5432, StockId: 1, Price: 1, Amount: 1, Route: APP, Kind: FULL, OriginId: 1, MsgId: 3}
-	a3 := &Message{TraderId: 777, TradeId: 5432, StockId: 1, Price: 1, Amount: 1, Route: ACK, Kind: FULL, OriginId: 1, MsgId: 3}
-	m4 := &Message{TraderId: 371, TradeId: 999, StockId: 1, Price: 1, Amount: 1, Route: APP, Kind: FULL, OriginId: 1, MsgId: 4}
-	a4 := &Message{TraderId: 371, TradeId: 999, StockId: 1, Price: 1, Amount: 1, Route: ACK, Kind: FULL, OriginId: 1, MsgId: 4}
-	m5 := &Message{TraderId: 87, TradeId: 50, StockId: 1, Price: 1, Amount: 1, Route: APP, Kind: FULL, OriginId: 1, MsgId: 5}
-	a5 := &Message{TraderId: 87, TradeId: 50, StockId: 1, Price: 1, Amount: 1, Route: ACK, Kind: FULL, OriginId: 1, MsgId: 5}
-	m6 := &Message{TraderId: 40, TradeId: 499, StockId: 1, Price: 1, Amount: 1, Route: APP, Kind: FULL, OriginId: 1, MsgId: 6}
-	a6 := &Message{TraderId: 40, TradeId: 499, StockId: 1, Price: 1, Amount: 1, Route: ACK, Kind: FULL, OriginId: 1, MsgId: 6}
-	m7 := &Message{TraderId: 99, TradeId: 700000, StockId: 1, Price: 1, Amount: 1, Route: APP, Kind: FULL, OriginId: 1, MsgId: 7}
-	a7 := &Message{TraderId: 99, TradeId: 700000, StockId: 1, Price: 1, Amount: 1, Route: ACK, Kind: FULL, OriginId: 1, MsgId: 7}
-	aUnkown := &Message{TraderId: 1, TradeId: 1, StockId: 1, Price: 1, Amount: 1, Route: ACK, Kind: FULL, OriginId: 1, MsgId: 8}
+	m1 := &RMessage{message: Message{Kind: FULL, TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1}, route: APP, originId: 1, msgId: 1}
+	a1 := &RMessage{message: Message{Kind: FULL, TraderId: 10, TradeId: 43, StockId: 1, Price: 1, Amount: 1}, route: ACK, originId: 1, msgId: 1}
+	m2 := &RMessage{message: Message{Kind: FULL, TraderId: 123, TradeId: 2000, StockId: 1, Price: 1, Amount: 1}, route: APP, originId: 1, msgId: 2}
+	a2 := &RMessage{message: Message{Kind: FULL, TraderId: 123, TradeId: 2000, StockId: 1, Price: 1, Amount: 1}, route: ACK, originId: 1, msgId: 2}
+	m3 := &RMessage{message: Message{Kind: FULL, TraderId: 777, TradeId: 5432, StockId: 1, Price: 1, Amount: 1}, route: APP, originId: 1, msgId: 3}
+	a3 := &RMessage{message: Message{Kind: FULL, TraderId: 777, TradeId: 5432, StockId: 1, Price: 1, Amount: 1}, route: ACK, originId: 1, msgId: 3}
+	m4 := &RMessage{message: Message{Kind: FULL, TraderId: 371, TradeId: 999, StockId: 1, Price: 1, Amount: 1}, route: APP, originId: 1, msgId: 4}
+	a4 := &RMessage{message: Message{Kind: FULL, TraderId: 371, TradeId: 999, StockId: 1, Price: 1, Amount: 1}, route: ACK, originId: 1, msgId: 4}
+	m5 := &RMessage{message: Message{Kind: FULL, TraderId: 87, TradeId: 50, StockId: 1, Price: 1, Amount: 1}, route: APP, originId: 1, msgId: 5}
+	a5 := &RMessage{message: Message{Kind: FULL, TraderId: 87, TradeId: 50, StockId: 1, Price: 1, Amount: 1}, route: ACK, originId: 1, msgId: 5}
+	m6 := &RMessage{message: Message{Kind: FULL, TraderId: 40, TradeId: 499, StockId: 1, Price: 1, Amount: 1}, route: APP, originId: 1, msgId: 6}
+	a6 := &RMessage{message: Message{Kind: FULL, TraderId: 40, TradeId: 499, StockId: 1, Price: 1, Amount: 1}, route: ACK, originId: 1, msgId: 6}
+	m7 := &RMessage{message: Message{Kind: FULL, TraderId: 99, TradeId: 700000, StockId: 1, Price: 1, Amount: 1}, route: APP, originId: 1, msgId: 7}
+	a7 := &RMessage{message: Message{Kind: FULL, TraderId: 99, TradeId: 700000, StockId: 1, Price: 1, Amount: 1}, route: ACK, originId: 1, msgId: 7}
+	aUnkown := &RMessage{message: Message{Kind: FULL, TraderId: 1, TradeId: 1, StockId: 1, Price: 1, Amount: 1}, route: ACK, originId: 1, msgId: 8}
 
 	// Add m1-5 to unacked list
 	r.addToUnacked(m1)
@@ -118,8 +118,8 @@ func TestUnackedInDetail(t *testing.T) {
 	}
 }
 
-func allResent(t *testing.T, out chan *Message, expect ...*Message) {
-	received := make([]*Message, 0)
+func allResent(t *testing.T, out chan *RMessage, expect ...*RMessage) {
+	received := make([]*RMessage, 0)
 	for len(out) > 0 {
 		received = append(received, <-out)
 	}
@@ -131,7 +131,7 @@ func allResent(t *testing.T, out chan *Message, expect ...*Message) {
 	allOfIn(t, received, expect)
 }
 
-func allOfIn(t *testing.T, first, second []*Message) {
+func allOfIn(t *testing.T, first, second []*RMessage) {
 	for _, f := range first {
 		found := false
 		for _, s := range second {
@@ -148,14 +148,14 @@ func allOfIn(t *testing.T, first, second []*Message) {
 }
 
 type chanReader struct {
-	in        chan *Message
+	in        chan *RMessage
 	shouldErr bool
 	writeN    int
 }
 
-func newChanReader(in chan *Message, shouldErr bool, writeN int) *chanReader {
-	if writeN > SizeofMessage || writeN < 0 {
-		writeN = SizeofMessage
+func newChanReader(in chan *RMessage, shouldErr bool, writeN int) *chanReader {
+	if writeN > SizeofRMessage || writeN < 0 {
+		writeN = SizeofRMessage
 	}
 	return &chanReader{in: in, shouldErr: shouldErr, writeN: writeN}
 }
@@ -174,10 +174,10 @@ func (r *chanReader) Close() error {
 	return nil
 }
 
-func startMockedListener(shouldErr bool, writeN int) (in, outApp, outResponder chan *Message) {
-	in = make(chan *Message, 100)
+func startMockedListener(shouldErr bool, writeN int) (in chan *RMessage, outApp chan *Message, outResponder chan *RMessage) {
+	in = make(chan *RMessage, 100)
 	outApp = make(chan *Message, 100)
-	outResponder = make(chan *Message, 100)
+	outResponder = make(chan *RMessage, 100)
 	r := newChanReader(in, shouldErr, writeN)
 	originId := uint32(1)
 	l := newReliableListener(r, outApp, outResponder, "Mocked Listener", originId, false)
@@ -186,109 +186,123 @@ func startMockedListener(shouldErr bool, writeN int) (in, outApp, outResponder c
 }
 
 func TestSmallReadError(t *testing.T) {
-	in, outApp, outResponder := startMockedListener(false, SizeofMessage-1)
-	m := &Message{Status: NORMAL, Route: APP, Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
+	in, outApp, outResponder := startMockedListener(false, SizeofRMessage-1)
+	m := &RMessage{status: NORMAL, route: APP, message: Message{Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}}
 	in <- m
 	// Expected server ack
-	a := &Message{}
+	a := &RMessage{}
 	a.WriteAckFor(m)
-	a.Status = SMALL_READ_ERROR
+	a.status = SMALL_READ_ERROR
 	// Expected response
 	r := &Message{}
-	*r = *m
-	r.Status = SMALL_READ_ERROR
-	validate(t, <-outResponder, a, 1)
+	*r = m.message
+	validateR(t, <-outResponder, a, 1)
 	validate(t, <-outApp, r, 1)
 }
 
 func TestReadError(t *testing.T) {
-	in, outApp, outResponder := startMockedListener(true, SizeofMessage)
-	m := &Message{Status: NORMAL, Route: APP, Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
+	in, outApp, outResponder := startMockedListener(true, SizeofRMessage)
+	m := &RMessage{status: NORMAL, route: APP, message: Message{Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}}
 	in <- m
 	// Expected server ack
-	a := &Message{}
+	a := &RMessage{}
 	a.WriteAckFor(m)
-	a.Status = READ_ERROR
+	a.status = READ_ERROR
 	// Expected response
 	r := &Message{}
-	*r = *m
-	r.Status = READ_ERROR
-	validate(t, <-outResponder, a, 1)
+	*r = m.message
+	validateR(t, <-outResponder, a, 1)
 	validate(t, <-outApp, r, 1)
 }
 
 func TestDuplicate(t *testing.T) {
-	in, outApp, outResponder := startMockedListener(false, SizeofMessage)
-	m := &Message{Status: NORMAL, Route: APP, Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1, OriginId: 1, MsgId: 1}
+	in, outApp, outResponder := startMockedListener(false, SizeofRMessage)
+	m := &RMessage{status: NORMAL, route: APP, originId: 1, msgId: 1, message: Message{Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}}
 	in <- m
 	in <- m
 	// Expected server ack
-	a := &Message{}
+	a := &RMessage{}
 	a.WriteAckFor(m)
+	// Expected app msgs
+	am := &Message{}
+	*am = m.message
 	// Expect an ack for both messages but the message is only forwarded on once
-	validate(t, <-outResponder, a, 1)
-	validate(t, <-outApp, m, 1)
-	validate(t, <-outResponder, a, 1)
-	m2 := &Message{Status: NORMAL, Route: APP, Kind: SELL, Price: 7, Amount: 1, TraderId: 2, TradeId: 1, StockId: 1, OriginId: 1, MsgId: 2}
+	validateR(t, <-outResponder, a, 1)
+	validate(t, <-outApp, am, 1)
+	validateR(t, <-outResponder, a, 1)
+	m2 := &RMessage{status: NORMAL, route: APP, originId: 1, msgId: 2, message: Message{Kind: SELL, Price: 7, Amount: 1, TraderId: 2, TradeId: 1, StockId: 1}}
 	in <- m2
 	// Expected server ack 2
-	a2 := &Message{}
+	a2 := &RMessage{}
 	a2.WriteAckFor(m2)
+	// Expected app msg
+	am2 := &Message{}
+	*am2 = m2.message
 	// An ack for m2 and m2 (but nothing relating to m)
-	validate(t, <-outResponder, a2, 1)
-	validate(t, <-outApp, m2, 1)
+	validateR(t, <-outResponder, a2, 1)
+	validate(t, <-outApp, am2, 1)
 }
 
 // Test ACK sent in, twice, expect ACK both times
 func TestDuplicateAck(t *testing.T) {
-	in, _, outResponder := startMockedListener(false, SizeofMessage)
-	m := &Message{Status: NORMAL, Route: ACK, Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
+	in, _, outResponder := startMockedListener(false, SizeofRMessage)
+	m := &RMessage{status: NORMAL, route: ACK, message: Message{Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}}
 	in <- m
 	in <- m
 	// Expect the ack to be passed through both times
-	validate(t, <-outResponder, m, 1)
-	validate(t, <-outResponder, m, 1)
+	validateR(t, <-outResponder, m, 1)
+	validateR(t, <-outResponder, m, 1)
 }
 
 func TestOrdersAckedSentAndDeduped(t *testing.T) {
 	// Test BUY sent in, twice, expect ACK, BUY and just ACK for the duplicate
-	m := &Message{Status: NORMAL, Route: APP, Kind: BUY, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
-	sendTwiceAckMsgAck(t, m)
+	m := &RMessage{status: NORMAL, route: APP, message: Message{Kind: BUY, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}}
+	sendThriceAckMsgAckAck(t, m)
 	// Test SELL sent in, twice, expect ACK, SELL and just ACK for the duplicate
-	m = &Message{Status: NORMAL, Route: APP, Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
-	sendTwiceAckMsgAck(t, m)
+	m = &RMessage{status: NORMAL, route: APP, message: Message{Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}}
+	sendThriceAckMsgAckAck(t, m)
 	// Test PARTIAL sent in, twice, expect ACK, PARTIAL and just ACK for the duplicate
-	m = &Message{Status: NORMAL, Route: APP, Kind: PARTIAL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
-	sendTwiceAckMsgAck(t, m)
+	m = &RMessage{status: NORMAL, route: APP, message: Message{Kind: PARTIAL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}}
+	sendThriceAckMsgAckAck(t, m)
 	// Test FULL sent in, twice, expect ACK, FULL and just ACK for the duplicate
-	m = &Message{Status: NORMAL, Route: APP, Kind: FULL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
-	sendTwiceAckMsgAck(t, m)
+	m = &RMessage{status: NORMAL, route: APP, message: Message{Kind: FULL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}}
+	sendThriceAckMsgAckAck(t, m)
 	// Test CANCELLED sent in, twice, expect ACK, CANCELLEd and just ACK for the duplicate
-	m = &Message{Status: NORMAL, Route: APP, Kind: CANCELLED, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
-	sendTwiceAckMsgAck(t, m)
+	m = &RMessage{status: NORMAL, route: APP, message: Message{Kind: CANCELLED, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}}
+	sendThriceAckMsgAckAck(t, m)
 	// Test NOT_CANCELLED sent in, twice, expect ACK, NOT_CANCELLED and just ACK for the duplicate
-	m = &Message{Status: NORMAL, Route: APP, Kind: NOT_CANCELLED, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
-	sendTwiceAckMsgAck(t, m)
+	m = &RMessage{status: NORMAL, route: APP, message: Message{Kind: NOT_CANCELLED, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}}
+	sendThriceAckMsgAckAck(t, m)
 	// Test CANCEL sent in, twice, expect ACK, CANCEL and just ACK for the duplicate
-	m = &Message{Status: NORMAL, Route: APP, Kind: CANCEL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
-	sendTwiceAckMsgAck(t, m)
+	m = &RMessage{status: NORMAL, route: APP, message: Message{Kind: CANCEL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}}
+	sendThriceAckMsgAckAck(t, m)
 }
 
-func sendTwiceAckMsgAck(t *testing.T, m *Message) {
-	in, outApp, outResponder := startMockedListener(false, SizeofMessage)
+func sendThriceAckMsgAckAck(t *testing.T, m *RMessage) {
+	in, outApp, outResponder := startMockedListener(false, SizeofRMessage)
 	in <- m
 	in <- m
 	in <- m
 	// Ack
-	a := &Message{}
+	a := &RMessage{}
 	a.WriteAckFor(m)
-	validate(t, <-outResponder, a, 2)
-	validate(t, <-outApp, m, 2)
-	validate(t, <-outResponder, a, 2)
-	validate(t, <-outResponder, a, 2)
+	// App
+	am := &Message{}
+	*am = m.message
+	validateR(t, <-outResponder, a, 2)
+	validate(t, <-outApp, am, 2)
+	validateR(t, <-outResponder, a, 2)
+	validateR(t, <-outResponder, a, 2)
 }
 
 func validate(t *testing.T, m, e *Message, stackOffset int) {
+	if *m != *e {
+		_, fname, lnum, _ := runtime.Caller(stackOffset)
+		t.Errorf("\nExpecting: %v\nFound:     %v \n%s:%d", e, m, fname, lnum)
+	}
+}
+
+func validateR(t *testing.T, m, e *RMessage, stackOffset int) {
 	if *m != *e {
 		_, fname, lnum, _ := runtime.Caller(stackOffset)
 		t.Errorf("\nExpecting: %v\nFound:     %v \n%s:%d", e, m, fname, lnum)

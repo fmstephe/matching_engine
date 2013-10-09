@@ -29,7 +29,8 @@ func (c *Client) Run() {
 	for {
 		select {
 		case m := <-c.In:
-			if m.Route == msg.SHUTDOWN {
+			if m.Kind == msg.SHUTDOWN {
+				c.Out <- m
 				return
 			}
 			if m != nil {
@@ -86,7 +87,7 @@ func (t *Trader) Cancel(price int64, tradeId, amount, stockId uint32) {
 }
 
 func (t *Trader) submit(kind msg.MsgKind, price int64, tradeId, amount, stockId uint32) {
-	m := &msg.Message{Direction: msg.OUT, Route: msg.APP, Kind: kind, Price: price, Amount: amount, TraderId: t.traderId, TradeId: tradeId, StockId: stockId}
+	m := &msg.Message{Kind: kind, Price: price, Amount: amount, TraderId: t.traderId, TradeId: tradeId, StockId: stockId}
 	if !m.Valid() {
 		panic(fmt.Sprintf("Invalid Message %v", m))
 	}

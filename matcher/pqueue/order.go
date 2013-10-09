@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/fmstephe/fstrconv"
 	"github.com/fmstephe/matching_engine/msg"
-	"github.com/fmstephe/matching_engine/msg/msgutil"
 )
 
 type OrderNode struct {
@@ -20,7 +19,7 @@ func (o *OrderNode) CopyFrom(from *msg.Message) {
 	o.amount = from.Amount
 	o.stockId = from.StockId
 	o.kind = from.Kind
-	o.setup(from.Price, msgutil.MkGuid(from.TraderId, from.TradeId))
+	o.setup(from.Price, msg.MkGuid(from.TraderId, from.TradeId))
 }
 
 func (o *OrderNode) setup(price, guid int64) {
@@ -37,11 +36,11 @@ func (o *OrderNode) Guid() int64 {
 }
 
 func (o *OrderNode) TraderId() uint32 {
-	return msgutil.GetTraderId(o.guidNode.val)
+	return msg.GetTraderId(o.guidNode.val)
 }
 
 func (o *OrderNode) TradeId() uint32 {
-	return msgutil.GetTradeId(o.guidNode.val)
+	return msg.GetTradeId(o.guidNode.val)
 }
 
 func (o *OrderNode) Amount() uint32 {

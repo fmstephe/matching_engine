@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"github.com/fmstephe/matching_engine/msg"
 	"io"
-	"net"
-	"os"
 )
 
 func InMemory(reader io.ReadCloser, writer io.WriteCloser, app AppMsgRunner, unused uint32, name string, log bool) {
@@ -39,7 +37,8 @@ func (l *inMemoryListener) Run() {
 	defer l.shutdown()
 	for {
 		m := l.deserialise()
-		shutdown := l.forward(m)
+		shutdown := m.Kind == msg.SHUTDOWN
+		l.toApp <- m
 		if shutdown {
 			return
 		}
@@ -52,10 +51,8 @@ func (l *inMemoryListener) deserialise() *msg.Message {
 	n, err := l.reader.Read(b)
 	m.WriteFrom(b[:n])
 	if err != nil {
-		m.Status = msg.READ_ERROR
 		l.logErr("Listener - UDP Read: " + err.Error())
 	} else if n != msg.SizeofMessage {
-		m.Status = msg.SMALL_READ_ERROR
 		l.logErr(fmt.Sprintf("Listener: Error incorrect number of bytes. Expecting %d, found %d in %v", msg.SizeofMessage, n, b))
 	}
 	return m
@@ -65,11 +62,6 @@ func (l *inMemoryListener) logErr(errStr string) {
 	if l.log {
 		println(errStr)
 	}
-}
-
-func (l *inMemoryListener) forward(o *msg.Message) (shutdown bool) {
-	l.toApp <- o
-	return o.Route == msg.SHUTDOWN
 }
 
 func (l *inMemoryListener) shutdown() {
@@ -95,37 +87,33 @@ func newInMemoryResponder(writer io.WriteCloser, fromApp chan *msg.Message, name
 func (r *inMemoryResponder) Run() {
 	defer r.shutdown()
 	for {
-		resp := <-r.fromApp
+		m := <-r.fromApp
 		if r.log {
-			println(r.name + ": " + resp.String())
+			println(r.name + ": " + m.String())
 		}
-		if resp.Route == msg.SHUTDOWN {
+		shutdown := m.Kind == msg.SHUTDOWN
+		r.write(m)
+		if shutdown {
 			return
-		} else {
-			r.write(resp)
 		}
 	}
 }
 
-func (r *inMemoryResponder) write(resp *msg.Message) {
+func (r *inMemoryResponder) write(m *msg.Message) {
 	b := make([]byte, msg.SizeofMessage)
-	resp.WriteTo(b)
+	m.WriteTo(b)
 	n, err := r.writer.Write(b)
 	if err != nil {
-		r.handleError(resp, err, msg.WRITE_ERROR)
+		r.handleError(err.Error())
 	}
 	if n != msg.SizeofMessage {
-		r.handleError(resp, err, msg.SMALL_WRITE_ERROR)
+		r.handleError(fmt.Sprintf("Write Error: Wrong sized message. Found %d, expecting %d", n, msg.SizeofMessage))
 	}
 }
 
-func (r *inMemoryResponder) handleError(resp *msg.Message, err error, s msg.MsgStatus) {
-	em := &msg.Message{}
-	*em = *resp
-	em.Status = s
-	println(resp.String(), err.Error())
-	if e, ok := err.(net.Error); ok && !e.Temporary() {
-		os.Exit(1)
+func (r *inMemoryResponder) handleError(errMsg string) {
+	if r.log {
+		println("Write Error: ", errMsg)
 	}
 }
 

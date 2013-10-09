@@ -1,13 +1,12 @@
-package msgutil
+package coordinator
 
 import (
-	"github.com/fmstephe/matching_engine/msg"
 	"math/rand"
 	"testing"
 )
 
 func TestAddThenRemove(t *testing.T) {
-	s := NewSet()
+	s := newSet()
 	msgs := randomUniqueMsgs()
 	for i, m := range msgs {
 		s.Add(m)
@@ -23,20 +22,20 @@ func TestAddThenRemove(t *testing.T) {
 	}
 }
 
-func expectAll(t *testing.T, s *Set, msgs []*msg.Message) {
+func expectAll(t *testing.T, s *set, msgs []*RMessage) {
 	allOrNone(t, s, msgs, true)
 	sameContent(t, msgs, extractAll(s))
 }
 
-func expectNone(t *testing.T, s *Set, msgs []*msg.Message) {
+func expectNone(t *testing.T, s *set, msgs []*RMessage) {
 	allOrNone(t, s, msgs, false)
 }
 
-func selfConsistent(t *testing.T, s *Set) {
+func selfConsistent(t *testing.T, s *set) {
 	allOrNone(t, s, extractAll(s), true)
 }
 
-func allOrNone(t *testing.T, s *Set, msgs []*msg.Message, shouldFind bool) {
+func allOrNone(t *testing.T, s *set, msgs []*RMessage, shouldFind bool) {
 	for _, m := range msgs {
 		if found := s.Contains(m); found != shouldFind {
 			t.Errorf("Expecting message to be found (%v), %v", shouldFind, m)
@@ -44,17 +43,17 @@ func allOrNone(t *testing.T, s *Set, msgs []*msg.Message, shouldFind bool) {
 	}
 }
 
-func extractAll(s *Set) []*msg.Message {
-	msgs := make([]*msg.Message, 0)
-	f := func(m *msg.Message) {
+func extractAll(s *set) []*RMessage {
+	msgs := make([]*RMessage, 0)
+	f := func(m *RMessage) {
 		msgs = append(msgs, m)
 	}
 	s.Do(f)
 	return msgs
 }
 
-func scramble(msgs []*msg.Message) []*msg.Message {
-	jMsgs := make([]*msg.Message, len(msgs))
+func scramble(msgs []*RMessage) []*RMessage {
+	jMsgs := make([]*RMessage, len(msgs))
 	copy(jMsgs, msgs)
 	r := rand.New(rand.NewSource(1))
 	for i := range jMsgs {
@@ -64,7 +63,7 @@ func scramble(msgs []*msg.Message) []*msg.Message {
 	return jMsgs
 }
 
-func sameContent(t *testing.T, msgs1 []*msg.Message, msgs2 []*msg.Message) {
+func sameContent(t *testing.T, msgs1 []*RMessage, msgs2 []*RMessage) {
 	if len(msgs1) != len(msgs2) {
 		t.Errorf("Slices are of different lengths, msgs1: %d. msgs2: %d", len(msgs1), len(msgs2))
 	}
@@ -72,7 +71,7 @@ func sameContent(t *testing.T, msgs1 []*msg.Message, msgs2 []*msg.Message) {
 	compareElements(t, msgs2, msgs1)
 }
 
-func compareElements(t *testing.T, msgs1 []*msg.Message, msgs2 []*msg.Message) {
+func compareElements(t *testing.T, msgs1 []*RMessage, msgs2 []*RMessage) {
 OUTER:
 	for _, m1 := range msgs1 {
 		for _, m2 := range msgs2 {
