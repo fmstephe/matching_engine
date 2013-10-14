@@ -93,7 +93,6 @@ const (
 	SizeofRMessage = int(unsafe.Sizeof(RMessage{}))
 )
 
-// TODO get rid of any rm.message references here
 func (rm *RMessage) Valid() bool {
 	// A message must always have a direction
 	if rm.direction == NO_DIRECTION {

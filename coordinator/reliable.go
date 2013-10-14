@@ -108,7 +108,7 @@ type reliableResponder struct {
 	originId     uint32
 	msgId        uint32
 	log          bool
-	unacked      *set
+	unacked      *rmsgSet
 }
 
 func newReliableResponder(writer io.WriteCloser, fromApp <-chan *msg.Message, fromListener <-chan *RMessage, name string, originId uint32, log bool) *reliableResponder {
@@ -159,7 +159,7 @@ func (r *reliableResponder) Run() {
 }
 
 func (r *reliableResponder) handleInAck(rm *RMessage) {
-	r.unacked.Remove(rm)
+	r.unacked.remove(rm)
 }
 
 func (r *reliableResponder) writeResponse(rm *RMessage) {
@@ -177,12 +177,12 @@ func (r *reliableResponder) decorateResponse(rm *RMessage) {
 
 func (r *reliableResponder) addToUnacked(rm *RMessage) {
 	if rm.route == APP {
-		r.unacked.Add(rm)
+		r.unacked.add(rm)
 	}
 }
 
 func (r *reliableResponder) resend() {
-	r.unacked.Do(func(rm *RMessage) {
+	r.unacked.do(func(rm *RMessage) {
 		r.write(rm)
 	})
 }

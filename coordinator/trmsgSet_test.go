@@ -9,46 +9,46 @@ func TestAddThenRemove(t *testing.T) {
 	s := newSet()
 	msgs := randomUniqueMsgs()
 	for i, m := range msgs {
-		s.Add(m)
+		s.add(m)
 		expectAll(t, s, msgs[0:i+1])
 		selfConsistent(t, s)
 	}
 	jMsgs := scramble(msgs)
 	for i, m := range jMsgs {
-		s.Remove(m)
+		s.remove(m)
 		expectNone(t, s, jMsgs[0:i+1])
 		expectAll(t, s, jMsgs[i+1:len(jMsgs)])
 		selfConsistent(t, s)
 	}
 }
 
-func expectAll(t *testing.T, s *set, msgs []*RMessage) {
+func expectAll(t *testing.T, s *rmsgSet, msgs []*RMessage) {
 	allOrNone(t, s, msgs, true)
 	sameContent(t, msgs, extractAll(s))
 }
 
-func expectNone(t *testing.T, s *set, msgs []*RMessage) {
+func expectNone(t *testing.T, s *rmsgSet, msgs []*RMessage) {
 	allOrNone(t, s, msgs, false)
 }
 
-func selfConsistent(t *testing.T, s *set) {
+func selfConsistent(t *testing.T, s *rmsgSet) {
 	allOrNone(t, s, extractAll(s), true)
 }
 
-func allOrNone(t *testing.T, s *set, msgs []*RMessage, shouldFind bool) {
+func allOrNone(t *testing.T, s *rmsgSet, msgs []*RMessage, shouldFind bool) {
 	for _, m := range msgs {
-		if found := s.Contains(m); found != shouldFind {
+		if found := s.contains(m); found != shouldFind {
 			t.Errorf("Expecting message to be found (%v), %v", shouldFind, m)
 		}
 	}
 }
 
-func extractAll(s *set) []*RMessage {
+func extractAll(s *rmsgSet) []*RMessage {
 	msgs := make([]*RMessage, 0)
 	f := func(m *RMessage) {
 		msgs = append(msgs, m)
 	}
-	s.Do(f)
+	s.do(f)
 	return msgs
 }
 
