@@ -11,6 +11,10 @@ type chanWriter struct {
 	out chan *RMessage
 }
 
+func newChanWriter(out chan *RMessage) *chanWriter {
+	return &chanWriter{out: out}
+}
+
 func (c chanWriter) Write(b []byte) (int, error) {
 	r := &RMessage{}
 	r.WriteFrom(b)
@@ -20,6 +24,73 @@ func (c chanWriter) Write(b []byte) (int, error) {
 
 func (c chanWriter) Close() error {
 	return nil
+}
+
+func startMockedResponder() (fromApp chan *Message, fromListener chan *RMessage, out chan *RMessage) {
+	fromApp = make(chan *Message, 100)
+	fromListener = make(chan *RMessage, 100)
+	out = make(chan *RMessage, 100)
+	w := newChanWriter(out)
+	originId := uint32(1)
+	r := newReliableResponder(w, fromApp, fromListener, "Mocked Responder", originId, false)
+	go r.Run()
+	return fromApp, fromListener, out
+}
+
+func TestAppMsgWrittenOut(t *testing.T) {
+	fromApp, _, out := startMockedResponder()
+	m := &Message{Kind: BUY, TraderId: 1, TradeId: 1, StockId: 1, Price: 1, Amount: 1}
+	rm := &RMessage{route: APP, direction: IN, originId: 1, msgId: 1, message: *m}
+	fromApp <- m
+	validateR(t, <-out, rm, 1)
+	m1 := &Message{Kind: SELL, TraderId: 2, TradeId: 2, StockId: 2, Price: 2, Amount: 2}
+	rm1 := &RMessage{route: APP, direction: IN, originId: 1, msgId: 2, message: *m1}
+	fromApp <- m1
+	validateR(t, <-out, rm1, 1)
+	m2 := &Message{Kind: PARTIAL, TraderId: 3, TradeId: 3, StockId: 3, Price: 3, Amount: 3}
+	rm2 := &RMessage{route: APP, direction: IN, originId: 1, msgId: 3, message: *m2}
+	fromApp <- m2
+	validateR(t, <-out, rm2, 1)
+	m3 := &Message{Kind: FULL, TraderId: 4, TradeId: 4, StockId: 4, Price: 4, Amount: 4}
+	rm3 := &RMessage{route: APP, direction: IN, originId: 1, msgId: 4, message: *m3}
+	fromApp <- m3
+	validateR(t, <-out, rm3, 1)
+}
+
+func TestOutAckWrittenOut(t *testing.T) {
+	_, fromListener, out := startMockedResponder()
+	a := &RMessage{route: ACK, direction: OUT, originId: 2, msgId: 10, message: Message{Kind: BUY, TraderId: 1, TradeId: 1, StockId: 1, Price: 1, Amount: 1}}
+	rm := &RMessage{}
+	*rm = *a
+	rm.direction = IN
+	rm.originId = 1
+	rm.msgId = 1
+	fromListener <- a
+	validateR(t, <-out, rm, 1)
+	a1 := &RMessage{route: ACK, direction: OUT, originId: 2, msgId: 11, message: Message{Kind: BUY, TraderId: 2, TradeId: 2, StockId: 2, Price: 2, Amount: 2}}
+	rm1 := &RMessage{}
+	*rm1 = *a1
+	rm1.direction = IN
+	rm1.originId = 1
+	rm1.msgId = 2
+	fromListener <- a1
+	validateR(t, <-out, rm1, 1)
+	a2 := &RMessage{route: ACK, direction: OUT, originId: 3, msgId: 12, message: Message{Kind: BUY, TraderId: 3, TradeId: 3, StockId: 3, Price: 3, Amount: 3}}
+	rm2 := &RMessage{}
+	*rm2 = *a2
+	rm2.direction = IN
+	rm2.originId = 1
+	rm2.msgId = 3
+	fromListener <- a2
+	validateR(t, <-out, rm2, 1)
+	a3 := &RMessage{route: ACK, direction: OUT, originId: 4, msgId: 13, message: Message{Kind: BUY, TraderId: 4, TradeId: 4, StockId: 4, Price: 4, Amount: 4}}
+	rm3 := &RMessage{}
+	*rm3 = *a3
+	rm3.direction = IN
+	rm3.originId = 1
+	rm3.msgId = 4
+	fromListener <- a3
+	validateR(t, <-out, rm3, 1)
 }
 
 // TODO we are creating RMessage structs in chaotic ways. This should be cleaned up

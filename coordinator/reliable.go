@@ -148,8 +148,9 @@ func (r *reliableResponder) Run() {
 				} else {
 					r.writeResponse(rm)
 				}
+			} else {
+				panic(fmt.Sprintf("Illegal message received from listener: %v", rm))
 			}
-			// TODO what do we do if rm.Route != ACK?
 		case <-t.C:
 			r.resend()
 			t = time.NewTimer(RESEND_MILLIS)
@@ -162,12 +163,16 @@ func (r *reliableResponder) handleInAck(rm *RMessage) {
 }
 
 func (r *reliableResponder) writeResponse(rm *RMessage) {
+	r.decorateResponse(rm)
+	r.addToUnacked(rm)
+	r.write(rm)
+}
+
+func (r *reliableResponder) decorateResponse(rm *RMessage) {
 	rm.direction = IN
 	rm.originId = r.originId
 	rm.msgId = r.msgId
 	r.msgId++
-	r.addToUnacked(rm)
-	r.write(rm)
 }
 
 func (r *reliableResponder) addToUnacked(rm *RMessage) {
