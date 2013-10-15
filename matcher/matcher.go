@@ -173,19 +173,15 @@ func completeTrade(out chan<- *msg.Message, brk, srk msg.MsgKind, b, s *pqueue.O
 }
 
 func completeCancelled(out chan<- *msg.Message, c *pqueue.OrderNode) {
-	cr := writeMessage(c)
-	cr.Kind = msg.CANCELLED
-	out <- cr
+	cm := &msg.Message{}
+	c.CopyTo(cm)
+	cm.Kind = msg.CANCELLED
+	out <- cm
 }
 
 func completeNotCancelled(out chan<- *msg.Message, nc *pqueue.OrderNode) {
-	ncr := writeMessage(nc)
-	ncr.Kind = msg.NOT_CANCELLED
-	out <- ncr
-}
-
-// TODO this should be moved into OrderNode
-func writeMessage(on *pqueue.OrderNode) *msg.Message {
-	m := &msg.Message{Price: on.Price(), Amount: on.Amount(), TraderId: on.TraderId(), TradeId: on.TradeId(), StockId: on.StockId()}
-	return m
+	ncm := &msg.Message{}
+	nc.CopyTo(ncm)
+	ncm.Kind = msg.NOT_CANCELLED
+	out <- ncm
 }

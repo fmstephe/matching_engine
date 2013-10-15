@@ -22,6 +22,15 @@ func (o *OrderNode) CopyFrom(from *msg.Message) {
 	o.setup(from.Price, msg.MkGuid(from.TraderId, from.TradeId))
 }
 
+func (o *OrderNode) CopyTo(to *msg.Message) {
+	to.Kind = o.Kind()
+	to.Price = o.Price()
+	to.Amount = o.Amount()
+	to.TraderId = o.TraderId()
+	to.TradeId = o.TradeId()
+	to.StockId = o.StockId()
+}
+
 func (o *OrderNode) setup(price, guid int64) {
 	initNode(o, price, &o.priceNode, &o.guidNode)
 	initNode(o, guid, &o.guidNode, &o.priceNode)
