@@ -130,18 +130,14 @@ func (r *reliableResponder) Run() {
 	for {
 		select {
 		case m := <-r.fromApp:
-			if r.log {
-				println(r.name + " Responder (A): " + m.String())
-			}
+			r.doLog(m.String())
 			if m.Kind == msg.SHUTDOWN {
 				return
 			}
 			rm := &RMessage{route: APP, message: *m}
 			r.writeResponse(rm)
 		case rm := <-r.fromListener:
-			if r.log {
-				println(r.name + " Responder (L): " + rm.String()) // TODO code duplication
-			}
+			r.doLog(rm.String())
 			if rm.route == ACK {
 				if rm.direction == IN {
 					r.handleInAck(rm)
@@ -155,6 +151,12 @@ func (r *reliableResponder) Run() {
 			r.resend()
 			t = time.NewTimer(RESEND_MILLIS)
 		}
+	}
+}
+
+func (r *reliableResponder) doLog(s string) {
+	if r.log {
+		println(r.name + "Responder: " + s)
 	}
 }
 
