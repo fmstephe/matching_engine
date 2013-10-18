@@ -3,7 +3,6 @@ package main
 import (
 	"code.google.com/p/go.net/websocket"
 	"encoding/json"
-	"fmt"
 	"github.com/fmstephe/matching_engine/client"
 	"github.com/fmstephe/matching_engine/coordinator"
 	"github.com/fmstephe/matching_engine/matcher"
@@ -12,12 +11,9 @@ import (
 	"github.com/fmstephe/simpleid"
 	"net/http"
 	"os"
-	"strconv"
 )
 
 var traderMaker *client.TraderMaker
-var traderMap map[uint32]*client.Trader
-var tradeId = uint32(0)
 var idMaker = simpleid.NewIdMaker()
 
 const (
@@ -37,154 +33,132 @@ func main() {
 	// Matching Engine
 	m := matcher.NewMatcher(100)
 	c, tm := client.NewClient()
-	traderMap = make(map[uint32]*client.Trader)
 	traderMaker = tm
 	coordinator.InMemory(serverToClient, clientToServer, c, clientOriginId, "Client.........", true)
 	coordinator.InMemory(clientToServer, serverToClient, m, serverOriginId, "Matching Engine", true)
-	http.HandleFunc("/buy", handleBuy)
-	http.HandleFunc("/sell", handleSell)
-	http.HandleFunc("/cancel", handleCancel)
-	http.Handle("/test", websocket.Handler(handleTrader))
+	http.Handle("/wsconn", websocket.Handler(handleTrader))
 	http.Handle("/", http.FileServer(http.Dir(pwd+"/html/")))
 	if err := http.ListenAndServe("127.0.0.1:8081", nil); err != nil {
 		println(err.Error())
 	}
 }
 
-type register struct {
-	TraderId uint32 `json:"traderId"`
-}
-
-type order struct {
+type tradeInfo struct {
 	Kind    string `json:"kind"`
 	Price   int64  `json:"price"`
 	Amount  uint32 `json:"amount"`
 	StockId uint32 `json:"stockId"`
 }
 
-func handleTrader(ws *websocket.Conn) {
-	defer ws.Close()
+type order struct {
+	tradeInfo
+}
+
+type response struct {
+	tradeInfo
+	TradeId  uint32 `json:"tradeId"`
+	AvailBal int64  `json:"availBal"`
+	CurBal   int64  `json:"curBal"`
+}
+
+type traderState struct {
+	traderId uint32
+	tradeId  uint32
+	availBal int64
+	curBal   int64
+	trader   *client.Trader
+}
+
+func newTraderState() *traderState {
 	traderId := uint32(idMaker.Id())
 	trader := traderMaker.Make(traderId)
-	println("New Trader", traderId)
-	go writer(ws, trader.OutOfClient)
-	tradeId := uint32(1)
+	bal := int64(100)
+	return &traderState{traderId: traderId, tradeId: uint32(1), availBal: bal, curBal: bal, trader: trader}
+}
+
+func (ts *traderState) processOrder(o *order) *response {
+	r := &response{tradeInfo: tradeInfo{Kind: o.Kind, Price: o.Price, Amount: o.Amount, StockId: o.StockId}, TradeId: ts.tradeId}
+	if o.Kind == "BUY" {
+		total := o.Price * int64(o.Amount)
+		if total > ts.availBal {
+			r.Kind = msg.REJECTED.String()
+		} else {
+			ts.trader.Buy(o.Price, ts.tradeId, o.Amount, o.StockId)
+			ts.availBal -= total
+		}
+	}
+	if o.Kind == "SELL" {
+		ts.trader.Sell(o.Price, ts.tradeId, o.Amount, o.StockId)
+	}
+	ts.tradeId++
+	r.AvailBal = ts.availBal
+	r.CurBal = ts.curBal
+	return r
+}
+
+func (ts *traderState) processMsg(m *msg.Message) *response {
+	total := m.Price * int64(m.Amount)
+	ts.curBal += total
+	// If sell (>0) then available balance is updated
+	// If buy (<0) then available balance has already been updated
+	if total > 0 {
+		ts.availBal += total
+	}
+	r := &response{tradeInfo: tradeInfo{Kind: m.Kind.String(), Price: m.Price, Amount: m.Amount, StockId: m.StockId}, TradeId: m.TradeId}
+	r.AvailBal = ts.availBal
+	r.CurBal = ts.curBal
+	return r
+}
+
+func handleTrader(ws *websocket.Conn) {
+	ts := newTraderState()
+	orders := make(chan *order)
+	responses := make(chan *response)
+	defer close(responses)
+	go reader(ws, orders)
+	go writer(ws, responses)
 	for {
-		o := &order{}
-		if err := get(ws, o); err != nil {
+		select {
+		case o := <-orders:
+			r := ts.processOrder(o)
+			responses <- r
+		case m := <-ts.trader.OutOfClient:
+			r := ts.processMsg(m)
+			responses <- r
+		}
+	}
+}
+
+func reader(ws *websocket.Conn, orders chan<- *order) {
+	defer close(orders)
+	defer ws.Close()
+	for {
+		var data string
+		if err := websocket.Message.Receive(ws, &data); err != nil {
 			println("error", err.Error())
 			return
 		}
-		println("Success!")
-		println(fmt.Sprintf("%v", o))
-		if o.Kind == "BUY" {
-			trader.Buy(o.Price, tradeId, o.Amount, o.StockId)
+		println(data)
+		o := &order{}
+		if err := json.Unmarshal([]byte(data), o); err != nil {
+			println("error", err.Error())
+			return
 		}
-		if o.Kind == "SELL" {
-			trader.Sell(o.Price, tradeId, o.Amount, o.StockId)
-		}
-		tradeId++
+		orders <- o
 	}
 }
 
-func get(ws *websocket.Conn, v interface{}) error {
-	var data string
-	if err := websocket.Message.Receive(ws, &data); err != nil {
-		return err
-	}
-	println(data)
-	if err := json.Unmarshal([]byte(data), v); err != nil {
-		return err
-	}
-	return nil
-}
-
-func writer(ws *websocket.Conn, writeChan chan *msg.Message) {
+func writer(ws *websocket.Conn, responses chan *response) {
 	defer ws.Close()
-	for m := range writeChan {
-		if _, err := ws.Write([]byte(m.String())); err != nil {
+	for r := range responses {
+		bytes, err := json.Marshal(r)
+		if err != nil {
+			println("Writer Error", err.Error())
+			return
+		}
+		if _, err := ws.Write(bytes); err != nil {
 			println("Writer Error", err.Error())
 			return
 		}
 	}
-}
-
-func handleBuy(w http.ResponseWriter, r *http.Request) {
-	price, traderId, tradeId, amount, stockId, err := getFields(r)
-	if err != nil {
-		w.Write([]byte("Bad Parameters\n"))
-	} else {
-		trader := getTrader(traderId)
-		trader.Buy(price, tradeId, amount, stockId)
-		w.Write([]byte("BUY\n"))
-	}
-}
-
-func handleSell(w http.ResponseWriter, r *http.Request) {
-	price, traderId, tradeId, amount, stockId, err := getFields(r)
-	if err != nil {
-		w.Write([]byte("Bad Parameters\n"))
-	} else {
-		trader := getTrader(traderId)
-		trader.Sell(price, tradeId, amount, stockId)
-		w.Write([]byte("SELL\n"))
-	}
-}
-
-func handleCancel(w http.ResponseWriter, r *http.Request) {
-	price, traderId, tradeId, amount, stockId, err := getFields(r)
-	if err != nil {
-		w.Write([]byte("Bad Parameters\n"))
-	} else {
-		trader := getTrader(traderId)
-		trader.Cancel(price, tradeId, amount, stockId)
-		w.Write([]byte("CANCEL\n"))
-	}
-}
-
-func getTrader(traderId uint32) *client.Trader {
-	trader := traderMap[traderId]
-	if trader == nil {
-		trader = traderMaker.Make(traderId)
-		traderMap[traderId] = trader
-	}
-	return trader
-}
-
-func getFields(r *http.Request) (price int64, traderId, tradeId, amount, stockId uint32, err error) {
-	price, err = getFieldInt64(r, "price")
-	if err != nil {
-		return
-	}
-	traderId, err = getFieldUint32(r, "traderId")
-	if err != nil {
-		return
-	}
-	tradeId, err = getFieldUint32(r, "tradeId")
-	if err != nil {
-		return
-	}
-	amount, err = getFieldUint32(r, "amount")
-	if err != nil {
-		return
-	}
-	stockId, err = getFieldUint32(r, "stockId")
-	return
-}
-
-func getFieldUint32(r *http.Request, name string) (uint32, error) {
-	field64, err := getFieldInt64(r, name)
-	// TODO do some bounds checking for max and min here
-	fieldu32 := uint32(field64)
-	return fieldu32, err
-}
-
-func getFieldInt64(r *http.Request, name string) (int64, error) {
-	fieldStr := r.FormValue(name)
-	field, err := strconv.Atoi(fieldStr)
-	field64 := int64(field)
-	if err != nil {
-		println(err.Error(), name)
-	}
-	return field64, err
 }

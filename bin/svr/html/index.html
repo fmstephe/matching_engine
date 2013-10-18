@@ -5,27 +5,31 @@
 				return document.getElementById(arguments[0]);
 			}
 
+			function Order(kind, price, amount, stockId, tradeId) {
+				this.kind = kind;
+				this.price = price;
+				this.amount = amount;
+				this.stockId = stockId;
+				this.tradeId = tradeId;
+			}
+
 			function setJsonValue(kind) {
-				var price = $("price");
-				var amount = $("amount");
-				var stockId = $("stockId");
-				var jsonValue = $("jsonValue");
 				var obj = new Object();
-				obj.kind = kind;
-				obj.price = price.value * 1;
-				obj.amount = amount.value * 1;
-				obj.stockId = stockId.value * 1;
-				console.log(JSON.stringify(obj));
-				ws.send(JSON.stringify(obj));
+				var price = Number($("price").value);
+				var amount = Number($("amount").value);
+				var stockId = Number($("stockId").value);
+				var order = new Order(kind, price, amount, stockId);
+				console.log("  To: " + JSON.stringify(order));
+				ws.send(JSON.stringify(order));
 			}
 
 			function doWebsocket() {
-				ws = new WebSocket("ws://localhost:8081/test");
+				ws = new WebSocket("ws://localhost:8081/wsconn");
 				ws.onopen = function() {
 					console.log("open");
 				}
 				ws.onmessage = function(m) {
-					console.log(m.data)
+				console.log("From: " + m.data)
 				}
 				ws.onclose = function() {
 					console.log("closed");
