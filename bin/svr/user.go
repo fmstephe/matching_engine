@@ -38,27 +38,26 @@ type user struct {
 	curTradeId  uint32
 	availBal    int64
 	curBal      int64
-	trader      *client.Trader
+	clientComm  *client.Comm
 	outstanding []webMessage
 }
 
-func newUser() *user {
+func newUser(clientComm *client.Comm) *user {
 	curTradeId := uint32(1)
 	bal := int64(100)
-	traderId := uint32(idMaker.Id())
-	trader := traderMaker.Make(traderId)
 	outstanding := make([]webMessage, 0)
-	return &user{curTradeId: curTradeId, availBal: bal, curBal: bal, trader: trader, outstanding: outstanding}
+	return &user{curTradeId: curTradeId, availBal: bal, curBal: bal, clientComm: clientComm, outstanding: outstanding}
 }
 
 func (u *user) run(msgs chan webMessage, responses chan []byte) {
 	defer close(responses)
+	outOfClient := u.clientComm.Out()
 	for {
 		var rm receivedMessage
 		select {
 		case wm := <-msgs:
 			rm = u.processOrder(wm)
-		case m := <-u.trader.OutOfClient:
+		case m := <-outOfClient:
 			rm = u.processMsg(m)
 		}
 		r := &response{Received: rm, AvailBal: u.availBal, CurBal: u.curBal, Outstanding: u.outstanding}
@@ -74,7 +73,7 @@ func (u *user) run(msgs chan webMessage, responses chan []byte) {
 func (u *user) processOrder(wm webMessage) receivedMessage {
 	// TODO should validate the webMessage here
 	if wm.Kind == "CANCEL" {
-		u.trader.Cancel(wm.Price, wm.TradeId, wm.Amount, wm.StockId)
+		u.clientComm.Cancel(wm.Price, wm.TradeId, wm.Amount, wm.StockId)
 		u.outstanding = append(u.outstanding, wm)
 		return receivedMessage{Message: wm, Type: ACCEPTED_CLIENT}
 	}
@@ -85,13 +84,13 @@ func (u *user) processOrder(wm webMessage) receivedMessage {
 		return receivedMessage{Message: wm, Type: REJECTED_CLIENT}
 	}
 	if wm.Kind == "BUY" {
-		u.trader.Buy(wm.Price, wm.TradeId, wm.Amount, wm.StockId)
+		u.clientComm.Buy(wm.Price, wm.TradeId, wm.Amount, wm.StockId)
 		u.availBal -= totalCost
 		u.outstanding = append(u.outstanding, wm)
 		return receivedMessage{Message: wm, Type: ACCEPTED_CLIENT}
 	}
 	if wm.Kind == "SELL" {
-		u.trader.Sell(wm.Price, wm.TradeId, wm.Amount, wm.StockId)
+		u.clientComm.Sell(wm.Price, wm.TradeId, wm.Amount, wm.StockId)
 		u.outstanding = append(u.outstanding, wm)
 		return receivedMessage{Message: wm, Type: ACCEPTED_CLIENT}
 	}

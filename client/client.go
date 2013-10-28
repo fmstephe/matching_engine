@@ -1,31 +1,29 @@
 package client
 
 import (
+	"errors"
 	"fmt"
 	"github.com/fmstephe/matching_engine/coordinator"
 	"github.com/fmstephe/matching_engine/msg"
 )
-
-const OUT_BUF_SIZE = 100
-const IN_BUF_SIZE = 100
 
 type traderRegMsg struct {
 	traderId    uint32
 	outOfClient chan *msg.Message
 }
 
-type Client struct {
+type C struct {
 	coordinator.AppMsgHelper
 	clientMap  map[uint32]chan *msg.Message
 	intoClient chan interface{}
 }
 
-func NewClient() (*Client, *TraderMaker) {
-	intoClient := make(chan interface{}, IN_BUF_SIZE)
-	return &Client{intoClient: intoClient, clientMap: make(map[uint32]chan *msg.Message)}, &TraderMaker{intoClient: intoClient}
+func NewClient() *C {
+	intoClient := make(chan interface{})
+	return &C{intoClient: intoClient, clientMap: make(map[uint32]chan *msg.Message)}
 }
 
-func (c *Client) Run() {
+func (c *C) Run() {
 	for {
 		select {
 		case m := <-c.In:
@@ -57,41 +55,40 @@ func (c *Client) Run() {
 	}
 }
 
-// TraderMaker is threadsafe and can be shared among multiple go-routines
-type TraderMaker struct {
-	intoClient chan interface{}
-}
-
-func (tm *TraderMaker) Make(traderId uint32) *Trader {
-	outOfClient := make(chan *msg.Message, OUT_BUF_SIZE)
+func (c *C) NewComm(traderId uint32) *Comm {
+	outOfClient := make(chan *msg.Message)
 	cr := &traderRegMsg{traderId: traderId, outOfClient: outOfClient}
-	tm.intoClient <- cr // Performs the registration of this trader
-	return &Trader{traderId: traderId, intoClient: tm.intoClient, OutOfClient: outOfClient}
+	c.intoClient <- cr // Register this Comm
+	return &Comm{traderId: traderId, intoClient: c.intoClient, outOfClient: outOfClient}
 }
 
-//TODO this is the wrong name - should be something neutral like client channel???
-type Trader struct {
+type Comm struct {
 	traderId    uint32
 	intoClient  chan interface{}
-	OutOfClient chan *msg.Message
+	outOfClient chan *msg.Message
 }
 
-func (t *Trader) Buy(price int64, tradeId, amount, stockId uint32) {
-	t.submit(msg.BUY, price, tradeId, amount, stockId)
+func (c *Comm) Buy(price int64, tradeId, amount, stockId uint32) error {
+	return c.submit(msg.BUY, price, tradeId, amount, stockId)
 }
 
-func (t *Trader) Sell(price int64, tradeId, amount, stockId uint32) {
-	t.submit(msg.SELL, price, tradeId, amount, stockId)
+func (c *Comm) Sell(price int64, tradeId, amount, stockId uint32) error {
+	return c.submit(msg.SELL, price, tradeId, amount, stockId)
 }
 
-func (t *Trader) Cancel(price int64, tradeId, amount, stockId uint32) {
-	t.submit(msg.CANCEL, price, tradeId, amount, stockId)
+func (c *Comm) Cancel(price int64, tradeId, amount, stockId uint32) error {
+	return c.submit(msg.CANCEL, price, tradeId, amount, stockId)
 }
 
-func (t *Trader) submit(kind msg.MsgKind, price int64, tradeId, amount, stockId uint32) {
-	m := &msg.Message{Kind: kind, Price: price, Amount: amount, TraderId: t.traderId, TradeId: tradeId, StockId: stockId}
+func (c *Comm) Out() chan *msg.Message {
+	return c.outOfClient
+}
+
+func (c *Comm) submit(kind msg.MsgKind, price int64, tradeId, amount, stockId uint32) error {
+	m := &msg.Message{Kind: kind, Price: price, Amount: amount, TraderId: c.traderId, TradeId: tradeId, StockId: stockId}
 	if !m.Valid() {
-		panic(fmt.Sprintf("Invalid Message %v", m))
+		return errors.New(fmt.Sprintf("Invalid Message %v", m))
 	}
-	t.intoClient <- m
+	c.intoClient <- m
+	return nil
 }

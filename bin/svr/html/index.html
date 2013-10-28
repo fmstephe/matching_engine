@@ -45,7 +45,7 @@ function displayMessage() {
 }
 
 function createCancel(msg) {
-	return "<div><a onclick=\"submitCancel(" + msg.tradeId  + ")\">Cancel</a>" + JSON.stringify(msg) + "</div>";
+	return "<div><a onclick=\"submitCancel(" + msg.tradeId  + ")\">Cancel</a><span>" + JSON.stringify(msg) + "</span></div>";
 }
 
 function submitCancel(tradeId) {
