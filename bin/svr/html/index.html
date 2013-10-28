@@ -1,41 +1,87 @@
 <html>
 	<head>
 		<script type="text/javascript">
-			function $() {
-				return document.getElementById(arguments[0]);
-			}
 
-			function Order(kind, price, amount, stockId, tradeId) {
-				this.kind = kind;
-				this.price = price;
-				this.amount = amount;
-				this.stockId = stockId;
-				this.tradeId = tradeId;
-			}
+var lastMessage;
 
-			function setJsonValue(kind) {
-				var obj = new Object();
-				var price = Number($("price").value);
-				var amount = Number($("amount").value);
-				var stockId = Number($("stockId").value);
-				var order = new Order(kind, price, amount, stockId);
-				console.log("  To: " + JSON.stringify(order));
-				ws.send(JSON.stringify(order));
-			}
+function $() {
+	return document.getElementById(arguments[0]);
+}
 
-			function doWebsocket() {
-				ws = new WebSocket("ws://localhost:8081/wsconn");
-				ws.onopen = function() {
-					console.log("open");
-				}
-				ws.onmessage = function(m) {
-				console.log("From: " + m.data)
-				}
-				ws.onclose = function() {
-					console.log("closed");
-				}
-			}
-		</script>
+function Order(kind, price, amount, stockId, tradeId) {
+	this.kind = kind;
+	this.price = price;
+	this.amount = amount;
+	this.stockId = stockId;
+	this.tradeId = tradeId;
+}
+
+function sendOrder(kind) {
+	var obj = new Object();
+	var price = Number($("price").value);
+	var amount = Number($("amount").value);
+	var stockId = Number($("stockId").value);
+	var order = new Order(kind, price, amount, stockId);
+	console.log("  To: " + JSON.stringify(order));
+	ws.send(JSON.stringify(order));
+}
+
+function receiveMessage(sMsg) {
+	var jMsg = JSON.parse(sMsg);
+	lastMessage = jMsg;
+	displayMessage();
+}
+
+function displayMessage() {
+	var p = $("msgs");
+	$("curBal").innerHTML = "Current Balance: " + lastMessage.curBal;
+	$("availBal").innerHTML = "Available Balance: " + lastMessage.availBal;
+	var msgsInner = "";
+	var outstanding = lastMessage.outstanding;
+	for (var i = 0; i < outstanding.length; i++) {
+		msgsInner += createCancel(outstanding[i]);
+	}
+	$("msgs").innerHTML = msgsInner;
+}
+
+function createCancel(msg) {
+	return "<div><a onclick=\"submitCancel(" + msg.tradeId  + ")\">Cancel</a>" + JSON.stringify(msg) + "</div>";
+}
+
+function submitCancel(tradeId) {
+	var outstanding = lastMessage.outstanding;
+	for (var i = 0; i < outstanding.length; i++) {
+		var msg = outstanding[i];
+		if (msg.tradeId == tradeId) {
+			var cancel = new Object();
+			cancel.kind = "CANCEL";
+			cancel.price = msg.price;
+			cancel.amount = msg.amount;
+			cancel.stockId = msg.stockId;
+			cancel.stockId = msg.stockId;
+			cancel.tradeId = msg.tradeId;
+			ws.send(JSON.stringify(cancel));
+			break;
+		}
+	}
+}
+
+function doWebsocket() {
+	ws = new WebSocket("ws://localhost:8081/wsconn");
+	ws.onopen = function() {
+		console.log("open");
+	}
+	ws.onmessage = function(m) {
+		console.log("From: " + m.data);
+		receiveMessage(m.data);
+	}
+	ws.onclose = function() {
+		console.log("closed");
+	}
+}
+
+</script>
+
 	</head>
 
 	<body onload="doWebsocket()">
@@ -44,9 +90,11 @@
 			Amount: <input type="text" name="amount" id="amount"></input><br/>
 			StockId: <input type="text" name="stockId" id="stockId"></input><br/>
 		</form>
-		<button onClick="setJsonValue('BUY')">BUY</button>
-		<button onClick="setJsonValue('SELL')">SELL</button>
-
+		<button onClick="sendOrder('BUY')">BUY</button>
+		<button onClick="sendOrder('SELL')">SELL</button>
+		<p id="curBal"></p>
+		<p id="availBal"></p>
+		<p id="msgs"></p>
 	</body>
 
 </html>

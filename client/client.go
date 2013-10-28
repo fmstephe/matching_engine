@@ -57,6 +57,7 @@ func (c *Client) Run() {
 	}
 }
 
+// TraderMaker is threadsafe and can be shared among multiple go-routines
 type TraderMaker struct {
 	intoClient chan interface{}
 }
@@ -68,6 +69,7 @@ func (tm *TraderMaker) Make(traderId uint32) *Trader {
 	return &Trader{traderId: traderId, intoClient: tm.intoClient, OutOfClient: outOfClient}
 }
 
+//TODO this is the wrong name - should be something neutral like client channel???
 type Trader struct {
 	traderId    uint32
 	intoClient  chan interface{}
