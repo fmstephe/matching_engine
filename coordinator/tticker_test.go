@@ -1,7 +1,7 @@
 package coordinator
 
 import (
-	"github.com/fmstephe/matching_engine/msg"
+	"github.com/fmstephe/matching_engine/ints"
 	"math/rand"
 	"testing"
 )
@@ -67,7 +67,7 @@ type simpleTicker struct {
 }
 
 func (t *simpleTicker) tick(m *RMessage) bool {
-	g := msg.MkGuid(m.originId, m.msgId)
+	g := ints.Combine(m.originId, m.msgId)
 	if t.guidMap[g] {
 		return false
 	}

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/fmstephe/matching_engine/msg"
+	"github.com/fmstephe/matching_engine/ints"
 	"strconv"
 )
 
@@ -22,7 +22,7 @@ func NewTicker() *Ticker {
 }
 
 func (t *Ticker) Tick(m *RMessage) (ticked bool) {
-	val := msg.MkGuid(m.originId, m.msgId)
+	val := ints.Combine(m.originId, m.msgId)
 	if t.r == nil {
 		t.r = newRoot(val)
 	}

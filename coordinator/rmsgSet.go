@@ -1,7 +1,7 @@
 package coordinator
 
 import (
-	"github.com/fmstephe/matching_engine/msg"
+	"github.com/fmstephe/matching_engine/ints"
 )
 
 type rmsgSet struct {
@@ -13,17 +13,17 @@ func newSet() *rmsgSet {
 }
 
 func (s *rmsgSet) add(rm *RMessage) {
-	g := msg.MkGuid(rm.originId, rm.msgId)
+	g := ints.Combine(rm.originId, rm.msgId)
 	s.msgMap[g] = rm
 }
 
 func (s *rmsgSet) remove(rm *RMessage) {
-	g := msg.MkGuid(rm.originId, rm.msgId)
+	g := ints.Combine(rm.originId, rm.msgId)
 	delete(s.msgMap, g)
 }
 
 func (s *rmsgSet) contains(rm *RMessage) bool {
-	g := msg.MkGuid(rm.originId, rm.msgId)
+	g := ints.Combine(rm.originId, rm.msgId)
 	_, ok := s.msgMap[g]
 	return ok
 }

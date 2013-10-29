@@ -3,6 +3,7 @@ package pqueue
 import (
 	"fmt"
 	"github.com/fmstephe/fstrconv"
+	"github.com/fmstephe/matching_engine/ints"
 	"github.com/fmstephe/matching_engine/msg"
 )
 
@@ -19,7 +20,7 @@ func (o *OrderNode) CopyFrom(from *msg.Message) {
 	o.amount = from.Amount
 	o.stockId = from.StockId
 	o.kind = from.Kind
-	o.setup(from.Price, msg.MkGuid(from.TraderId, from.TradeId))
+	o.setup(from.Price, ints.Combine(from.TraderId, from.TradeId))
 }
 
 func (o *OrderNode) CopyTo(to *msg.Message) {
@@ -45,11 +46,11 @@ func (o *OrderNode) Guid() int64 {
 }
 
 func (o *OrderNode) TraderId() uint32 {
-	return msg.GetTraderId(o.guidNode.val)
+	return ints.High32(o.guidNode.val)
 }
 
 func (o *OrderNode) TradeId() uint32 {
-	return msg.GetTradeId(o.guidNode.val)
+	return ints.Low32(o.guidNode.val)
 }
 
 func (o *OrderNode) Amount() uint32 {
