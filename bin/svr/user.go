@@ -104,16 +104,13 @@ func (u *user) processMsg(m *msg.Message) receivedMessage {
 	switch m.Kind {
 	case msg.CANCELLED:
 		u.cancelOutstanding(m)
-	case msg.FULL:
-		u.fullOutstanding(m)
-	case msg.PARTIAL:
-		u.partialOutstanding(m)
+	case msg.FULL, msg.PARTIAL:
+		u.matchOutstanding(m)
 	}
 	wm := webMessage{Kind: m.Kind.String(), Price: m.Price, Amount: m.Amount, StockId: m.StockId, TradeId: m.TradeId}
 	return receivedMessage{Message: wm, Type: FROM_SERVER}
 }
 
-// TODO refactor these three methods
 func (u *user) cancelOutstanding(c *msg.Message) {
 	newOutstanding := make([]webMessage, 0, len(u.outstanding))
 	for _, wm := range u.outstanding {
@@ -130,25 +127,8 @@ func (u *user) cancelOutstanding(c *msg.Message) {
 	u.outstanding = newOutstanding
 }
 
-func (u *user) fullOutstanding(f *msg.Message) {
-	totalCost := f.Price * int64(f.Amount)
-	u.curBal += totalCost
-	// If sell (totalCost>0) then available balance is updated
-	// If buy (totalCost<0) then available balance has already been updated
-	if totalCost > 0 {
-		u.availBal += totalCost
-	}
-	newOutstanding := make([]webMessage, 0, len(u.outstanding))
-	for _, wm := range u.outstanding {
-		if wm.TradeId != f.TradeId {
-			newOutstanding = append(newOutstanding, wm)
-		}
-	}
-	u.outstanding = newOutstanding
-}
-
-func (u *user) partialOutstanding(p *msg.Message) {
-	totalCost := p.Price * int64(p.Amount)
+func (u *user) matchOutstanding(m *msg.Message) {
+	totalCost := m.Price * int64(m.Amount)
 	u.curBal += totalCost
 	// If sell (totalCost>0) then available balance is updated
 	// If buy (totalCost<0) then available balance has already been updated
@@ -157,11 +137,11 @@ func (u *user) partialOutstanding(p *msg.Message) {
 	}
 	newOutstanding := make([]webMessage, 0, len(u.outstanding))
 	for i, wm := range u.outstanding {
-		if wm.TradeId != p.TradeId {
+		if wm.TradeId != m.TradeId {
 			newOutstanding = append(newOutstanding, wm)
-		} else {
+		} else if m.Kind == msg.PARTIAL {
 			newOutstanding = append(newOutstanding, wm)
-			newOutstanding[i].Amount -= p.Amount
+			newOutstanding[i].Amount -= m.Amount
 		}
 	}
 	u.outstanding = newOutstanding
