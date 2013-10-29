@@ -18,9 +18,9 @@ type C struct {
 	intoClient chan interface{}
 }
 
-func NewClient() *C {
+func NewClient() (*C, *CommMaker) {
 	intoClient := make(chan interface{})
-	return &C{intoClient: intoClient, clientMap: make(map[uint32]chan *msg.Message)}
+	return &C{intoClient: intoClient, clientMap: make(map[uint32]chan *msg.Message)}, &CommMaker{intoClient: intoClient}
 }
 
 func (c *C) Run() {
@@ -55,11 +55,15 @@ func (c *C) Run() {
 	}
 }
 
-func (c *C) NewComm(traderId uint32) *Comm {
+type CommMaker struct {
+	intoClient chan interface{}
+}
+
+func (cm *CommMaker) NewComm(traderId uint32) *Comm {
 	outOfClient := make(chan *msg.Message)
 	cr := &traderRegMsg{traderId: traderId, outOfClient: outOfClient}
-	c.intoClient <- cr // Register this Comm
-	return &Comm{traderId: traderId, intoClient: c.intoClient, outOfClient: outOfClient}
+	cm.intoClient <- cr // Register this Comm
+	return &Comm{traderId: traderId, intoClient: cm.intoClient, outOfClient: outOfClient}
 }
 
 type Comm struct {
