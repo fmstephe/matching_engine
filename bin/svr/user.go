@@ -71,7 +71,6 @@ func (u *user) run(msgs chan webMessage, responses chan []byte) {
 }
 
 func (u *user) processOrder(wm webMessage) receivedMessage {
-	// TODO should validate the webMessage here
 	if wm.Kind == "CANCEL" {
 		u.clientComm.Cancel(wm.Price, wm.TradeId, wm.Amount, wm.StockId)
 		u.outstanding = append(u.outstanding, wm)
@@ -84,13 +83,17 @@ func (u *user) processOrder(wm webMessage) receivedMessage {
 		return receivedMessage{Message: wm, Type: REJECTED_CLIENT}
 	}
 	if wm.Kind == "BUY" {
-		u.clientComm.Buy(wm.Price, wm.TradeId, wm.Amount, wm.StockId)
+		if err := u.clientComm.Buy(wm.Price, wm.TradeId, wm.Amount, wm.StockId); err != nil {
+			return receivedMessage{Message: wm, Type: REJECTED_CLIENT}
+		}
 		u.availBal -= totalCost
 		u.outstanding = append(u.outstanding, wm)
 		return receivedMessage{Message: wm, Type: ACCEPTED_CLIENT}
 	}
 	if wm.Kind == "SELL" {
-		u.clientComm.Sell(wm.Price, wm.TradeId, wm.Amount, wm.StockId)
+		if err := u.clientComm.Sell(wm.Price, wm.TradeId, wm.Amount, wm.StockId); err != nil {
+			return receivedMessage{Message: wm, Type: REJECTED_CLIENT}
+		}
 		u.outstanding = append(u.outstanding, wm)
 		return receivedMessage{Message: wm, Type: ACCEPTED_CLIENT}
 	}
