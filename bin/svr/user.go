@@ -14,17 +14,10 @@ type webMessage struct {
 	TradeId uint32 `json:"tradeId"`
 }
 
-type rType string
-
-const (
-	ACCEPTED_CLIENT = rType("ACCEPTED_CLIENT")
-	REJECTED_CLIENT = rType("REJECTED_CLIENT")
-	FROM_SERVER     = rType("FROM_SERVER")
-)
-
 type receivedMessage struct {
-	Type    rType      `json:"type"`
-	Message webMessage `json:"message"`
+	FromClient bool       `json:"fromClient"`
+	Accepted   bool       `json:accepted`
+	Message    webMessage `json:"message"`
 }
 
 type response struct {
@@ -74,30 +67,30 @@ func (u *user) processOrder(wm webMessage) receivedMessage {
 	if wm.Kind == "CANCEL" {
 		u.clientComm.Cancel(wm.Price, wm.TradeId, wm.Amount, wm.StockId)
 		u.outstanding = append(u.outstanding, wm)
-		return receivedMessage{Message: wm, Type: ACCEPTED_CLIENT}
+		return receivedMessage{Message: wm, FromClient: true, Accepted: true}
 	}
 	wm.TradeId = u.curTradeId
 	u.curTradeId++
 	totalCost := wm.Price * int64(wm.Amount)
 	if wm.Kind == "BUY" && totalCost > u.availBal {
-		return receivedMessage{Message: wm, Type: REJECTED_CLIENT}
+		return receivedMessage{Message: wm, FromClient: true, Accepted: false}
 	}
 	if wm.Kind == "BUY" {
 		if err := u.clientComm.Buy(wm.Price, wm.TradeId, wm.Amount, wm.StockId); err != nil {
-			return receivedMessage{Message: wm, Type: REJECTED_CLIENT}
+			return receivedMessage{Message: wm, FromClient: true, Accepted: false}
 		}
 		u.availBal -= totalCost
 		u.outstanding = append(u.outstanding, wm)
-		return receivedMessage{Message: wm, Type: ACCEPTED_CLIENT}
+		return receivedMessage{Message: wm, FromClient: true, Accepted: true}
 	}
 	if wm.Kind == "SELL" {
 		if err := u.clientComm.Sell(wm.Price, wm.TradeId, wm.Amount, wm.StockId); err != nil {
-			return receivedMessage{Message: wm, Type: REJECTED_CLIENT}
+			return receivedMessage{Message: wm, FromClient: true, Accepted: false}
 		}
 		u.outstanding = append(u.outstanding, wm)
-		return receivedMessage{Message: wm, Type: ACCEPTED_CLIENT}
+		return receivedMessage{Message: wm, FromClient: true, Accepted: true}
 	}
-	return receivedMessage{Message: wm, Type: REJECTED_CLIENT}
+	return receivedMessage{Message: wm, FromClient: true, Accepted: false}
 }
 
 func (u *user) processMsg(m *msg.Message) receivedMessage {
@@ -108,7 +101,7 @@ func (u *user) processMsg(m *msg.Message) receivedMessage {
 		u.matchOutstanding(m)
 	}
 	wm := webMessage{Kind: m.Kind.String(), Price: m.Price, Amount: m.Amount, StockId: m.StockId, TradeId: m.TradeId}
-	return receivedMessage{Message: wm, Type: FROM_SERVER}
+	return receivedMessage{Message: wm, FromClient: false, Accepted: true}
 }
 
 func (u *user) cancelOutstanding(c *msg.Message) {
