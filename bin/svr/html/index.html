@@ -34,8 +34,11 @@ function receiveMessage(sMsg) {
 
 function displayMessage() {
 	var p = $("msgs");
+	$("receivedMessage").innerHTML = "Received Message: " + JSON.stringify(lastMessage.received);
 	$("curBal").innerHTML = "Current Balance: " + lastMessage.curBal;
 	$("availBal").innerHTML = "Available Balance: " + lastMessage.availBal;
+	$("stocksHeld").innerHTML = "Stocks Held: " + JSON.stringify(lastMessage.stocks.stocksHeld);
+	$("stocksToSell").innerHTML = "Stocks To Sell: " + JSON.stringify(lastMessage.stocks.stocksToSell);
 	var msgsInner = "";
 	var outstanding = lastMessage.outstanding;
 	for (var i = 0; i < outstanding.length; i++) {
@@ -76,6 +79,7 @@ function doWebsocket() {
 		receiveMessage(m.data);
 	}
 	ws.onclose = function() {
+		alert("Websocket Connection Closed");
 		console.log("closed");
 	}
 }
@@ -92,8 +96,11 @@ function doWebsocket() {
 		</form>
 		<button onClick="sendOrder('BUY')">BUY</button>
 		<button onClick="sendOrder('SELL')">SELL</button>
+		<p id="receivedMessage"></p>
 		<p id="curBal"></p>
 		<p id="availBal"></p>
+		<p id="stocksHeld"></p>
+		<p id="stocksToSell"></p>
 		<p id="msgs"></p>
 	</body>
 
