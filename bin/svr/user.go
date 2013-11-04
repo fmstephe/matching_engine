@@ -22,11 +22,47 @@ type receivedMessage struct {
 }
 
 type response struct {
-	AvailBal    int64           `json:"availBal"`
-	CurBal      int64           `json:"curBal"`
+	Balance     balanceManager  `json:"balance"`
 	Stocks      stockManager    `json:"stocks"`
 	Received    receivedMessage `json:"received"`
 	Outstanding []webMessage    `json:"outstanding"`
+}
+
+type balanceManager struct {
+	Current   int64 `json:"current"`
+	Available int64 `json:"available"`
+}
+
+func newBalanceManager() balanceManager {
+	bal := int64(100)
+	return balanceManager{Current: bal, Available: bal}
+}
+
+func (bm *balanceManager) total(price int64, amount uint32) int64 {
+	return price * int64(amount)
+}
+
+func (bm *balanceManager) canBuy(price int64, amount uint32) bool {
+	return bm.Available >= bm.total(price, amount)
+}
+
+func (bm *balanceManager) submitBuy(price int64, amount uint32) {
+	bm.Available -= bm.total(price, amount)
+}
+
+func (bm *balanceManager) cancelBuy(price int64, amount uint32) {
+	bm.Available += bm.total(price, amount)
+}
+
+func (bm *balanceManager) completeBuy(price int64, amount uint32) {
+	// TODO bm.Current -= bm.total(price, amount)
+	bm.Current += bm.total(price, amount)
+}
+
+func (bm *balanceManager) completeSell(price int64, amount uint32) {
+	total := bm.total(price, amount)
+	bm.Current += total
+	bm.Available += total
 }
 
 // TODO the naming of this hasn't worked out very well
@@ -105,8 +141,7 @@ func (sm *stockManager) completeBuy(stockId, amount uint32) {
 
 type user struct {
 	curTradeId  uint32
-	availBal    int64
-	curBal      int64
+	balance     balanceManager
 	stocks      stockManager
 	outstanding []webMessage
 	clientComm  *client.Comm
@@ -114,10 +149,10 @@ type user struct {
 
 func newUser(clientComm *client.Comm) *user {
 	curTradeId := uint32(1)
-	bal := int64(100)
 	outstanding := make([]webMessage, 0)
+	balance := newBalanceManager()
 	stocks := newStockManager()
-	return &user{curTradeId: curTradeId, availBal: bal, curBal: bal, outstanding: outstanding, stocks: stocks, clientComm: clientComm}
+	return &user{curTradeId: curTradeId, balance: balance, outstanding: outstanding, stocks: stocks, clientComm: clientComm}
 }
 
 func (u *user) run(msgs chan webMessage, responses chan []byte) {
@@ -131,7 +166,7 @@ func (u *user) run(msgs chan webMessage, responses chan []byte) {
 		case m := <-outOfClient:
 			rm = u.processMsg(m)
 		}
-		r := &response{Received: rm, AvailBal: u.availBal, CurBal: u.curBal, Stocks: u.stocks, Outstanding: u.outstanding}
+		r := &response{Received: rm, Balance: u.balance, Stocks: u.stocks, Outstanding: u.outstanding}
 		bytes, err := json.Marshal(r)
 		if err != nil {
 			println("Marshalling Error", err.Error())
@@ -166,15 +201,14 @@ func (u *user) submitCancel(c webMessage) receivedMessage {
 func (u *user) submitBuy(b webMessage) receivedMessage {
 	b.TradeId = u.curTradeId
 	u.curTradeId++
-	totalCost := b.Price * int64(b.Amount)
-	if totalCost > u.availBal {
+	if !u.balance.canBuy(b.Price, b.Amount) {
 		return receivedMessage{Message: b, FromClient: true, Accepted: false}
 	}
 	if err := u.clientComm.Buy(b.Price, b.TradeId, b.Amount, b.StockId); err != nil {
 		println("Rejected message", err.Error())
 		return receivedMessage{Message: b, FromClient: true, Accepted: false}
 	}
-	u.availBal -= totalCost
+	u.balance.submitBuy(b.Price, b.Amount)
 	u.outstanding = append(u.outstanding, b)
 	return receivedMessage{Message: b, FromClient: true, Accepted: true}
 }
@@ -213,9 +247,7 @@ func (u *user) cancelOutstanding(c *msg.Message) {
 		} else {
 			switch wm.Kind {
 			case msg.BUY.String():
-				// If buy then we need to increase the available balance
-				totalCost := c.Price * int64(c.Amount)
-				u.availBal += totalCost
+				u.balance.cancelBuy(c.Price, c.Amount)
 			case msg.SELL.String():
 				u.stocks.cancelSell(c.StockId, c.Amount)
 			}
@@ -225,13 +257,6 @@ func (u *user) cancelOutstanding(c *msg.Message) {
 }
 
 func (u *user) matchOutstanding(m *msg.Message) {
-	totalCost := m.Price * int64(m.Amount)
-	u.curBal += totalCost
-	// If sell (totalCost>0) then available balance is updated
-	// If buy (totalCost<0) then available balance has already been updated
-	if totalCost > 0 {
-		u.availBal += totalCost
-	}
 	newOutstanding := make([]webMessage, 0, len(u.outstanding))
 	for i, wm := range u.outstanding {
 		if wm.TradeId != m.TradeId {
@@ -242,9 +267,11 @@ func (u *user) matchOutstanding(m *msg.Message) {
 				newOutstanding[i].Amount -= m.Amount
 			}
 			if wm.Kind == msg.SELL.String() {
+				u.balance.completeSell(m.Price, m.Amount)
 				u.stocks.completeSell(m.StockId, m.Amount)
 			}
 			if wm.Kind == msg.BUY.String() {
+				u.balance.completeBuy(m.Price, m.Amount)
 				u.stocks.completeBuy(m.StockId, m.Amount)
 			}
 		}

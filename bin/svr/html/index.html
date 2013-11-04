@@ -35,8 +35,8 @@ function receiveMessage(sMsg) {
 function displayMessage() {
 	var p = $("msgs");
 	$("receivedMessage").innerHTML = "Received Message: " + JSON.stringify(lastMessage.received);
-	$("curBal").innerHTML = "Current Balance: " + lastMessage.curBal;
-	$("availBal").innerHTML = "Available Balance: " + lastMessage.availBal;
+	$("curBal").innerHTML = "Current Balance: " + lastMessage.balance.current;
+	$("availBal").innerHTML = "Available Balance: " + lastMessage.balance.available;
 	$("stocksHeld").innerHTML = "Stocks Held: " + JSON.stringify(lastMessage.stocks.stocksHeld);
 	$("stocksToSell").innerHTML = "Stocks To Sell: " + JSON.stringify(lastMessage.stocks.stocksToSell);
 	var msgsInner = "";
@@ -79,7 +79,6 @@ function doWebsocket() {
 		receiveMessage(m.data);
 	}
 	ws.onclose = function() {
-		alert("Websocket Connection Closed");
 		console.log("closed");
 	}
 }
