@@ -72,15 +72,15 @@ type Comm struct {
 	outOfClient chan *msg.Message
 }
 
-func (c *Comm) Buy(price int64, tradeId, amount, stockId uint32) error {
+func (c *Comm) Buy(price uint64, tradeId, amount, stockId uint32) error {
 	return c.submit(msg.BUY, price, tradeId, amount, stockId)
 }
 
-func (c *Comm) Sell(price int64, tradeId, amount, stockId uint32) error {
+func (c *Comm) Sell(price uint64, tradeId, amount, stockId uint32) error {
 	return c.submit(msg.SELL, price, tradeId, amount, stockId)
 }
 
-func (c *Comm) Cancel(price int64, tradeId, amount, stockId uint32) error {
+func (c *Comm) Cancel(price uint64, tradeId, amount, stockId uint32) error {
 	return c.submit(msg.CANCEL, price, tradeId, amount, stockId)
 }
 
@@ -88,7 +88,7 @@ func (c *Comm) Out() chan *msg.Message {
 	return c.outOfClient
 }
 
-func (c *Comm) submit(kind msg.MsgKind, price int64, tradeId, amount, stockId uint32) error {
+func (c *Comm) submit(kind msg.MsgKind, price uint64, tradeId, amount, stockId uint32) error {
 	m := &msg.Message{Kind: kind, Price: price, Amount: amount, TraderId: c.traderId, TradeId: tradeId, StockId: stockId}
 	if !m.Valid() {
 		return errors.New(fmt.Sprintf("Invalid Message %v", m))

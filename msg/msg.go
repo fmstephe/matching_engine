@@ -56,7 +56,7 @@ const (
 // Flat description of an incoming message
 type Message struct {
 	Kind     MsgKind
-	Price    int64
+	Price    uint64
 	Amount   uint32
 	TraderId uint32
 	TradeId  uint32
@@ -103,8 +103,8 @@ func (m *Message) String() string {
 	}
 	price := fstrconv.Itoa64Delim(int64(m.Price), ',')
 	amount := fstrconv.Itoa64Delim(int64(m.Amount), ',')
-	traderId := fstrconv.Itoa64Delim(int64(m.TraderId), '-')
-	tradeId := fstrconv.Itoa64Delim(int64(m.TradeId), '-')
-	stockId := fstrconv.Itoa64Delim(int64(m.StockId), '-')
-	return fmt.Sprintf("%v, price %v, amount %s, trader %s, trade %s, stock %s", m.Kind, price, amount, traderId, tradeId, stockId)
+	traderId := fstrconv.Itoa64Delim(int64(m.TraderId), ' ')
+	tradeId := fstrconv.Itoa64Delim(int64(m.TradeId), ' ')
+	stockId := fstrconv.Itoa64Delim(int64(m.StockId), ' ')
+	return fmt.Sprintf("%v, price %s, amount %s, trader %s, trade %s, stock %s", m.Kind, price, amount, traderId, tradeId, stockId)
 }

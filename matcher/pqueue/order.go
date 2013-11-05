@@ -32,16 +32,16 @@ func (o *OrderNode) CopyTo(to *msg.Message) {
 	to.StockId = o.StockId()
 }
 
-func (o *OrderNode) setup(price, guid int64) {
+func (o *OrderNode) setup(price, guid uint64) {
 	initNode(o, price, &o.priceNode, &o.guidNode)
 	initNode(o, guid, &o.guidNode, &o.priceNode)
 }
 
-func (o *OrderNode) Price() int64 {
+func (o *OrderNode) Price() uint64 {
 	return o.priceNode.val
 }
 
-func (o *OrderNode) Guid() int64 {
+func (o *OrderNode) Guid() uint64 {
 	return o.guidNode.val
 }
 

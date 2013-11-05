@@ -5,10 +5,10 @@ import ()
 // An easy to build priority queue
 type pqueue struct {
 	prios               [][]*OrderNode
-	lowPrice, highPrice int64
+	lowPrice, highPrice uint64
 }
 
-func mkPrioq(lowPrice, highPrice int64) *pqueue {
+func mkPrioq(lowPrice, highPrice uint64) *pqueue {
 	prios := make([][]*OrderNode, highPrice-lowPrice+1)
 	return &pqueue{prios: prios, lowPrice: lowPrice, highPrice: highPrice}
 }
@@ -88,7 +88,7 @@ func (q *pqueue) pop(i int) *OrderNode {
 	return o
 }
 
-func (q *pqueue) cancel(guid int64) *OrderNode {
+func (q *pqueue) cancel(guid uint64) *OrderNode {
 	for i := range q.prios {
 		priceQ := q.prios[i]
 		for j := range priceQ {

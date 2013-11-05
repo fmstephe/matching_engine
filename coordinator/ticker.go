@@ -33,14 +33,14 @@ type root struct {
 	n *node
 }
 
-func newRoot(val int64) *root {
+func newRoot(val uint64) *root {
 	n := newNode(val)
 	r := &root{n: n}
 	n.pp = &r.n
 	return r
 }
 
-func (r *root) tick(val int64) bool {
+func (r *root) tick(val uint64) bool {
 	return r.n.tick(val)
 }
 
@@ -50,7 +50,7 @@ type node struct {
 	right    *node
 	parent   *node
 	pp       **node
-	min, max int64
+	min, max uint64
 	block    [blockSize]bool
 }
 
@@ -77,13 +77,13 @@ func (n *node) String() string {
 	return b.String()
 }
 
-func newNode(val int64) *node {
+func newNode(val uint64) *node {
 	min := val &^ blockMask
 	max := min + blockMask
 	return &node{min: min, max: max}
 }
 
-func (n *node) tick(val int64) (ticked bool) {
+func (n *node) tick(val uint64) (ticked bool) {
 	for {
 		switch {
 		case val >= n.min && val <= n.max:
@@ -120,7 +120,7 @@ func (n *node) isRed() bool {
 	return false
 }
 
-func (n *node) record(val int64) (ticked bool) {
+func (n *node) record(val uint64) (ticked bool) {
 	idx := val - n.min
 	if n.block[idx] {
 		return false

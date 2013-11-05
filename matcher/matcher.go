@@ -157,7 +157,7 @@ func (m *M) fillableSell(s *pqueue.OrderNode, q *pqueue.MatchQueues) bool {
 	panic("Unreachable")
 }
 
-func price(bPrice, sPrice int64) int64 {
+func price(bPrice, sPrice uint64) uint64 {
 	if sPrice == msg.MARKET_PRICE {
 		return bPrice
 	}
@@ -165,8 +165,8 @@ func price(bPrice, sPrice int64) int64 {
 	return sPrice + (d / 2)
 }
 
-func completeTrade(out chan<- *msg.Message, brk, srk msg.MsgKind, b, s *pqueue.OrderNode, price int64, amount uint32) {
-	br := &msg.Message{Kind: brk, Price: -price, Amount: amount, TraderId: b.TraderId(), TradeId: b.TradeId(), StockId: b.StockId()}
+func completeTrade(out chan<- *msg.Message, brk, srk msg.MsgKind, b, s *pqueue.OrderNode, price uint64, amount uint32) {
+	br := &msg.Message{Kind: brk, Price: price, Amount: amount, TraderId: b.TraderId(), TradeId: b.TradeId(), StockId: b.StockId()}
 	sr := &msg.Message{Kind: srk, Price: price, Amount: amount, TraderId: s.TraderId(), TradeId: s.TradeId(), StockId: s.StockId()}
 	out <- br
 	out <- sr

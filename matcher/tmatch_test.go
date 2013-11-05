@@ -16,7 +16,7 @@ const (
 var matchMaker = msg.NewMessageMaker(100)
 
 type responseVals struct {
-	price   int64
+	price   uint64
 	amount  uint32
 	tradeId uint32
 	stockId uint32
@@ -42,7 +42,7 @@ func TestPrice(t *testing.T) {
 	testPrice(t, 30, 10, 20)
 }
 
-func testPrice(t *testing.T, bPrice, sPrice, expected int64) {
+func testPrice(t *testing.T, bPrice, sPrice, expected uint64) {
 	result := price(bPrice, sPrice)
 	if result != expected {
 		t.Errorf("price(%d,%d) does not equal %d, got %d instead.", bPrice, sPrice, expected, result)

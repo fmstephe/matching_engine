@@ -66,7 +66,7 @@ func (b *rbtree) popMax() *node {
 	return nil
 }
 
-func (b *rbtree) cancel(val int64) *node {
+func (b *rbtree) cancel(val uint64) *node {
 	n := b.get(val)
 	if n == nil {
 		return nil
@@ -76,11 +76,11 @@ func (b *rbtree) cancel(val int64) *node {
 	return n
 }
 
-func (b *rbtree) Has(val int64) bool {
+func (b *rbtree) Has(val uint64) bool {
 	return b.get(val) != nil
 }
 
-func (b *rbtree) get(val int64) *node {
+func (b *rbtree) get(val uint64) *node {
 	n := b.root
 	for {
 		if n == nil {
@@ -101,7 +101,7 @@ func (b *rbtree) get(val int64) *node {
 type node struct {
 	black bool
 	// Tree fields
-	val    int64
+	val    uint64
 	left   *node
 	right  *node
 	parent *node
@@ -138,7 +138,7 @@ func (n *node) String() string {
 	return b.String()
 }
 
-func initNode(o *OrderNode, val int64, n, other *node) {
+func initNode(o *OrderNode, val uint64, n, other *node) {
 	*n = node{val: val, order: o, other: other}
 	n.next = n
 	n.prev = n

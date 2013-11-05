@@ -9,7 +9,7 @@ import (
 
 type webMessage struct {
 	Kind    string `json:"kind"`
-	Price   int64  `json:"price"`
+	Price   uint64 `json:"price"`
 	Amount  uint32 `json:"amount"`
 	StockId uint32 `json:"stockId"`
 	TradeId uint32 `json:"tradeId"`
@@ -29,37 +29,36 @@ type response struct {
 }
 
 type balanceManager struct {
-	Current   int64 `json:"current"`
-	Available int64 `json:"available"`
+	Current   uint64 `json:"current"`
+	Available uint64 `json:"available"`
 }
 
 func newBalanceManager() balanceManager {
-	bal := int64(100)
+	bal := uint64(100)
 	return balanceManager{Current: bal, Available: bal}
 }
 
-func (bm *balanceManager) total(price int64, amount uint32) int64 {
-	return price * int64(amount)
+func (bm *balanceManager) total(price uint64, amount uint32) uint64 {
+	return price * uint64(amount)
 }
 
-func (bm *balanceManager) canBuy(price int64, amount uint32) bool {
+func (bm *balanceManager) canBuy(price uint64, amount uint32) bool {
 	return bm.Available >= bm.total(price, amount)
 }
 
-func (bm *balanceManager) submitBuy(price int64, amount uint32) {
+func (bm *balanceManager) submitBuy(price uint64, amount uint32) {
 	bm.Available -= bm.total(price, amount)
 }
 
-func (bm *balanceManager) cancelBuy(price int64, amount uint32) {
+func (bm *balanceManager) cancelBuy(price uint64, amount uint32) {
 	bm.Available += bm.total(price, amount)
 }
 
-func (bm *balanceManager) completeBuy(price int64, amount uint32) {
-	// TODO bm.Current -= bm.total(price, amount)
-	bm.Current += bm.total(price, amount)
+func (bm *balanceManager) completeBuy(price uint64, amount uint32) {
+	bm.Current -= bm.total(price, amount)
 }
 
-func (bm *balanceManager) completeSell(price int64, amount uint32) {
+func (bm *balanceManager) completeSell(price uint64, amount uint32) {
 	total := bm.total(price, amount)
 	bm.Current += total
 	bm.Available += total

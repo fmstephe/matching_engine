@@ -25,7 +25,7 @@ func TestCompareMatchers(t *testing.T) {
 	compareMatchers(t, 100, 100, 100, 2000)
 }
 
-func compareMatchers(t *testing.T, orderPairs, depth int, lowPrice, highPrice int64) {
+func compareMatchers(t *testing.T, orderPairs, depth int, lowPrice, highPrice uint64) {
 	refIn := make(chan *msg.Message)
 	refOut := make(chan *msg.Message, orderPairs*2)
 	refm := newRefmatcher(lowPrice, highPrice)

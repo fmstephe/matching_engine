@@ -11,7 +11,7 @@ type refmatcher struct {
 	coordinator.AppMsgHelper
 }
 
-func newRefmatcher(lowPrice, highPrice int64) *refmatcher {
+func newRefmatcher(lowPrice, highPrice uint64) *refmatcher {
 	matchQueues := pqueue.NewRefMatchQueues(lowPrice, highPrice)
 	return &refmatcher{matchQueues: matchQueues}
 }

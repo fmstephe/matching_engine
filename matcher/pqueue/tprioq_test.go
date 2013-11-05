@@ -88,21 +88,21 @@ func testPushAscDesc(t *testing.T, pushCount int, kind msg.MsgKind) {
 	validate(t, priceTree, guidTree)
 	for i := 0; i < pushCount; i++ {
 		o := &OrderNode{}
-		o.CopyFrom(msgMkr.MkPricedOrder(int64(i), kind))
+		o.CopyFrom(msgMkr.MkPricedOrder(uint64(i), kind))
 		priceTree.push(&o.priceNode)
 		guidTree.push(&o.guidNode)
 		validate(t, priceTree, guidTree)
 	}
 	for i := pushCount - 1; i >= 0; i-- {
 		o := &OrderNode{}
-		o.CopyFrom(msgMkr.MkPricedOrder(int64(i), kind))
+		o.CopyFrom(msgMkr.MkPricedOrder(uint64(i), kind))
 		priceTree.push(&o.priceNode)
 		guidTree.push(&o.guidNode)
 		validate(t, priceTree, guidTree)
 	}
 }
 
-func testPushSimple(t *testing.T, pushCount int, lowPrice, highPrice int64, kind msg.MsgKind) {
+func testPushSimple(t *testing.T, pushCount int, lowPrice, highPrice uint64, kind msg.MsgKind) {
 	priceTree := &rbtree{}
 	guidTree := &rbtree{}
 	validate(t, priceTree, guidTree)
@@ -115,7 +115,7 @@ func testPushSimple(t *testing.T, pushCount int, lowPrice, highPrice int64, kind
 	}
 }
 
-func testPushPopSimple(t *testing.T, pushCount int, lowPrice, highPrice int64, kind msg.MsgKind, popper popperFun) {
+func testPushPopSimple(t *testing.T, pushCount int, lowPrice, highPrice uint64, kind msg.MsgKind, popper popperFun) {
 	priceTree := &rbtree{}
 	guidTree := &rbtree{}
 	validate(t, priceTree, guidTree)
@@ -133,7 +133,7 @@ func testPushPopSimple(t *testing.T, pushCount int, lowPrice, highPrice int64, k
 	}
 }
 
-func testPushPopRandom(t *testing.T, pushCount int, lowPrice, highPrice int64, kind msg.MsgKind, popper popperFun) {
+func testPushPopRandom(t *testing.T, pushCount int, lowPrice, highPrice uint64, kind msg.MsgKind, popper popperFun) {
 	priceTree := &rbtree{}
 	guidTree := &rbtree{}
 	validate(t, priceTree, guidTree)
@@ -165,11 +165,11 @@ func testPushPopRandom(t *testing.T, pushCount int, lowPrice, highPrice int64, k
 	}
 }
 
-func testAddRemoveSimple(t *testing.T, pushCount int, lowPrice, highPrice int64, kind msg.MsgKind) {
+func testAddRemoveSimple(t *testing.T, pushCount int, lowPrice, highPrice uint64, kind msg.MsgKind) {
 	priceTree := &rbtree{}
 	guidTree := &rbtree{}
 	validate(t, priceTree, guidTree)
-	orderMap := make(map[int64]*OrderNode)
+	orderMap := make(map[uint64]*OrderNode)
 	for i := 0; i < pushCount; i++ {
 		o := &OrderNode{}
 		o.CopyFrom(msgMkr.MkPricedOrder(msgMkr.Between(lowPrice, highPrice), kind))
@@ -181,11 +181,11 @@ func testAddRemoveSimple(t *testing.T, pushCount int, lowPrice, highPrice int64,
 	drainTree(t, priceTree, guidTree, orderMap)
 }
 
-func testAddRemoveRandom(t *testing.T, pushCount int, lowPrice, highPrice int64, kind msg.MsgKind) {
+func testAddRemoveRandom(t *testing.T, pushCount int, lowPrice, highPrice uint64, kind msg.MsgKind) {
 	priceTree := &rbtree{}
 	guidTree := &rbtree{}
 	validate(t, priceTree, guidTree)
-	orderMap := make(map[int64]*OrderNode)
+	orderMap := make(map[uint64]*OrderNode)
 	r := rand.New(rand.NewSource(1))
 	for i := 0; i < pushCount; {
 		n := r.Int()
@@ -213,7 +213,7 @@ func testAddRemoveRandom(t *testing.T, pushCount int, lowPrice, highPrice int64,
 	drainTree(t, priceTree, guidTree, orderMap)
 }
 
-func drainTree(t *testing.T, priceTree, guidTree *rbtree, orderMap map[int64]*OrderNode) {
+func drainTree(t *testing.T, priceTree, guidTree *rbtree, orderMap map[uint64]*OrderNode) {
 	for g := range orderMap {
 		o := orderMap[g]
 		po := guidTree.cancel(o.Guid()).getOrderNode()

@@ -48,7 +48,7 @@ func TestTickRepeated(t *testing.T) {
 
 func TestTickRandom(t *testing.T) {
 	r := rand.New(rand.NewSource(1))
-	st := &simpleTicker{make(map[int64]bool)}
+	st := &simpleTicker{make(map[uint64]bool)}
 	tk := NewTicker()
 	msgs := randomUniqueMsgs()
 	for i := 0; i < 1000; i++ {
@@ -63,7 +63,7 @@ func TestTickRandom(t *testing.T) {
 }
 
 type simpleTicker struct {
-	guidMap map[int64]bool
+	guidMap map[uint64]bool
 }
 
 func (t *simpleTicker) tick(m *RMessage) bool {

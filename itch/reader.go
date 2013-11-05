@@ -12,8 +12,8 @@ import (
 
 type ItchReader struct {
 	lineCount uint
-	maxBuy    int64
-	minSell   int64
+	maxBuy    uint64
+	minSell   uint64
 	r         *bufio.Reader
 }
 
@@ -70,11 +70,11 @@ func (i *ItchReader) LineCount() uint {
 	return i.lineCount
 }
 
-func (i *ItchReader) MaxBuy() int64 {
+func (i *ItchReader) MaxBuy() uint64 {
 	return i.maxBuy
 }
 
-func (i *ItchReader) MinSell() int64 {
+func (i *ItchReader) MinSell() uint64 {
 	return i.minSell
 }
 
@@ -118,5 +118,5 @@ func mkData(useful []string) (m *msg.Message, err error) {
 	if err != nil {
 		return nil, err
 	}
-	return &msg.Message{Price: int64(price), Amount: uint32(amount), TraderId: uint32(traderId), TradeId: uint32(tradeId), StockId: uint32(1)}, nil
+	return &msg.Message{Price: uint64(price), Amount: uint32(amount), TraderId: uint32(traderId), TradeId: uint32(tradeId), StockId: uint32(1)}, nil
 }

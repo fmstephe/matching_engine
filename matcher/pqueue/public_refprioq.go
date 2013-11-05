@@ -8,7 +8,7 @@ type RefMatchQueues struct {
 	size  int
 }
 
-func NewRefMatchQueues(lowPrice, highPrice int64) *RefMatchQueues {
+func NewRefMatchQueues(lowPrice, highPrice uint64) *RefMatchQueues {
 	buys := mkPrioq(lowPrice, highPrice)
 	sells := mkPrioq(lowPrice, highPrice)
 	return &RefMatchQueues{buys: buys, sells: sells}

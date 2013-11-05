@@ -5,11 +5,11 @@ import (
 )
 
 type rmsgSet struct {
-	msgMap map[int64]*RMessage
+	msgMap map[uint64]*RMessage
 }
 
 func newSet() *rmsgSet {
-	return &rmsgSet{msgMap: make(map[int64]*RMessage)}
+	return &rmsgSet{msgMap: make(map[uint64]*RMessage)}
 }
 
 func (s *rmsgSet) add(rm *RMessage) {
