@@ -1,7 +1,6 @@
 package client
 
 import (
-	"errors"
 	"fmt"
 	"github.com/fmstephe/matching_engine/coordinator"
 	"github.com/fmstephe/matching_engine/msg"
@@ -18,9 +17,9 @@ type C struct {
 	intoClient chan interface{}
 }
 
-func NewClient() (*C, *CommMaker) {
+func NewClient() (*C, *UserMaker) {
 	intoClient := make(chan interface{})
-	return &C{intoClient: intoClient, clientMap: make(map[uint32]chan *msg.Message)}, &CommMaker{intoClient: intoClient}
+	return &C{intoClient: intoClient, clientMap: make(map[uint32]chan *msg.Message)}, &UserMaker{intoClient: intoClient}
 }
 
 func (c *C) Run() {
@@ -53,46 +52,4 @@ func (c *C) Run() {
 			}
 		}
 	}
-}
-
-type CommMaker struct {
-	intoClient chan interface{}
-}
-
-func (cm *CommMaker) NewComm(traderId uint32) *Comm {
-	outOfClient := make(chan *msg.Message)
-	cr := &traderRegMsg{traderId: traderId, outOfClient: outOfClient}
-	cm.intoClient <- cr // Register this Comm
-	return &Comm{traderId: traderId, intoClient: cm.intoClient, outOfClient: outOfClient}
-}
-
-type Comm struct {
-	traderId    uint32
-	intoClient  chan interface{}
-	outOfClient chan *msg.Message
-}
-
-func (c *Comm) Buy(price uint64, tradeId, amount, stockId uint32) error {
-	return c.submit(msg.BUY, price, tradeId, amount, stockId)
-}
-
-func (c *Comm) Sell(price uint64, tradeId, amount, stockId uint32) error {
-	return c.submit(msg.SELL, price, tradeId, amount, stockId)
-}
-
-func (c *Comm) Cancel(price uint64, tradeId, amount, stockId uint32) error {
-	return c.submit(msg.CANCEL, price, tradeId, amount, stockId)
-}
-
-func (c *Comm) Out() chan *msg.Message {
-	return c.outOfClient
-}
-
-func (c *Comm) submit(kind msg.MsgKind, price uint64, tradeId, amount, stockId uint32) error {
-	m := &msg.Message{Kind: kind, Price: price, Amount: amount, TraderId: c.traderId, TradeId: tradeId, StockId: stockId}
-	if !m.Valid() {
-		return errors.New(fmt.Sprintf("Invalid Message %v", m))
-	}
-	c.intoClient <- m
-	return nil
 }
