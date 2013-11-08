@@ -2,7 +2,7 @@ package client
 
 import ()
 
-type WebMessage struct {
+type ClientMessage struct {
 	Kind    string `json:"kind"`
 	Price   uint64 `json:"price"`
 	Amount  uint32 `json:"amount"`
@@ -11,14 +11,14 @@ type WebMessage struct {
 }
 
 type receivedMessage struct {
-	FromClient bool       `json:"fromClient"`
-	Accepted   bool       `json:"accepted"`
-	Message    WebMessage `json:"message"`
+	FromClient bool          `json:"fromClient"`
+	Accepted   bool          `json:"accepted"`
+	Message    ClientMessage `json:"message"`
 }
 
 type response struct {
 	Balance     balanceManager  `json:"balance"`
 	Stocks      stockManager    `json:"stocks"`
 	Received    receivedMessage `json:"received"`
-	Outstanding []WebMessage    `json:"outstanding"`
+	Outstanding []ClientMessage `json:"outstanding"`
 }

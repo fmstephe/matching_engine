@@ -12,7 +12,7 @@ import (
 	"os"
 )
 
-var userMaker *client.UserMaker
+var userMaker *client.ClientMaker
 var idMaker = simpleid.NewIdMaker()
 
 const (
@@ -31,9 +31,9 @@ func main() {
 	serverToClient := q.NewSimpleQ("Server To Client")
 	// Matching Engine
 	m := matcher.NewMatcher(100)
-	var traderClient *client.C
-	traderClient, userMaker = client.NewClient()
-	coordinator.InMemory(serverToClient, clientToServer, traderClient, clientOriginId, "Client.........", true)
+	var clientSvr *client.Server
+	clientSvr, userMaker = client.NewServer()
+	coordinator.InMemory(serverToClient, clientToServer, clientSvr, clientOriginId, "Client.........", true)
 	coordinator.InMemory(clientToServer, serverToClient, m, serverOriginId, "Matching Engine", true)
 	http.Handle("/wsconn", websocket.Handler(handleTrader))
 	http.Handle("/", http.FileServer(http.Dir(pwd+"/html/")))
@@ -45,12 +45,11 @@ func main() {
 func handleTrader(ws *websocket.Conn) {
 	traderId := uint32(idMaker.Id())
 	orders, responses := userMaker.Connect(traderId)
-	println(orders, responses)
 	go reader(ws, orders)
 	writer(ws, responses)
 }
 
-func reader(ws *websocket.Conn, msgs chan<- client.WebMessage) {
+func reader(ws *websocket.Conn, msgs chan<- client.ClientMessage) {
 	defer close(msgs)
 	defer ws.Close()
 	for {
@@ -60,7 +59,7 @@ func reader(ws *websocket.Conn, msgs chan<- client.WebMessage) {
 			return
 		}
 		println(data)
-		wm := &client.WebMessage{}
+		wm := &client.ClientMessage{}
 		if err := json.Unmarshal([]byte(data), wm); err != nil {
 			println("error", err.Error())
 			return
