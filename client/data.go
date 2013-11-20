@@ -1,24 +1,21 @@
 package client
 
-import ()
-
-type ClientMessage struct {
-	Kind    string `json:"kind"`
-	Price   uint64 `json:"price"`
-	Amount  uint32 `json:"amount"`
-	StockId uint32 `json:"stockId"`
-	TradeId uint32 `json:"tradeId"`
-}
+import (
+	"github.com/fmstephe/matching_engine/msg"
+)
 
 type receivedMessage struct {
-	FromClient bool          `json:"fromClient"`
-	Accepted   bool          `json:"accepted"`
-	Message    ClientMessage `json:"message"`
+	Accepted bool        `json:"accepted"`
+	Message  msg.Message `json:"message"`
 }
 
 type response struct {
-	Balance     balanceManager  `json:"balance"`
-	Stocks      stockManager    `json:"stocks"`
-	Received    receivedMessage `json:"received"`
-	Outstanding []ClientMessage `json:"outstanding"`
+	State    clientState     `json:"state"`
+	Received receivedMessage `json:"received"`
+}
+
+type clientState struct {
+	Balance     balanceManager `json:"balance"`
+	Stocks      stockManager   `json:"stocks"`
+	Outstanding []msg.Message  `json:"outstanding"`
 }

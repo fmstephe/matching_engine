@@ -17,7 +17,7 @@ func TestAddThenRemove(t *testing.T) {
 	for i, m := range jMsgs {
 		s.remove(m)
 		expectNone(t, s, jMsgs[0:i+1])
-		expectAll(t, s, jMsgs[i+1:len(jMsgs)])
+		expectAll(t, s, jMsgs[i+1:])
 		selfConsistent(t, s)
 	}
 }

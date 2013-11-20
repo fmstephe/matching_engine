@@ -13,10 +13,10 @@ var (
 	openSellMessage = Message{Price: 0, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}
 	// Collection of messages with misssing fields (skipping price)
 	partialBodyMessages = []Message{
-		Message{Price: 1, Amount: 0, TraderId: 1, TradeId: 1, StockId: 1},
-		Message{Price: 1, Amount: 1, TraderId: 0, TradeId: 1, StockId: 1},
-		Message{Price: 1, Amount: 1, TraderId: 1, TradeId: 0, StockId: 1},
-		Message{Price: 1, Amount: 1, TraderId: 1, TradeId: 1, StockId: 0},
+		{Price: 1, Amount: 0, TraderId: 1, TradeId: 1, StockId: 1},
+		{Price: 1, Amount: 1, TraderId: 0, TradeId: 1, StockId: 1},
+		{Price: 1, Amount: 1, TraderId: 1, TradeId: 0, StockId: 1},
+		{Price: 1, Amount: 1, TraderId: 1, TradeId: 1, StockId: 0},
 	}
 	// no fields set at all
 	blankMessage = Message{}

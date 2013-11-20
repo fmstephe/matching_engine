@@ -19,6 +19,7 @@ const (
 	NOT_CANCELLED = MsgKind(iota)
 	REJECTED      = MsgKind(iota)
 	SHUTDOWN      = MsgKind(iota)
+	NEW_USER      = MsgKind(iota)
 	NUM_OF_KIND   = int32(iota)
 )
 
@@ -44,6 +45,8 @@ func (k MsgKind) String() string {
 		return "REJECTED"
 	case SHUTDOWN:
 		return "SHUTDOWN"
+	case NEW_USER:
+		return "NEW_USER"
 	}
 	panic("Uncreachable")
 }
@@ -55,12 +58,12 @@ const (
 
 // Flat description of an incoming message
 type Message struct {
-	Kind     MsgKind
-	Price    uint64
-	Amount   uint32
-	TraderId uint32
-	TradeId  uint32
-	StockId  uint32
+	Kind     MsgKind `json:"kind"`
+	Price    uint64  `json:"price"`
+	Amount   uint32  `json:"amount"`
+	TraderId uint32  `json:"traderId"`
+	TradeId  uint32  `json:"tradeId"`
+	StockId  uint32  `json:"stockId"`
 }
 
 const (
@@ -70,6 +73,9 @@ const (
 func (m *Message) Valid() bool {
 	if m.Kind == SHUTDOWN {
 		return m.Price == 0 && m.Amount == 0 && m.TraderId == 0 && m.TradeId == 0 && m.StockId == 0
+	}
+	if m.Kind == NEW_USER {
+		return m.TraderId != 0 && m.Price == 0 && m.Amount == 0 && m.TradeId == 0 && m.StockId == 0
 	}
 	// Only sells (and messages cancelling sells) are allowed to have a price of 0
 	isValid := (m.Price != 0 || m.Kind == SELL || m.Kind == CANCEL || m.Kind == CANCELLED || m.Kind == NOT_CANCELLED)

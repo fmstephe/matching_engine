@@ -3,6 +3,9 @@
 		<script type="text/javascript">
 
 var lastMessage;
+var BUY = 1;
+var SELL = 2;
+var CANCEL = 3;
 
 function $() {
 	return document.getElementById(arguments[0]);
@@ -35,12 +38,12 @@ function receiveMessage(sMsg) {
 function displayMessage() {
 	var p = $("msgs");
 	$("receivedMessage").innerHTML = "Received Message: " + JSON.stringify(lastMessage.received);
-	$("curBal").innerHTML = "Current Balance: " + lastMessage.balance.current;
-	$("availBal").innerHTML = "Available Balance: " + lastMessage.balance.available;
-	$("stocksHeld").innerHTML = "Stocks Held: " + JSON.stringify(lastMessage.stocks.stocksHeld);
-	$("stocksToSell").innerHTML = "Stocks To Sell: " + JSON.stringify(lastMessage.stocks.stocksToSell);
+	$("curBal").innerHTML = "Current Balance: " + lastMessage.state.balance.current;
+	$("availBal").innerHTML = "Available Balance: " + lastMessage.state.balance.available;
+	$("stocksHeld").innerHTML = "Stocks Held: " + JSON.stringify(lastMessage.state.stocks.stocksHeld);
+	$("stocksToSell").innerHTML = "Stocks To Sell: " + JSON.stringify(lastMessage.state.stocks.stocksToSell);
 	var msgsInner = "";
-	var outstanding = lastMessage.outstanding;
+	var outstanding = lastMessage.state.outstanding;
 	for (var i = 0; i < outstanding.length; i++) {
 		msgsInner += createCancel(outstanding[i]);
 	}
@@ -52,15 +55,14 @@ function createCancel(msg) {
 }
 
 function submitCancel(tradeId) {
-	var outstanding = lastMessage.outstanding;
+	var outstanding = lastMessage.state.outstanding;
 	for (var i = 0; i < outstanding.length; i++) {
 		var msg = outstanding[i];
 		if (msg.tradeId == tradeId) {
 			var cancel = new Object();
-			cancel.kind = "CANCEL";
+			cancel.kind = CANCEL;
 			cancel.price = msg.price;
 			cancel.amount = msg.amount;
-			cancel.stockId = msg.stockId;
 			cancel.stockId = msg.stockId;
 			cancel.tradeId = msg.tradeId;
 			ws.send(JSON.stringify(cancel));
@@ -93,8 +95,8 @@ function doWebsocket() {
 			Amount: <input type="text" name="amount" id="amount"></input><br/>
 			StockId: <input type="text" name="stockId" id="stockId"></input><br/>
 		</form>
-		<button onClick="sendOrder('BUY')">BUY</button>
-		<button onClick="sendOrder('SELL')">SELL</button>
+		<button onClick="sendOrder(BUY)">BUY</button>
+		<button onClick="sendOrder(SELL)">SELL</button>
 		<p id="receivedMessage"></p>
 		<p id="curBal"></p>
 		<p id="availBal"></p>

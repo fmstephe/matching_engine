@@ -2,8 +2,6 @@ package client
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
 	"github.com/fmstephe/matching_engine/msg"
 )
 
@@ -12,160 +10,154 @@ type client struct {
 	curTradeId  uint32
 	balance     balanceManager
 	stocks      stockManager
-	outstanding []ClientMessage
+	outstanding []msg.Message
 	// Communication with external system, e.g. a websocket connection
-	orders    chan ClientMessage
+	orders    chan *msg.Message
 	responses chan []byte // serialised &response{} structs
 	// Communication with internal client server
-	intoSvr  chan interface{}
-	outOfSvr chan *msg.Message
+	intoSvr   chan *msg.Message
+	outOfSvr  chan *msg.Message
+	connecter chan connect
 }
 
-func newClient(traderId uint32, intoSvr chan interface{}, outOfSvr chan *msg.Message) *client {
-	orders := make(chan ClientMessage)
-	responses := make(chan []byte)
+func newClient(traderId uint32, intoSvr, outOfSvr chan *msg.Message) (*client, clientComm) {
 	curTradeId := uint32(1)
 	balance := newBalanceManager()
 	stocks := newStockManager()
-	outstanding := make([]ClientMessage, 0)
-	return &client{traderId: traderId, orders: orders, responses: responses, curTradeId: curTradeId, balance: balance, outstanding: outstanding, stocks: stocks, intoSvr: intoSvr, outOfSvr: outOfSvr}
+	outstanding := make([]msg.Message, 0)
+	connecter := make(chan connect)
+	c := &client{traderId: traderId, curTradeId: curTradeId, balance: balance, outstanding: outstanding, stocks: stocks, intoSvr: intoSvr, outOfSvr: outOfSvr, connecter: connecter}
+	cc := clientComm{outOfSvr: outOfSvr, connecter: connecter}
+	return c, cc
 }
 
 func (c *client) run() {
 	defer close(c.responses)
-	orders := c.orders
-	responses := c.responses
-	outOfSvr := c.outOfSvr
 	for {
-		var rm receivedMessage
 		select {
-		case cm := <-orders:
-			rm = c.processClientMessage(cm)
-		case m := <-outOfSvr:
-			rm = c.processServerMessage(m)
+		case con := <-c.connecter:
+			c.connectTo(con)
+		case m := <-c.orders:
+			accepted := c.process(m)
+			c.sendState(m, accepted)
+		case m := <-c.outOfSvr:
+			accepted := c.process(m)
+			c.sendState(m, accepted)
 		}
-		r := &response{Received: rm, Balance: c.balance, Stocks: c.stocks, Outstanding: c.outstanding}
-		bytes, err := json.Marshal(r)
+	}
+}
+
+func (c *client) connectTo(con connect) {
+	if c.responses != nil {
+		// TODO we need to send the old connection an explanatory message before we close
+		close(c.responses)
+	}
+	c.orders = con.orders
+	c.responses = con.responses
+}
+
+func (c *client) sendState(m *msg.Message, accepted bool) {
+	if c.responses != nil {
+		rm := receivedMessage{Message: *m, Accepted: accepted}
+		s := clientState{Balance: c.balance, Stocks: c.stocks, Outstanding: c.outstanding}
+		r := response{State: s, Received: rm}
+		b, err := json.Marshal(r)
 		if err != nil {
-			println("Marshalling Error", err.Error())
-		} else {
-			responses <- bytes
+			println("Marshalling Error: ", err.Error())
 		}
+		c.responses <- b
 	}
 }
 
-func (c *client) Chans() (orders chan ClientMessage, responses chan []byte) {
-	return c.orders, c.responses
-}
-
-func (c *client) processClientMessage(cm ClientMessage) receivedMessage {
-	switch cm.Kind {
-	case msg.CANCEL.String():
-		return c.submitCancel(cm)
-	case msg.BUY.String():
-		return c.submitBuy(cm)
-	case msg.SELL.String():
-		return c.submitSell(cm)
-	default:
-		return receivedMessage{Message: cm, FromClient: true, Accepted: false}
-	}
-}
-
-func (c *client) submitCancel(cm ClientMessage) receivedMessage {
-	if err := c.submit(msg.CANCEL, cm.Price, cm.TradeId, cm.Amount, cm.StockId); err != nil {
-		println("Rejected message: ", err.Error())
-		return receivedMessage{Message: cm, FromClient: true, Accepted: false}
-	}
-	c.outstanding = append(c.outstanding, cm)
-	return receivedMessage{Message: cm, FromClient: true, Accepted: true}
-}
-
-func (c *client) submitBuy(cm ClientMessage) receivedMessage {
-	cm.TradeId = c.curTradeId
-	c.curTradeId++
-	if !c.balance.canBuy(cm.Price, cm.Amount) {
-		return receivedMessage{Message: cm, FromClient: true, Accepted: false}
-	}
-	if err := c.submit(msg.BUY, cm.Price, cm.TradeId, cm.Amount, cm.StockId); err != nil {
-		println("Rejected message", err.Error())
-		return receivedMessage{Message: cm, FromClient: true, Accepted: false}
-	}
-	c.balance.submitBuy(cm.Price, cm.Amount)
-	c.outstanding = append(c.outstanding, cm)
-	return receivedMessage{Message: cm, FromClient: true, Accepted: true}
-}
-
-func (c *client) submitSell(cm ClientMessage) receivedMessage {
-	cm.TradeId = c.curTradeId
-	c.curTradeId++
-	if !c.stocks.canSell(cm.StockId, cm.Amount) {
-		return receivedMessage{Message: cm, FromClient: true, Accepted: false}
-	}
-	if err := c.submit(msg.SELL, cm.Price, cm.TradeId, cm.Amount, cm.StockId); err != nil {
-		println("Rejected message", err.Error())
-		return receivedMessage{Message: cm, FromClient: true, Accepted: false}
-	}
-	c.stocks.submitSell(cm.StockId, cm.Amount)
-	c.outstanding = append(c.outstanding, cm)
-	return receivedMessage{Message: cm, FromClient: true, Accepted: true}
-}
-
-func (c *client) submit(kind msg.MsgKind, price uint64, tradeId, amount, stockId uint32) error {
-	m := &msg.Message{Kind: kind, Price: price, Amount: amount, TraderId: c.traderId, TradeId: tradeId, StockId: stockId}
-	if !m.Valid() {
-		return errors.New(fmt.Sprintf("Invalid Message %v", m))
-	}
-	c.intoSvr <- m
-	return nil
-}
-
-func (c *client) processServerMessage(m *msg.Message) receivedMessage {
+func (c *client) process(m *msg.Message) bool {
+	m.TraderId = c.traderId
 	switch m.Kind {
+	case msg.CANCEL:
+		return c.submitCancel(m)
+	case msg.BUY:
+		c.curTradeId++
+		m.TradeId = c.curTradeId
+		return c.submitBuy(m)
+	case msg.SELL:
+		c.curTradeId++
+		m.TradeId = c.curTradeId
+		return c.submitSell(m)
 	case msg.CANCELLED:
-		c.cancelOutstanding(m)
+		return c.cancelOutstanding(m)
 	case msg.FULL, msg.PARTIAL:
-		c.matchOutstanding(m)
+		return c.matchOutstanding(m)
 	}
-	cm := ClientMessage{Kind: m.Kind.String(), Price: m.Price, Amount: m.Amount, StockId: m.StockId, TradeId: m.TradeId}
-	return receivedMessage{Message: cm, FromClient: false, Accepted: true}
+	return false
 }
 
-func (c *client) cancelOutstanding(m *msg.Message) {
-	newOutstanding := make([]ClientMessage, 0, len(c.outstanding))
-	for _, cm := range c.outstanding {
-		if cm.TradeId != m.TradeId {
-			newOutstanding = append(newOutstanding, cm)
+func (c *client) submitCancel(m *msg.Message) bool {
+	c.outstanding = append(c.outstanding, *m)
+	c.intoSvr <- m
+	return true
+}
+
+func (c *client) submitBuy(m *msg.Message) bool {
+	if !c.balance.canBuy(m.Price, m.Amount) {
+		return false
+	}
+	c.balance.submitBuy(m.Price, m.Amount)
+	c.outstanding = append(c.outstanding, *m)
+	c.intoSvr <- m
+	return true
+}
+
+func (c *client) submitSell(m *msg.Message) bool {
+	if !c.stocks.canSell(m.StockId, m.Amount) {
+		return false
+	}
+	c.stocks.submitSell(m.StockId, m.Amount)
+	c.outstanding = append(c.outstanding, *m)
+	c.intoSvr <- m
+	return true
+}
+
+func (c *client) cancelOutstanding(m *msg.Message) bool {
+	accepted := false
+	newOutstanding := make([]msg.Message, 0, len(c.outstanding))
+	for _, om := range c.outstanding {
+		if om.TradeId != m.TradeId {
+			newOutstanding = append(newOutstanding, om)
 		} else {
-			switch cm.Kind {
-			case msg.BUY.String():
+			accepted = true
+			switch om.Kind {
+			case msg.BUY:
 				c.balance.cancelBuy(m.Price, m.Amount)
-			case msg.SELL.String():
+			case msg.SELL:
 				c.stocks.cancelSell(m.StockId, m.Amount)
 			}
 		}
 	}
 	c.outstanding = newOutstanding
+	return accepted
 }
 
-func (c *client) matchOutstanding(m *msg.Message) {
-	newOutstanding := make([]ClientMessage, 0, len(c.outstanding))
-	for i, cm := range c.outstanding {
-		if cm.TradeId != m.TradeId {
-			newOutstanding = append(newOutstanding, cm)
+func (c *client) matchOutstanding(m *msg.Message) bool {
+	accepted := false
+	newOutstanding := make([]msg.Message, 0, len(c.outstanding))
+	for i, om := range c.outstanding {
+		if om.TradeId != m.TradeId {
+			newOutstanding = append(newOutstanding, om)
 		} else {
+			accepted = true
 			if m.Kind == msg.PARTIAL {
-				newOutstanding = append(newOutstanding, cm)
+				newOutstanding = append(newOutstanding, om)
 				newOutstanding[i].Amount -= m.Amount
 			}
-			if cm.Kind == msg.SELL.String() {
+			if om.Kind == msg.SELL {
 				c.balance.completeSell(m.Price, m.Amount)
 				c.stocks.completeSell(m.StockId, m.Amount)
 			}
-			if cm.Kind == msg.BUY.String() {
+			if om.Kind == msg.BUY {
 				c.balance.completeBuy(m.Price, m.Amount)
 				c.stocks.completeBuy(m.StockId, m.Amount)
 			}
 		}
 	}
 	c.outstanding = newOutstanding
+	return accepted
 }

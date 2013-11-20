@@ -6,6 +6,7 @@ import (
 	"github.com/fmstephe/matching_engine/client"
 	"github.com/fmstephe/matching_engine/coordinator"
 	"github.com/fmstephe/matching_engine/matcher"
+	"github.com/fmstephe/matching_engine/msg"
 	"github.com/fmstephe/matching_engine/q"
 	"github.com/fmstephe/simpleid"
 	"net/http"
@@ -44,13 +45,13 @@ func main() {
 
 func handleTrader(ws *websocket.Conn) {
 	traderId := uint32(idMaker.Id())
-	orders, responses := userMaker.Connect(traderId)
+	orders, responses := userMaker.Make(traderId)
 	go reader(ws, orders)
 	writer(ws, responses)
 }
 
-func reader(ws *websocket.Conn, msgs chan<- client.ClientMessage) {
-	defer close(msgs)
+func reader(ws *websocket.Conn, orders chan<- *msg.Message) {
+	defer close(orders)
 	defer ws.Close()
 	for {
 		var data string
@@ -58,13 +59,13 @@ func reader(ws *websocket.Conn, msgs chan<- client.ClientMessage) {
 			println("error", err.Error())
 			return
 		}
-		println(data)
-		wm := &client.ClientMessage{}
-		if err := json.Unmarshal([]byte(data), wm); err != nil {
+		m := &msg.Message{}
+		if err := json.Unmarshal([]byte(data), m); err != nil {
 			println("error", err.Error())
 			return
 		}
-		msgs <- *wm
+		println(m.String(), orders)
+		orders <- m
 	}
 }
 

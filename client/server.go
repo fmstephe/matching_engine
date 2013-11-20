@@ -1,70 +1,115 @@
 package client
 
 import (
+	"container/list"
 	"fmt"
 	"github.com/fmstephe/matching_engine/coordinator"
 	"github.com/fmstephe/matching_engine/msg"
 )
 
-type traderRegMsg struct {
-	traderId uint32
-	outOfSvr chan *msg.Message
+type connect struct {
+	traderId  uint32
+	orders    chan *msg.Message
+	responses chan []byte
+}
+
+type clientComm struct {
+	outOfSvr  chan *msg.Message
+	connecter chan connect
 }
 
 type Server struct {
 	coordinator.AppMsgHelper
-	clientMap map[uint32]chan *msg.Message
-	intoSvr   chan interface{}
+	intoSvr   chan *msg.Message
+	connecter chan connect
+	clientMap map[uint32]clientComm
+	connects  list.List
 }
 
 func NewServer() (*Server, *ClientMaker) {
-	intoSvr := make(chan interface{})
-	clientMap := make(map[uint32]chan *msg.Message)
-	return &Server{intoSvr: intoSvr, clientMap: clientMap}, &ClientMaker{intoSvr: intoSvr}
+	intoSvr := make(chan *msg.Message)
+	clientMap := make(map[uint32]clientComm)
+	connecter := make(chan connect)
+	return &Server{intoSvr: intoSvr, clientMap: clientMap, connecter: connecter}, &ClientMaker{intoSvr: intoSvr, connecter: connecter}
 }
 
 func (s *Server) Run() {
 	for {
 		select {
 		case m := <-s.In:
-			if m.Kind == msg.SHUTDOWN {
-				s.Out <- m
-				return
-			}
-			if m != nil {
-				outOfSvr := s.clientMap[m.TraderId]
-				if outOfSvr == nil {
-					println("Missing traderId", m.TraderId)
-					continue
-				}
-				outOfSvr <- m
-			}
-		case i := <-s.intoSvr:
-			switch i := i.(type) {
-			case *traderRegMsg:
-				if s.clientMap[i.traderId] != nil {
-					panic(fmt.Sprintf("Attempted to register a trader (%i) twice", i.traderId))
-				}
-				s.clientMap[i.traderId] = i.outOfSvr
-			case *msg.Message:
-				s.Out <- i
-			default:
-				panic(fmt.Sprintf("%T is not a legal type", i))
-			}
+			s.fromServer(m)
+		case m := <-s.intoSvr:
+			s.fromClient(m)
+		case con := <-s.connecter:
+			s.connectClient(con)
 		}
 	}
 }
 
-type ClientMaker struct {
-	intoSvr chan interface{}
+func (s *Server) fromServer(m *msg.Message) {
+	if m.Kind == msg.SHUTDOWN {
+		return
+	}
+	if m != nil {
+		cc, ok := s.clientMap[m.TraderId]
+		if !ok {
+			println("Missing traderId", m.TraderId)
+			return
+		}
+		cc.outOfSvr <- m
+	}
 }
 
-func (cm *ClientMaker) Connect(traderId uint32) (orders chan ClientMessage, responses chan []byte) {
-	// TODO in the future this should take an existing user and establish a connection with it
+func (s *Server) fromClient(m *msg.Message) {
+	if m.Kind == msg.NEW_USER {
+		s.newTrader(m)
+	} else {
+		s.Out <- m
+	}
+}
+
+func (s *Server) newTrader(m *msg.Message) {
+	_, ok := s.clientMap[m.TraderId]
+	if ok {
+		println(fmt.Sprintf("Attempted to register a trader (%i) twice", m.TraderId))
+		return
+	}
 	outOfSvr := make(chan *msg.Message)
-	cr := &traderRegMsg{traderId: traderId, outOfSvr: outOfSvr}
-	cm.intoSvr <- cr // Register this user
-	u := newClient(traderId, cm.intoSvr, outOfSvr)
-	go u.run()
-	return u.orders, u.responses
+	c, cc := newClient(m.TraderId, s.intoSvr, outOfSvr)
+	go c.run()
+	s.clientMap[m.TraderId] = cc
+	for e := s.connects.Front(); e != nil; {
+		con := e.Value.(connect)
+		nxt := e.Next()
+		if con.traderId == m.TraderId {
+			cc.connecter <- con
+			s.connects.Remove(e)
+		}
+		e = nxt
+	}
+}
+
+func (s *Server) connectClient(con connect) {
+	if cc, ok := s.clientMap[con.traderId]; ok {
+		cc.connecter <- con
+	} else {
+		s.connects.InsertAfter(con, s.connects.Back())
+	}
+}
+
+type ClientMaker struct {
+	intoSvr   chan *msg.Message
+	connecter chan connect
+}
+
+func (cm *ClientMaker) Make(traderId uint32) (orders chan *msg.Message, responses chan []byte) {
+	// TODO do we need a separate method to connect to an existing user?
+	// TODO new user messages should be pre-canned in the msg package
+	m := &msg.Message{Kind: msg.NEW_USER, TraderId: traderId}
+	cm.intoSvr <- m // Register this user
+	orders = make(chan *msg.Message)
+	responses = make(chan []byte)
+	con := connect{traderId: traderId, orders: orders, responses: responses}
+	cm.connecter <- con
+	return orders, responses
 }
