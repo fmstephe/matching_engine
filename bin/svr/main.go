@@ -13,7 +13,7 @@ import (
 	"os"
 )
 
-var userMaker *client.ClientMaker
+var traderMaker *client.TraderMaker
 var idMaker = simpleid.NewIdMaker()
 
 const (
@@ -33,7 +33,7 @@ func main() {
 	// Matching Engine
 	m := matcher.NewMatcher(100)
 	var clientSvr *client.Server
-	clientSvr, userMaker = client.NewServer()
+	clientSvr, traderMaker = client.NewServer()
 	coordinator.InMemory(serverToClient, clientToServer, clientSvr, clientOriginId, "Client.........", true)
 	coordinator.InMemory(clientToServer, serverToClient, m, serverOriginId, "Matching Engine", true)
 	http.Handle("/wsconn", websocket.Handler(handleTrader))
@@ -45,7 +45,7 @@ func main() {
 
 func handleTrader(ws *websocket.Conn) {
 	traderId := uint32(idMaker.Id())
-	orders, responses := userMaker.Make(traderId)
+	orders, responses := traderMaker.Make(traderId)
 	go reader(ws, orders)
 	writer(ws, responses)
 }

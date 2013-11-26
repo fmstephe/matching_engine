@@ -10,11 +10,11 @@ type receivedMessage struct {
 }
 
 type response struct {
-	State    clientState     `json:"state"`
+	State    traderState     `json:"state"`
 	Received receivedMessage `json:"received"`
 }
 
-type clientState struct {
+type traderState struct {
 	Balance     balanceManager `json:"balance"`
 	Stocks      stockManager   `json:"stocks"`
 	Outstanding []msg.Message  `json:"outstanding"`
