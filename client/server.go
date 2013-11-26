@@ -105,7 +105,8 @@ type TraderMaker struct {
 func (tm *TraderMaker) Make(traderId uint32) (orders chan *msg.Message, responses chan []byte) {
 	// TODO do we need a separate method to connect to an existing user?
 	// TODO new user messages should be pre-canned in the msg package
-	m := &msg.Message{Kind: msg.NEW_TRADER, TraderId: traderId}
+	m := &msg.Message{}
+	m.WriteNewTrader(traderId)
 	tm.intoSvr <- m // Register this user
 	orders = make(chan *msg.Message)
 	responses = make(chan []byte)

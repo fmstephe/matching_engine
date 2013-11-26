@@ -86,6 +86,12 @@ func (m *Message) Valid() bool {
 	return isValid
 }
 
+func (m *Message) WriteNewTrader(traderId uint32) {
+	*m = Message{}
+	m.Kind = NEW_TRADER
+	m.TraderId = traderId
+}
+
 func (m *Message) WriteCancelFor(om *Message) {
 	*m = *om
 	m.Kind = CANCEL
