@@ -31,8 +31,12 @@ func (bm *balanceManager) cancelBuy(price uint64, amount uint32) {
 	bm.Available += bm.total(price, amount)
 }
 
-func (bm *balanceManager) completeBuy(price uint64, amount uint32) {
-	bm.Current -= bm.total(price, amount)
+func (bm *balanceManager) completeBuy(bidPrice, actualPrice uint64, amount uint32) {
+	bidTotal := bm.total(bidPrice, amount)
+	actualTotal := bm.total(actualPrice, amount)
+	bm.Available += bidTotal
+	bm.Available -= actualTotal
+	bm.Current -= actualTotal
 }
 
 func (bm *balanceManager) completeSell(price uint64, amount uint32) {

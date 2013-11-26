@@ -19,7 +19,7 @@ const (
 	NOT_CANCELLED = MsgKind(iota)
 	REJECTED      = MsgKind(iota)
 	SHUTDOWN      = MsgKind(iota)
-	NEW_TRADER      = MsgKind(iota)
+	NEW_TRADER    = MsgKind(iota)
 	NUM_OF_KIND   = int32(iota)
 )
 

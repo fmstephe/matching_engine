@@ -153,7 +153,7 @@ func (t *trader) matchOutstanding(m *msg.Message) bool {
 				t.stocks.completeSell(m.StockId, m.Amount)
 			}
 			if om.Kind == msg.BUY {
-				t.balance.completeBuy(m.Price, m.Amount)
+				t.balance.completeBuy(om.Price, m.Price, m.Amount)
 				t.stocks.completeBuy(m.StockId, m.Amount)
 			}
 		}
