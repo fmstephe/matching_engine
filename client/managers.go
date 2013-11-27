@@ -4,7 +4,6 @@ import (
 	"strconv"
 )
 
-// TODO there is a defect here where the match price is half way between the bid/offer - when we reconcile the balances we are using the original bid/offer prices which leads to inconsistent balances
 type balanceManager struct {
 	Current   uint64 `json:"current"`
 	Available uint64 `json:"available"`
@@ -45,7 +44,6 @@ func (bm *balanceManager) completeSell(price uint64, amount uint32) {
 	bm.Available += total
 }
 
-// TODO the naming of this hasn't worked out very well
 type stockManager struct {
 	StocksHeld   map[string]uint32 `json:"stocksHeld"`
 	StocksToSell map[string]uint32 `json:"stocksToSell"`
