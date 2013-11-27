@@ -1,7 +1,6 @@
 package client
 
 import (
-	"container/list"
 	"fmt"
 	"github.com/fmstephe/matching_engine/coordinator"
 	"github.com/fmstephe/matching_engine/msg"
@@ -20,10 +19,10 @@ type traderComm struct {
 
 type Server struct {
 	coordinator.AppMsgHelper
-	intoSvr   chan *msg.Message
-	connecter chan connect
-	traderMap map[uint32]traderComm
-	connects  list.List
+	intoSvr     chan *msg.Message
+	connecter   chan connect
+	traderMap   map[uint32]traderComm
+	connectsMap map[uint32][]connect
 }
 
 func NewServer() (*Server, *TraderMaker) {
@@ -78,14 +77,10 @@ func (s *Server) newTrader(m *msg.Message) {
 	t, tc := newTrader(m.TraderId, s.intoSvr, outOfSvr)
 	go t.run()
 	s.traderMap[m.TraderId] = tc
-	for e := s.connects.Front(); e != nil; {
-		con := e.Value.(connect)
-		nxt := e.Next()
-		if con.traderId == m.TraderId {
-			tc.connecter <- con
-			s.connects.Remove(e)
-		}
-		e = nxt
+	cons := s.connectsMap[m.TraderId]
+	delete(s.connectsMap, m.TraderId)
+	for _, con := range cons {
+		tc.connecter <- con
 	}
 }
 
@@ -93,7 +88,12 @@ func (s *Server) connectTrader(con connect) {
 	if cc, ok := s.traderMap[con.traderId]; ok {
 		cc.connecter <- con
 	} else {
-		s.connects.InsertAfter(con, s.connects.Back())
+		cons := s.connectsMap[con.traderId]
+		if cons == nil {
+			cons = make([]connect, 1)
+		}
+		cons = append(cons, con)
+		s.connectsMap[con.traderId] = cons
 	}
 }
 
