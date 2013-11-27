@@ -40,6 +40,9 @@ func (t *trader) run() {
 		case m := <-t.orders:
 			accepted := t.process(m)
 			t.sendState(m, accepted)
+			if accepted {
+				t.intoSvr <- m
+			}
 		case m := <-t.outOfSvr:
 			accepted := t.process(m)
 			t.sendState(m, accepted)
@@ -54,6 +57,8 @@ func (t *trader) connectTo(con connect) {
 	}
 	t.orders = con.orders
 	t.responses = con.responses
+	// Send a hello state message
+	t.sendState(&msg.Message{}, true)
 }
 
 func (t *trader) sendState(m *msg.Message, accepted bool) {
@@ -92,7 +97,6 @@ func (t *trader) process(m *msg.Message) bool {
 
 func (t *trader) submitCancel(m *msg.Message) bool {
 	t.outstanding = append(t.outstanding, *m)
-	t.intoSvr <- m
 	return true
 }
 
@@ -102,7 +106,6 @@ func (t *trader) submitBuy(m *msg.Message) bool {
 	}
 	t.balance.submitBuy(m.Price, m.Amount)
 	t.outstanding = append(t.outstanding, *m)
-	t.intoSvr <- m
 	return true
 }
 
@@ -112,7 +115,6 @@ func (t *trader) submitSell(m *msg.Message) bool {
 	}
 	t.stocks.submitSell(m.StockId, m.Amount)
 	t.outstanding = append(t.outstanding, *m)
-	t.intoSvr <- m
 	return true
 }
 
