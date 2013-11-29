@@ -32,12 +32,16 @@ func newTrader(traderId uint32, intoSvr, outOfSvr chan *msg.Message) (*trader, t
 }
 
 func (t *trader) run() {
-	defer close(t.responses)
+	defer t.shutdown()
 	for {
 		select {
 		case con := <-t.connecter:
-			t.connectTo(con)
+			t.connect(con)
 		case m := <-t.orders:
+			if m == nil { // channel has been closed
+				t.disconnect()
+				continue
+			}
 			accepted := t.process(m)
 			t.sendState(m, accepted)
 			if accepted {
@@ -50,7 +54,13 @@ func (t *trader) run() {
 	}
 }
 
-func (t *trader) connectTo(con connect) {
+func (t *trader) shutdown() {
+	if t.responses != nil {
+		close(t.responses)
+	}
+}
+
+func (t *trader) connect(con connect) {
 	if t.responses != nil {
 		// TODO we need to send the old connection an explanatory message before we close
 		close(t.responses)
@@ -59,6 +69,14 @@ func (t *trader) connectTo(con connect) {
 	t.responses = con.responses
 	// Send a hello state message
 	t.sendState(&msg.Message{}, true)
+}
+
+func (t *trader) disconnect() {
+	if t.responses != nil {
+		close(t.responses)
+	}
+	t.responses = nil
+	t.orders = nil
 }
 
 func (t *trader) sendState(m *msg.Message, accepted bool) {
