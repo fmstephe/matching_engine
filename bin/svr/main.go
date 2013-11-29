@@ -46,11 +46,11 @@ func main() {
 func handleTrader(ws *websocket.Conn) {
 	traderId := uint32(idMaker.Id())
 	orders, responses := traderMaker.Make(traderId)
-	go reader(ws, orders)
+	go reader(ws, traderId, orders)
 	writer(ws, responses)
 }
 
-func reader(ws *websocket.Conn, orders chan<- *msg.Message) {
+func reader(ws *websocket.Conn, traderId uint32, orders chan<- *msg.Message) {
 	defer close(orders)
 	defer ws.Close()
 	for {
@@ -64,7 +64,8 @@ func reader(ws *websocket.Conn, orders chan<- *msg.Message) {
 			println("error", err.Error())
 			return
 		}
-		println(m.String(), orders)
+		m.TraderId = traderId
+		println("WebSocket......: " + m.String())
 		orders <- m
 	}
 }
