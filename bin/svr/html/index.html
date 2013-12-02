@@ -3,10 +3,28 @@
 		<script type="text/javascript">
 
 var lastMessage;
-// TODO need to be able to print these Kind constants to readable strings
 var BUY = 1;
 var SELL = 2;
 var CANCEL = 3;
+var PARTIAL = 4;
+var FULL = 5;
+var CANCELLED = 6;
+var NOT_CANCELLED = 7;
+var REJECTED = 8;
+var SHUTDOWN = 9;
+var NEW_TRADER = 10;
+
+var kindMap = {
+	"1": "BUY",
+	"2": "SELL",
+	"3": "CANCEL",
+	"4": "PARTIAL",
+	"5": "FULL",
+	"6": "CANCELLED",
+	"7": "NOT_CANCELLED",
+	"8": "REJECTED",
+	"9": "SHUTDOWN",
+	"10": "NEW_TRADER"};
 
 function $() {
 	return document.getElementById(arguments[0]);
@@ -38,21 +56,35 @@ function receiveMessage(sMsg) {
 
 function displayMessage() {
 	var p = $("msgs");
-	$("receivedMessage").innerHTML = "Received Message: " + JSON.stringify(lastMessage.received);
-	$("curBal").innerHTML = "Current Balance: " + lastMessage.state.balance.current;
-	$("availBal").innerHTML = "Available Balance: " + lastMessage.state.balance.available;
-	$("stocksHeld").innerHTML = "Stocks Held: " + JSON.stringify(lastMessage.state.stocks.stocksHeld);
-	$("stocksToSell").innerHTML = "Stocks To Sell: " + JSON.stringify(lastMessage.state.stocks.stocksToSell);
 	var msgsInner = "";
 	var outstanding = lastMessage.state.outstanding;
 	for (var i = 0; i < outstanding.length; i++) {
 		msgsInner += createCancel(outstanding[i]);
 	}
 	$("msgs").innerHTML = msgsInner;
+	$("receivedMessage").innerHTML = "Received Message: " + readableReceived(lastMessage.received);
+	$("curBal").innerHTML = "Current Balance: " + lastMessage.state.balance.current;
+	$("availBal").innerHTML = "Available Balance: " + lastMessage.state.balance.available;
+	$("stocksHeld").innerHTML = "Stocks Held: " + JSON.stringify(lastMessage.state.stocks.stocksHeld);
+	$("stocksToSell").innerHTML = "Stocks To Sell: " + JSON.stringify(lastMessage.state.stocks.stocksToSell);
+}
+
+function readableReceived(received) {
+	var sReceived = JSON.stringify(received);
+	var rReceived = JSON.parse(sReceived);
+	rReceived.message = readableMessage(rReceived.message);
+	return JSON.stringify(rReceived);
+}
+
+function readableMessage(msg) {
+	var sMsg = JSON.stringify(msg);
+	var rMsg = JSON.parse(sMsg);
+	rMsg.kind = kindMap[msg.kind];
+	return JSON.stringify(rMsg);
 }
 
 function createCancel(msg) {
-	return "<div><a onclick=\"submitCancel(" + msg.tradeId  + ")\">Cancel</a><span>" + JSON.stringify(msg) + "</span></div>";
+	return "<div><a onclick=\"submitCancel(" + msg.tradeId  + ")\">Cancel</a><span>" + readableMessage(msg) + "</span></div>";
 }
 
 function submitCancel(tradeId) {
