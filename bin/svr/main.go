@@ -3,12 +3,14 @@ package main
 import (
 	"code.google.com/p/go.net/websocket"
 	"encoding/json"
+	"fmt"
 	"github.com/fmstephe/matching_engine/client"
 	"github.com/fmstephe/matching_engine/coordinator"
 	"github.com/fmstephe/matching_engine/matcher"
 	"github.com/fmstephe/matching_engine/msg"
 	"github.com/fmstephe/matching_engine/q"
 	"github.com/fmstephe/simpleid"
+	"io"
 	"net/http"
 	"os"
 )
@@ -47,7 +49,7 @@ func handleTrader(ws *websocket.Conn) {
 	traderId := uint32(idMaker.Id())
 	orders, responses := traderMaker.Make(traderId)
 	go reader(ws, traderId, orders)
-	writer(ws, responses)
+	writer(ws, traderId, responses)
 }
 
 func reader(ws *websocket.Conn, traderId uint32, orders chan<- *msg.Message) {
@@ -56,12 +58,12 @@ func reader(ws *websocket.Conn, traderId uint32, orders chan<- *msg.Message) {
 	for {
 		var data string
 		if err := websocket.Message.Receive(ws, &data); err != nil {
-			println("error", err.Error())
+			logError(traderId, err)
 			return
 		}
 		m := &msg.Message{}
 		if err := json.Unmarshal([]byte(data), m); err != nil {
-			println("error", err.Error())
+			logError(traderId, err)
 			return
 		}
 		m.TraderId = traderId
@@ -70,12 +72,20 @@ func reader(ws *websocket.Conn, traderId uint32, orders chan<- *msg.Message) {
 	}
 }
 
-func writer(ws *websocket.Conn, responses chan []byte) {
+func writer(ws *websocket.Conn, traderId uint32, responses chan []byte) {
 	defer ws.Close()
 	for bytes := range responses {
 		if _, err := ws.Write(bytes); err != nil {
-			println("Writer Error", err.Error())
+			logError(traderId, err)
 			return
 		}
+	}
+}
+
+func logError(traderId uint32, err error) {
+	if err == io.EOF {
+		println(fmt.Sprintf("Closing connection for trader %d", traderId))
+	} else {
+		println(fmt.Sprintf("Error for trader %d: %s", traderId, err.Error()))
 	}
 }
