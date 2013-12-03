@@ -43,13 +43,13 @@ func (t *trader) run() {
 				continue
 			}
 			accepted := t.process(m)
-			t.sendState(m, accepted)
+			t.sendState(m, accepted, "")
 			if accepted {
 				t.intoSvr <- m
 			}
 		case m := <-t.outOfSvr:
 			accepted := t.process(m)
-			t.sendState(m, accepted)
+			t.sendState(m, accepted, "")
 		}
 	}
 }
@@ -62,13 +62,13 @@ func (t *trader) shutdown() {
 
 func (t *trader) connect(con connect) {
 	if t.responses != nil {
-		// TODO we need to send the old connection an explanatory message before we close
+		t.sendState(&msg.Message{}, true, "Disconnected in favour of new connection")
 		close(t.responses)
 	}
 	t.orders = con.orders
 	t.responses = con.responses
 	// Send a hello state message
-	t.sendState(&msg.Message{}, true)
+	t.sendState(&msg.Message{}, true, "")
 }
 
 func (t *trader) disconnect() {
@@ -79,11 +79,11 @@ func (t *trader) disconnect() {
 	t.orders = nil
 }
 
-func (t *trader) sendState(m *msg.Message, accepted bool) {
+func (t *trader) sendState(m *msg.Message, accepted bool, comment string) {
 	if t.responses != nil {
 		rm := receivedMessage{Message: *m, Accepted: accepted}
 		s := traderState{Balance: t.balance, Stocks: t.stocks, Outstanding: t.outstanding}
-		r := response{State: s, Received: rm}
+		r := response{State: s, Received: rm, Comment: comment}
 		b, err := json.Marshal(r)
 		if err != nil {
 			println("Marshalling Error: ", err.Error())

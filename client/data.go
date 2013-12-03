@@ -12,6 +12,7 @@ type receivedMessage struct {
 type response struct {
 	State    traderState     `json:"state"`
 	Received receivedMessage `json:"received"`
+	Comment  string          `json:"comment"`
 }
 
 type traderState struct {
