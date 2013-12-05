@@ -5,6 +5,13 @@ import (
 	"github.com/fmstephe/matching_engine/msg"
 )
 
+const (
+	connectedComment    = "Connected to trader"
+	ordersClosedComment = "Disconnected because orders channel was closed"
+	replacedComment     = "Disconnected because trader received a new connection"
+	shutdownComment     = "Disconnected because trader is shutting down"
+)
+
 type trader struct {
 	traderId    uint32
 	curTradeId  uint32
@@ -39,7 +46,7 @@ func (t *trader) run() {
 			t.connect(con)
 		case m := <-t.orders:
 			if m == nil { // channel has been closed
-				t.disconnect()
+				t.disconnect(ordersClosedComment)
 				continue
 			}
 			accepted := t.process(m)
@@ -54,25 +61,22 @@ func (t *trader) run() {
 	}
 }
 
+// TODO currently trader never shuts down. How do we want to deal with this?
 func (t *trader) shutdown() {
-	if t.responses != nil {
-		close(t.responses)
-	}
+	t.disconnect(shutdownComment)
 }
 
 func (t *trader) connect(con connect) {
-	if t.responses != nil {
-		t.sendState(&msg.Message{}, true, "Disconnected in favour of new connection")
-		close(t.responses)
-	}
+	t.disconnect(replacedComment)
 	t.orders = con.orders
 	t.responses = con.responses
 	// Send a hello state message
-	t.sendState(&msg.Message{}, true, "")
+	t.sendState(&msg.Message{}, true, connectedComment)
 }
 
-func (t *trader) disconnect() {
+func (t *trader) disconnect(comment string) {
 	if t.responses != nil {
+		t.sendState(&msg.Message{}, true, comment)
 		close(t.responses)
 	}
 	t.responses = nil
