@@ -12,6 +12,9 @@ const (
 	shutdownComment     = "Disconnected because trader is shutting down"
 )
 
+// Temporary constant while we are creating new traders when a connection is established
+const initialBalance = 100
+
 type trader struct {
 	traderId    uint32
 	curTradeId  uint32
@@ -29,7 +32,7 @@ type trader struct {
 
 func newTrader(traderId uint32, intoSvr, outOfSvr chan *msg.Message) (*trader, traderComm) {
 	curTradeId := uint32(1)
-	balance := newBalanceManager()
+	balance := newBalanceManager(initialBalance)
 	stocks := newStockManager()
 	outstanding := make([]msg.Message, 0)
 	connecter := make(chan connect)
@@ -50,13 +53,13 @@ func (t *trader) run() {
 				continue
 			}
 			accepted := t.process(m)
-			t.sendState(m, accepted, "")
+			t.sendResponse(m, accepted, "")
 			if accepted {
 				t.intoSvr <- m
 			}
 		case m := <-t.outOfSvr:
 			accepted := t.process(m)
-			t.sendState(m, accepted, "")
+			t.sendResponse(m, accepted, "")
 		}
 	}
 }
@@ -71,29 +74,34 @@ func (t *trader) connect(con connect) {
 	t.orders = con.orders
 	t.responses = con.responses
 	// Send a hello state message
-	t.sendState(&msg.Message{}, true, connectedComment)
+	t.sendResponse(&msg.Message{}, true, connectedComment)
 }
 
 func (t *trader) disconnect(comment string) {
 	if t.responses != nil {
-		t.sendState(&msg.Message{}, true, comment)
+		t.sendResponse(&msg.Message{}, true, comment)
 		close(t.responses)
 	}
 	t.responses = nil
 	t.orders = nil
 }
 
-func (t *trader) sendState(m *msg.Message, accepted bool, comment string) {
+func (t *trader) sendResponse(m *msg.Message, accepted bool, comment string) {
 	if t.responses != nil {
-		rm := receivedMessage{Message: *m, Accepted: accepted}
-		s := traderState{Balance: t.balance, Stocks: t.stocks, Outstanding: t.outstanding}
-		r := response{State: s, Received: rm, Comment: comment}
+		r := t.makeResponse(m, accepted, comment)
 		b, err := json.Marshal(r)
 		if err != nil {
+			// TODO what should we send to responses if we had a marshalling error?
 			println("Marshalling Error: ", err.Error())
 		}
 		t.responses <- b
 	}
+}
+
+func (t *trader) makeResponse(m *msg.Message, accepted bool, comment string) *response {
+	rm := receivedMessage{Message: *m, Accepted: accepted}
+	s := traderState{Balance: t.balance, Stocks: t.stocks, Outstanding: t.outstanding}
+	return &response{State: s, Received: rm, Comment: comment}
 }
 
 func (t *trader) process(m *msg.Message) bool {

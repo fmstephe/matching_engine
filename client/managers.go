@@ -4,14 +4,18 @@ import (
 	"strconv"
 )
 
+// Temporary function while we are creating new traders when a connection is established
+func initialStocks() map[string]uint32 {
+	return map[string]uint32{"1": 10, "2": 10, "3": 10}
+}
+
 type balanceManager struct {
 	Current   uint64 `json:"current"`
 	Available uint64 `json:"available"`
 }
 
-func newBalanceManager() balanceManager {
-	bal := uint64(100)
-	return balanceManager{Current: bal, Available: bal}
+func newBalanceManager(balance uint64) balanceManager {
+	return balanceManager{Current: balance, Available: balance}
 }
 
 func (bm *balanceManager) total(price uint64, amount uint32) uint64 {
@@ -22,6 +26,7 @@ func (bm *balanceManager) canBuy(price uint64, amount uint32) bool {
 	return bm.Available >= bm.total(price, amount)
 }
 
+// TODO if this wraps below 0 we really need to cope with that error?
 func (bm *balanceManager) submitBuy(price uint64, amount uint32) {
 	bm.Available -= bm.total(price, amount)
 }
@@ -51,7 +56,7 @@ type stockManager struct {
 
 func newStockManager() stockManager {
 	sm := stockManager{}
-	sm.StocksHeld = map[string]uint32{"1": 10, "2": 10, "3": 10}
+	sm.StocksHeld = initialStocks()
 	sm.StocksToSell = make(map[string]uint32)
 	return sm
 }
