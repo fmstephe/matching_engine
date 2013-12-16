@@ -31,7 +31,7 @@ type trader struct {
 }
 
 func newTrader(traderId uint32, intoSvr, outOfSvr chan *msg.Message) (*trader, traderComm) {
-	curTradeId := uint32(1)
+	curTradeId := uint32(0)
 	balance := newBalanceManager(initialBalance)
 	stocks := newStockManager()
 	outstanding := make([]msg.Message, 0)
@@ -104,16 +104,21 @@ func (t *trader) makeResponse(m *msg.Message, accepted bool, comment string) *re
 	return &response{State: s, Received: rm, Comment: comment}
 }
 
+// NB: After this method returns BUYs and SELLs are guaranteed to have the correct TradeId
+// BUYs, SELLs and CANCELs are guaranteed to have the correct TraderId
+// CANCELLEDs and FULLs are assumed to have the correct values and are unchanged
 func (t *trader) process(m *msg.Message) bool {
-	m.TraderId = t.traderId
 	switch m.Kind {
 	case msg.CANCEL:
+		m.TraderId = t.traderId
 		return t.submitCancel(m)
 	case msg.BUY:
+		m.TraderId = t.traderId
 		t.curTradeId++
 		m.TradeId = t.curTradeId
 		return t.submitBuy(m)
 	case msg.SELL:
+		m.TraderId = t.traderId
 		t.curTradeId++
 		m.TradeId = t.curTradeId
 		return t.submitSell(m)
