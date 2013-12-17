@@ -15,6 +15,11 @@ const (
 // Temporary constant while we are creating new traders when a connection is established
 const initialBalance = 100
 
+// Temporary function while we are creating new traders when a connection is established
+func initialStocks() map[uint32]uint32 {
+	return map[uint32]uint32{1: 10, 2: 10, 3: 10}
+}
+
 type trader struct {
 	traderId    uint32
 	curTradeId  uint32
@@ -33,7 +38,7 @@ type trader struct {
 func newTrader(traderId uint32, intoSvr, outOfSvr chan *msg.Message) (*trader, traderComm) {
 	curTradeId := uint32(0)
 	balance := newBalanceManager(initialBalance)
-	stocks := newStockManager()
+	stocks := newStockManager(initialStocks())
 	outstanding := make([]msg.Message, 0)
 	connecter := make(chan connect)
 	t := &trader{traderId: traderId, curTradeId: curTradeId, balance: balance, outstanding: outstanding, stocks: stocks, intoSvr: intoSvr, outOfSvr: outOfSvr, connecter: connecter}

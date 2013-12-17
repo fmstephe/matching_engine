@@ -101,8 +101,6 @@ func TestMessageProcessBuyPartialDiffSimple(t *testing.T) {
 	validate(t, tdr)
 }
 
-// TODO we need to be able to assert the number of outstanding sells for a stock
-// First we should unit test the stockManager
 func TestMessageProcessSellCancelCancelled(t *testing.T) {
 	traderId := uint32(1)
 	tdr := setupTrader(traderId, t)

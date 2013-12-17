@@ -4,11 +4,7 @@ import (
 	"strconv"
 )
 
-// Temporary function while we are creating new traders when a connection is established
-func initialStocks() map[string]uint32 {
-	return map[string]uint32{"1": 10, "2": 10, "3": 10}
-}
-
+// TODO should rethink the approach taken to make this code safer, right now the managers are just adders and subtracters. No safety checking is being done
 type balanceManager struct {
 	Current   uint64 `json:"current"`
 	Available uint64 `json:"available"`
@@ -54,10 +50,13 @@ type stockManager struct {
 	StocksToSell map[string]uint32 `json:"stocksToSell"`
 }
 
-func newStockManager() stockManager {
+func newStockManager(initialStocks map[uint32]uint32) stockManager {
 	sm := stockManager{}
-	sm.StocksHeld = initialStocks()
+	sm.StocksHeld = make(map[string]uint32)
 	sm.StocksToSell = make(map[string]uint32)
+	for k, v := range initialStocks {
+		sm.StocksHeld[strconv.Itoa(int(k))] = v
+	}
 	return sm
 }
 
