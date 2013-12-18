@@ -46,7 +46,7 @@ func main() {
 }
 
 func handleTrader(ws *websocket.Conn) {
-	traderId := uint32(idMaker.Id())
+	traderId := uint32(idMaker.Id()) // NB: A fussy man would check that the id generated fitted inside uint32
 	orders, responses := traderMaker.Make(traderId)
 	go reader(ws, traderId, orders)
 	writer(ws, traderId, responses)

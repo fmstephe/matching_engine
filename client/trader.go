@@ -28,6 +28,7 @@ type trader struct {
 	outstanding []msg.Message
 	// Communication with external system, e.g. a websocket connection
 	orders    chan *msg.Message
+	// TODO - we really need to deep copy into a &ressponse{} and send that instead
 	responses chan []byte // serialised &response{} structs
 	// Communication with internal trader server
 	intoSvr   chan *msg.Message
@@ -109,6 +110,8 @@ func (t *trader) makeResponse(m *msg.Message, accepted bool, comment string) *re
 	return &response{State: s, Received: rm, Comment: comment}
 }
 
+// TODO we should separate this processing into some kind of trader state object.
+// Then trader only deals with channel connections etc.
 // NB: After this method returns BUYs and SELLs are guaranteed to have the correct TradeId
 // BUYs, SELLs and CANCELs are guaranteed to have the correct TraderId
 // CANCELLEDs and FULLs are assumed to have the correct values and are unchanged

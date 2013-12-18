@@ -1,3 +1,4 @@
+// TODO this approach to remembering received messages just doesn't work
 package coordinator
 
 import (
