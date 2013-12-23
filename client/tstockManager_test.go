@@ -2,7 +2,6 @@ package client
 
 import (
 	"runtime"
-	"strconv"
 	"testing"
 )
 
@@ -44,16 +43,16 @@ func TestSubmitSellCancel(t *testing.T) {
 	stocks := newStockManager(init)
 	// Initial state
 	canSell(t, stocks, 1, 1)
-	expectInHeld(t, stocks, init)
-	expectInToSell(t, stocks, map[uint32]uint32{})
+	expectInMap(t, stocks.held, init)
+	expectInMap(t, stocks.toSell, map[uint32]uint32{})
 	// Submitted sell
 	stocks.submitSell(uint32(1), uint32(1))
-	expectInHeld(t, stocks, map[uint32]uint32{1: 0, 2: 7})
-	expectInToSell(t, stocks, map[uint32]uint32{1: 1})
+	expectInMap(t, stocks.held, map[uint32]uint32{1: 0, 2: 7})
+	expectInMap(t, stocks.toSell, map[uint32]uint32{1: 1})
 	// Completed sell
 	stocks.cancelSell(uint32(1), uint32(1))
-	expectInHeld(t, stocks, init)
-	expectInToSell(t, stocks, map[uint32]uint32{})
+	expectInMap(t, stocks.held, init)
+	expectInMap(t, stocks.toSell, map[uint32]uint32{})
 }
 
 func TestSubmitSellCancelPartialSell(t *testing.T) {
@@ -61,16 +60,16 @@ func TestSubmitSellCancelPartialSell(t *testing.T) {
 	stocks := newStockManager(init)
 	// Initial state
 	canSell(t, stocks, 2, 5)
-	expectInHeld(t, stocks, init)
-	expectInToSell(t, stocks, map[uint32]uint32{})
+	expectInMap(t, stocks.held, init)
+	expectInMap(t, stocks.toSell, map[uint32]uint32{})
 	// Submitted sell
 	stocks.submitSell(uint32(2), uint32(5))
-	expectInHeld(t, stocks, map[uint32]uint32{1: 1, 2: 2})
-	expectInToSell(t, stocks, map[uint32]uint32{2: 5})
+	expectInMap(t, stocks.held, map[uint32]uint32{1: 1, 2: 2})
+	expectInMap(t, stocks.toSell, map[uint32]uint32{2: 5})
 	// Completed sell
 	stocks.cancelSell(uint32(2), uint32(5))
-	expectInHeld(t, stocks, init)
-	expectInToSell(t, stocks, map[uint32]uint32{})
+	expectInMap(t, stocks.held, init)
+	expectInMap(t, stocks.toSell, map[uint32]uint32{})
 }
 
 func TestSubmitSellComplete(t *testing.T) {
@@ -78,16 +77,16 @@ func TestSubmitSellComplete(t *testing.T) {
 	stocks := newStockManager(init)
 	// Initial state
 	canSell(t, stocks, 1, 1)
-	expectInHeld(t, stocks, init)
-	expectInToSell(t, stocks, map[uint32]uint32{})
+	expectInMap(t, stocks.held, init)
+	expectInMap(t, stocks.toSell, map[uint32]uint32{})
 	// Submitted sell
 	stocks.submitSell(uint32(1), uint32(1))
-	expectInHeld(t, stocks, map[uint32]uint32{1: 0, 2: 7})
-	expectInToSell(t, stocks, map[uint32]uint32{1: 1})
+	expectInMap(t, stocks.held, map[uint32]uint32{1: 0, 2: 7})
+	expectInMap(t, stocks.toSell, map[uint32]uint32{1: 1})
 	// Completed sell
 	stocks.completeSell(uint32(1), uint32(1))
-	expectInHeld(t, stocks, map[uint32]uint32{2: 7})
-	expectInToSell(t, stocks, map[uint32]uint32{})
+	expectInMap(t, stocks.held, map[uint32]uint32{2: 7})
+	expectInMap(t, stocks.toSell, map[uint32]uint32{})
 }
 
 func TestSubmitSellCompletePartialSell(t *testing.T) {
@@ -95,16 +94,16 @@ func TestSubmitSellCompletePartialSell(t *testing.T) {
 	stocks := newStockManager(init)
 	// Initial state
 	canSell(t, stocks, 2, 5)
-	expectInHeld(t, stocks, init)
-	expectInToSell(t, stocks, map[uint32]uint32{})
+	expectInMap(t, stocks.held, init)
+	expectInMap(t, stocks.toSell, map[uint32]uint32{})
 	// Submitted sell
 	stocks.submitSell(uint32(2), uint32(5))
-	expectInHeld(t, stocks, map[uint32]uint32{1: 1, 2: 2})
-	expectInToSell(t, stocks, map[uint32]uint32{2: 5})
+	expectInMap(t, stocks.held, map[uint32]uint32{1: 1, 2: 2})
+	expectInMap(t, stocks.toSell, map[uint32]uint32{2: 5})
 	// Completed sell
 	stocks.completeSell(uint32(2), uint32(5))
-	expectInHeld(t, stocks, map[uint32]uint32{1: 1, 2: 2})
-	expectInToSell(t, stocks, map[uint32]uint32{})
+	expectInMap(t, stocks.held, map[uint32]uint32{1: 1, 2: 2})
+	expectInMap(t, stocks.toSell, map[uint32]uint32{})
 }
 
 func TestCompleteBuyNewStock(t *testing.T) {
@@ -112,8 +111,8 @@ func TestCompleteBuyNewStock(t *testing.T) {
 	stocks := newStockManager(init)
 	// Complete buy
 	stocks.completeBuy(3, 4)
-	expectInHeld(t, stocks, map[uint32]uint32{1: 1, 2: 7, 3: 4})
-	expectInToSell(t, stocks, map[uint32]uint32{})
+	expectInMap(t, stocks.held, map[uint32]uint32{1: 1, 2: 7, 3: 4})
+	expectInMap(t, stocks.toSell, map[uint32]uint32{})
 }
 
 func TestCompleteBuyOwnedStock(t *testing.T) {
@@ -121,8 +120,8 @@ func TestCompleteBuyOwnedStock(t *testing.T) {
 	stocks := newStockManager(init)
 	// Complete buy
 	stocks.completeBuy(1, 4)
-	expectInHeld(t, stocks, map[uint32]uint32{1: 5, 2: 7})
-	expectInToSell(t, stocks, map[uint32]uint32{})
+	expectInMap(t, stocks.held, map[uint32]uint32{1: 5, 2: 7})
+	expectInMap(t, stocks.toSell, map[uint32]uint32{})
 }
 
 func canSell(t *testing.T, stocks stockManager, stock, amount int) {
@@ -140,37 +139,23 @@ func expectCanSell(t *testing.T, stocks stockManager, stock, amount int, canSell
 	}
 	if canSell != stocks.canSell(uint32(stock), uint32(amount)) {
 		_, fname, lnum, _ := runtime.Caller(2)
-		t.Errorf("Expected to %sbe able to sell %d of %d. Held %v, To Sell %v\n%s:%d", mod, amount, stock, stocks.StocksHeld, stocks.StocksToSell, fname, lnum)
+		t.Errorf("Expected to %sbe able to sell %d of %d. Held %v, To Sell %v\n%s:%d", mod, amount, stock, stocks.held, stocks.toSell, fname, lnum)
 	}
 }
 
-func expectInHeld(t *testing.T, stocks stockManager, expected map[uint32]uint32) {
-	expectInMap(t, expected, stocks.StocksHeld, "Held")
-}
-
-func expectInToSell(t *testing.T, stocks stockManager, expected map[uint32]uint32) {
-	expectInMap(t, expected, stocks.StocksToSell, "To sell")
-}
-
-func expectInMap(t *testing.T, expected map[uint32]uint32, actual map[string]uint32, mod string) {
-	for eStock, eAmount := range expected {
-		aStock := strconv.Itoa(int(eStock))
-		aAmount := actual[aStock]
+func expectInMap(t *testing.T, expected, actual map[uint32]uint32) {
+	for stock, eAmount := range expected {
+		aAmount := actual[stock]
 		if aAmount != eAmount {
-			_, fname, lnum, _ := runtime.Caller(2)
-			t.Errorf("%s expected (stock %d: amount %d) but found (stock %s: amount %d)\n%s:%d", mod, eStock, eAmount, aStock, aAmount, fname, lnum)
+			_, fname, lnum, _ := runtime.Caller(1)
+			t.Errorf("Expected (stock %d: amount %d) but found (stock %d: amount %d)\n%s:%d", stock, eAmount, stock, aAmount, fname, lnum)
 		}
 	}
-	for aStock, aAmount := range actual {
-		eStock, err := strconv.Atoi(aStock)
-		if err != nil {
-			_, fname, lnum, _ := runtime.Caller(2)
-			t.Errorf("%s stock %s illegal\n%s:%d", mod, aStock, fname, lnum)
-		}
-		_, ok := expected[uint32(eStock)]
+	for stock, aAmount := range actual {
+		_, ok := expected[stock]
 		if !ok {
-			_, fname, lnum, _ := runtime.Caller(2)
-			t.Errorf("%s (stock %d: amount %d) was not expected\n%s:%d", mod, eStock, aAmount, fname, lnum)
+			_, fname, lnum, _ := runtime.Caller(1)
+			t.Errorf("(stock %d: amount %d) was not expected\n%s:%d", stock, aAmount, fname, lnum)
 		}
 	}
 }

@@ -72,10 +72,15 @@ func reader(ws *websocket.Conn, traderId uint32, orders chan<- *msg.Message) {
 	}
 }
 
-func writer(ws *websocket.Conn, traderId uint32, responses chan []byte) {
+func writer(ws *websocket.Conn, traderId uint32, responses chan *client.Response) {
 	defer ws.Close()
-	for bytes := range responses {
-		if _, err := ws.Write(bytes); err != nil {
+	for r := range responses {
+		b, err := json.Marshal(r)
+		if err != nil {
+			logError(traderId, err)
+			return
+		}
+		if _, err = ws.Write(b); err != nil {
 			logError(traderId, err)
 			return
 		}

@@ -11,11 +11,11 @@ const randRuns = 20
 func TestNewBalanceManager(t *testing.T) {
 	balance := uint64(100)
 	bm := newBalanceManager(balance)
-	if bm.Current != balance {
-		t.Errorf("Expecting %d current balance, found %d", balance, bm.Current)
+	if bm.current != balance {
+		t.Errorf("Expecting %d current balance, found %d", balance, bm.current)
 	}
-	if bm.Available != balance {
-		t.Errorf("Expecting %d current balance, found %d", balance, bm.Available)
+	if bm.available != balance {
+		t.Errorf("Expecting %d current balance, found %d", balance, bm.available)
 	}
 }
 
@@ -292,17 +292,17 @@ func expectCanBuy(t *testing.T, bm balanceManager, price, amount int, canBuy boo
 	}
 	if canBuy != bm.canBuy(uint64(price), uint32(amount)) {
 		_, fname, lnum, _ := runtime.Caller(2)
-		t.Errorf("Expected to %sbe able to buy %d stock(s) at %d. Current: %d, Available: %d\n%s:%d", mod, amount, price, bm.Current, bm.Available, fname, lnum)
+		t.Errorf("Expected to %sbe able to buy %d stock(s) at %d. Current: %d, Available: %d\n%s:%d", mod, amount, price, bm.current, bm.available, fname, lnum)
 	}
 }
 
 func expectBalance(t *testing.T, bm balanceManager, available, current int) {
-	if uint64(available) != bm.Available {
+	if uint64(available) != bm.available {
 		_, fname, lnum, _ := runtime.Caller(1)
-		t.Errorf("Expected available %d, found %d\n%s:%d", available, bm.Available, fname, lnum)
+		t.Errorf("Expected available %d, found %d\n%s:%d", available, bm.available, fname, lnum)
 	}
-	if uint64(current) != bm.Current {
+	if uint64(current) != bm.current {
 		_, fname, lnum, _ := runtime.Caller(1)
-		t.Errorf("Expected current %d, found %d\n%s:%d", current, bm.Current, fname, lnum)
+		t.Errorf("Expected current %d, found %d\n%s:%d", current, bm.current, fname, lnum)
 	}
 }

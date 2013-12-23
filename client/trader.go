@@ -1,8 +1,8 @@
 package client
 
 import (
-	"encoding/json"
 	"github.com/fmstephe/matching_engine/msg"
+	"strconv"
 )
 
 const (
@@ -28,8 +28,7 @@ type trader struct {
 	outstanding []msg.Message
 	// Communication with external system, e.g. a websocket connection
 	orders    chan *msg.Message
-	// TODO - we really need to deep copy into a &ressponse{} and send that instead
-	responses chan []byte // serialised &response{} structs
+	responses chan *Response
 	// Communication with internal trader server
 	intoSvr   chan *msg.Message
 	outOfSvr  chan *msg.Message
@@ -95,19 +94,31 @@ func (t *trader) disconnect(comment string) {
 func (t *trader) sendResponse(m *msg.Message, accepted bool, comment string) {
 	if t.responses != nil {
 		r := t.makeResponse(m, accepted, comment)
-		b, err := json.Marshal(r)
-		if err != nil {
-			// TODO what should we send to responses if we had a marshalling error?
-			println("Marshalling Error: ", err.Error())
-		}
-		t.responses <- b
+		t.responses <- r
 	}
 }
 
-func (t *trader) makeResponse(m *msg.Message, accepted bool, comment string) *response {
+func (t *trader) makeResponse(m *msg.Message, accepted bool, comment string) *Response {
 	rm := receivedMessage{Message: *m, Accepted: accepted}
-	s := traderState{Balance: t.balance, Stocks: t.stocks, Outstanding: t.outstanding}
-	return &response{State: s, Received: rm, Comment: comment}
+	current := t.balance.current
+	available := t.balance.available
+	held := mapToJson(t.stocks.held)
+	toSell := mapToJson(t.stocks.toSell)
+	os := make([]msg.Message, len(t.outstanding))
+	copy(os, t.outstanding)
+	s := traderState{CurrentBalance: current, AvailableBalance: available, StocksHeld: held, StocksToSell: toSell, Outstanding: os}
+	return &Response{State: s, Received: rm, Comment: comment}
+}
+
+// TODO this is the wrong place for this - we need to move this whole state out of the trader struct and into the managers
+// then we can reconsider how to copy across the trader's state into the *Response struct
+func mapToJson(in map[uint32]uint32) map[string]uint32 {
+	out := make(map[string]uint32)
+	for k, v := range in {
+		ks := strconv.Itoa(int(k))
+		out[ks] = v
+	}
+	return out
 }
 
 // TODO we should separate this processing into some kind of trader state object.

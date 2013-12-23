@@ -9,14 +9,16 @@ type receivedMessage struct {
 	Message  msg.Message `json:"message"`
 }
 
-type response struct {
+type Response struct {
 	State    traderState     `json:"state"`
 	Received receivedMessage `json:"received"`
 	Comment  string          `json:"comment"`
 }
 
 type traderState struct {
-	Balance     balanceManager `json:"balance"`
-	Stocks      stockManager   `json:"stocks"`
-	Outstanding []msg.Message  `json:"outstanding"`
+	CurrentBalance   uint64            `json:"currentBalance"`
+	AvailableBalance uint64            `json:"availableBalance"`
+	StocksHeld       map[string]uint32 `json:"stocksHeld"`
+	StocksToSell     map[string]uint32 `json:"stocksToSell"`
+	Outstanding      []msg.Message     `json:"outstanding"`
 }

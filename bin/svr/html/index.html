@@ -63,10 +63,10 @@ function displayMessage() {
 	}
 	$("msgs").innerHTML = msgsInner;
 	$("receivedMessage").innerHTML = "Received Message: " + readableReceived(lastMessage.received);
-	$("curBal").innerHTML = "Current Balance: " + lastMessage.state.balance.current;
-	$("availBal").innerHTML = "Available Balance: " + lastMessage.state.balance.available;
-	$("stocksHeld").innerHTML = "Stocks Held: " + JSON.stringify(lastMessage.state.stocks.stocksHeld);
-	$("stocksToSell").innerHTML = "Stocks To Sell: " + JSON.stringify(lastMessage.state.stocks.stocksToSell);
+	$("curBal").innerHTML = "Current Balance: " + lastMessage.state.currentBalance;
+	$("availBal").innerHTML = "Available Balance: " + lastMessage.state.availableBalance;
+	$("stocksHeld").innerHTML = "Stocks Held: " + JSON.stringify(lastMessage.state.stocksHeld);
+	$("stocksToSell").innerHTML = "Stocks To Sell: " + JSON.stringify(lastMessage.state.stocksToSell);
 }
 
 function readableReceived(received) {

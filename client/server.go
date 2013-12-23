@@ -9,7 +9,7 @@ import (
 type connect struct {
 	traderId  uint32
 	orders    chan *msg.Message
-	responses chan []byte
+	responses chan *Response
 }
 
 type traderComm struct {
@@ -102,16 +102,16 @@ type TraderMaker struct {
 	connecter chan connect
 }
 
-func (tm *TraderMaker) Make(traderId uint32) (orders chan *msg.Message, responses chan []byte) {
+func (tm *TraderMaker) Make(traderId uint32) (orders chan *msg.Message, responses chan *Response) {
 	m := &msg.Message{}
 	m.WriteNewTrader(traderId)
 	tm.intoSvr <- m // Register this user
 	return tm.Connect(traderId)
 }
 
-func (tm *TraderMaker) Connect(traderId uint32) (orders chan *msg.Message, responses chan []byte) {
+func (tm *TraderMaker) Connect(traderId uint32) (orders chan *msg.Message, responses chan *Response) {
 	orders = make(chan *msg.Message)
-	responses = make(chan []byte)
+	responses = make(chan *Response)
 	con := connect{traderId: traderId, orders: orders, responses: responses}
 	tm.connecter <- con
 	return orders, responses
