@@ -60,10 +60,10 @@ const (
 type Message struct {
 	Kind     MsgKind `json:"kind"`
 	Price    uint64  `json:"price"`
-	Amount   uint32  `json:"amount"` // TODO this should be uint64
+	Amount   uint64  `json:"amount"`
+	StockId  uint64  `json:"stockId"`
 	TraderId uint32  `json:"traderId"`
 	TradeId  uint32  `json:"tradeId"`
-	StockId  uint32  `json:"stockId"`
 }
 
 const (

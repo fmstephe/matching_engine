@@ -9,12 +9,12 @@ import (
 
 type M struct {
 	coordinator.AppMsgHelper
-	matchQueues map[uint32]*pqueue.MatchQueues
+	matchQueues map[uint64]*pqueue.MatchQueues
 	slab        *pqueue.Slab
 }
 
 func NewMatcher(slabSize int) *M {
-	matchQueues := make(map[uint32]*pqueue.MatchQueues)
+	matchQueues := make(map[uint64]*pqueue.MatchQueues)
 	slab := pqueue.NewSlab(slabSize)
 	return &M{matchQueues: matchQueues, slab: slab}
 }
@@ -43,7 +43,7 @@ func (m *M) Run() {
 	}
 }
 
-func (m *M) getMatchQueues(stockId uint32) *pqueue.MatchQueues {
+func (m *M) getMatchQueues(stockId uint64) *pqueue.MatchQueues {
 	q := m.matchQueues[stockId]
 	if q == nil {
 		q = &pqueue.MatchQueues{}
@@ -165,7 +165,7 @@ func price(bPrice, sPrice uint64) uint64 {
 	return sPrice + (d / 2)
 }
 
-func completeTrade(out chan<- *msg.Message, brk, srk msg.MsgKind, b, s *pqueue.OrderNode, price uint64, amount uint32) {
+func completeTrade(out chan<- *msg.Message, brk, srk msg.MsgKind, b, s *pqueue.OrderNode, price, amount uint64) {
 	br := &msg.Message{Kind: brk, Price: price, Amount: amount, TraderId: b.TraderId(), TradeId: b.TradeId(), StockId: b.StockId()}
 	sr := &msg.Message{Kind: srk, Price: price, Amount: amount, TraderId: s.TraderId(), TradeId: s.TradeId(), StockId: s.StockId()}
 	out <- br

@@ -20,8 +20,8 @@ func TestNewBalanceManager(t *testing.T) {
 }
 
 func TestCanBuySimple(t *testing.T) {
-	balance := 100
-	bm := newBalanceManager(uint64(balance))
+	balance := uint64(100)
+	bm := newBalanceManager(balance)
 	// Can Buy
 	canBuy(t, bm, 1, 1)
 	canBuy(t, bm, 1, balance)
@@ -56,16 +56,16 @@ func TestCanBuySimple(t *testing.T) {
 }
 
 func TestCanBuy(t *testing.T) {
-	balance := 100
-	bm := newBalanceManager(uint64(balance))
+	balance := uint64(100)
+	bm := newBalanceManager(balance)
 	// If the (stocks * price) <= bm.Balance then we can buy
-	for stocks := 1; stocks <= balance; stocks++ {
-		for price := 1; price <= balance/stocks; price++ {
+	for stocks := uint64(1); stocks <= balance; stocks++ {
+		for price := uint64(1); price <= balance/stocks; price++ {
 			canBuy(t, bm, price, stocks)
 		}
 	}
 	// If the (stocks * price) > bm.Balance then we can't buy
-	for stocks := 1; stocks <= balance; stocks++ {
+	for stocks := uint64(1); stocks <= balance; stocks++ {
 		initPrice := (balance / stocks) + 1
 		for price := initPrice; price <= initPrice*5; price++ {
 			cannotBuy(t, bm, price, stocks)
@@ -74,10 +74,10 @@ func TestCanBuy(t *testing.T) {
 }
 
 func TestCanBuyAfterSubmitBuySimple(t *testing.T) {
-	balance := 100
+	balance := uint64(100)
 	price := uint64(5)
-	amount := uint32(5)
-	bm := newBalanceManager(uint64(balance))
+	amount := uint64(5)
+	bm := newBalanceManager(balance)
 	cannotBuy(t, bm, 101, 1)
 	canBuy(t, bm, 100, 1)
 	canBuy(t, bm, 5, 5)
@@ -137,15 +137,15 @@ func TestCanBuyAfterSubmitBuyRandom(t *testing.T) {
 }
 
 func testCanBuyAfterSubmitBuyRandom(t *testing.T, r *rand.Rand) {
-	balance := 100
-	bm := newBalanceManager(uint64(balance))
-	total := 0
-	for i := 0; i < 20; i++ {
+	balance := uint64(100)
+	bm := newBalanceManager(balance)
+	total := uint64(0)
+	for i := uint64(0); i < 20; i++ {
 		price, amount := makePriceAmount(balance/20, 5, r)
 		if (total + price*amount) <= balance {
 			total += price * amount
 			canBuy(t, bm, price, amount)
-			bm.submitBuy(uint64(price), uint32(amount))
+			bm.submitBuy(price, amount)
 			expectBalance(t, bm, balance-total, balance)
 		} else {
 			cannotBuy(t, bm, price, amount)
@@ -162,20 +162,20 @@ func TestBuyAndCancelRandom(t *testing.T) {
 }
 
 func testBuyAndCancelRandom(t *testing.T, r *rand.Rand) {
-	balance := 100
-	bm := newBalanceManager(uint64(balance))
+	balance := uint64(100)
+	bm := newBalanceManager(balance)
 	for j := 0; j < 20; j++ {
-		prices := make([]int, 0)
-		amounts := make([]int, 0)
-		total := 0
-		for i := 0; i < 20; i++ {
+		prices := make([]uint64, 0)
+		amounts := make([]uint64, 0)
+		total := uint64(0)
+		for i := uint64(0); i < 20; i++ {
 			price, amount := makePriceAmount(balance/20, 5, r)
 			if (total + price*amount) <= balance {
 				prices = append(prices, price)
 				amounts = append(amounts, amount)
 				total += price * amount
 				canBuy(t, bm, price, amount)
-				bm.submitBuy(uint64(price), uint32(amount))
+				bm.submitBuy(price, amount)
 				expectBalance(t, bm, balance-total, balance)
 			} else {
 				cannotBuy(t, bm, price, amount)
@@ -186,17 +186,17 @@ func testBuyAndCancelRandom(t *testing.T, r *rand.Rand) {
 			price := prices[i]
 			amount := amounts[i]
 			total -= price * amount
-			bm.cancelBuy(uint64(price), uint32(amount))
+			bm.cancelBuy(price, amount)
 			expectBalance(t, bm, balance-total, balance)
 		}
 	}
 }
 
 func TestBuyAndCompleteBuySimple(t *testing.T) {
-	balance := 100
+	balance := uint64(100)
 	price := uint64(5)
-	amount := uint32(5)
-	bm := newBalanceManager(uint64(balance))
+	amount := uint64(5)
+	bm := newBalanceManager(balance)
 	bm.submitBuy(price, amount)
 	expectBalance(t, bm, 75, 100)
 	bm.completeBuy(price, price, amount)
@@ -220,33 +220,33 @@ func TestBuyAndCompleteBuySimple(t *testing.T) {
 }
 
 func TestBuyAndCompleteBuyDiff(t *testing.T) {
-	balance := 100
-	bm := newBalanceManager(uint64(balance))
+	balance := uint64(100)
+	bm := newBalanceManager(balance)
 	// Buy 10 * 5
-	bm.submitBuy(uint64(10), uint32(5))
+	bm.submitBuy(10, 5)
 	expectBalance(t, bm, 50, 100)
 	// Actual 9 * 5
-	bm.completeBuy(uint64(10), uint64(9), uint32(5))
+	bm.completeBuy(10, 9, 5)
 	expectBalance(t, bm, 55, 55)
 	// Buy 5 * 1
-	bm.submitBuy(uint64(5), uint32(1))
+	bm.submitBuy(5, 1)
 	expectBalance(t, bm, 50, 55)
 	// Actual 4 * 1
-	bm.completeBuy(uint64(5), uint64(4), uint32(1))
+	bm.completeBuy(5, 4, 1)
 	expectBalance(t, bm, 51, 51)
 	// Buy 5 * 10
-	bm.submitBuy(uint64(5), uint32(10))
+	bm.submitBuy(5, 10)
 	expectBalance(t, bm, 1, 51)
 	// Actual 3 * 10
-	bm.completeBuy(uint64(5), uint64(3), uint32(10))
+	bm.completeBuy(5, 3, 10)
 	expectBalance(t, bm, 21, 21)
 }
 
 func TestCompleteSellSimple(t *testing.T) {
-	balance := 100
+	balance := uint64(100)
 	price := uint64(5)
-	amount := uint32(5)
-	bm := newBalanceManager(uint64(balance))
+	amount := uint64(5)
+	bm := newBalanceManager(balance)
 	bm.completeSell(price, amount)
 	expectBalance(t, bm, 125, 125)
 	// 125
@@ -262,46 +262,48 @@ func TestCompleteSellSimple(t *testing.T) {
 }
 
 func testCompleteSellRandom(t *testing.T, r *rand.Rand) {
-	balance := 100
-	bm := newBalanceManager(uint64(balance))
-	total := 0
-	for i := 0; i < 20; i++ {
+	balance := uint64(100)
+	bm := newBalanceManager(balance)
+	total := uint64(0)
+	for i := uint64(0); i < 20; i++ {
 		price, amount := makePriceAmount(balance/20, 5, r)
 		total += price * amount
-		bm.completeSell(uint64(price), uint32(amount))
+		bm.completeSell(price, amount)
 		expectBalance(t, bm, balance+total, balance+total)
 	}
 }
 
-func makePriceAmount(priceCap, amountCap int, r *rand.Rand) (price, amount int) {
-	return int(r.Int63n(int64(priceCap-1))) + 1, int(r.Int63n(int64(amountCap-1)) + 1)
+func makePriceAmount(priceCap, amountCap uint64, r *rand.Rand) (uint64, uint64) {
+	price := uint64(r.Int63n(int64(priceCap-1))) + 1
+	amount := uint64(r.Int63n(int64(amountCap-1)) + 1)
+	return price, amount
 }
 
-func canBuy(t *testing.T, bm balanceManager, price, amount int) {
+func canBuy(t *testing.T, bm balanceManager, price, amount uint64) {
 	expectCanBuy(t, bm, price, amount, true)
 }
 
-func cannotBuy(t *testing.T, bm balanceManager, price, amount int) {
+func cannotBuy(t *testing.T, bm balanceManager, price, amount uint64) {
 	expectCanBuy(t, bm, price, amount, false)
 }
 
-func expectCanBuy(t *testing.T, bm balanceManager, price, amount int, canBuy bool) {
+func expectCanBuy(t *testing.T, bm balanceManager, price, amount uint64, canBuy bool) {
 	mod := ""
 	if !canBuy {
 		mod = "not "
 	}
-	if canBuy != bm.canBuy(uint64(price), uint32(amount)) {
+	if canBuy != bm.canBuy(price, amount) {
 		_, fname, lnum, _ := runtime.Caller(2)
 		t.Errorf("Expected to %sbe able to buy %d stock(s) at %d. Current: %d, Available: %d\n%s:%d", mod, amount, price, bm.current, bm.available, fname, lnum)
 	}
 }
 
-func expectBalance(t *testing.T, bm balanceManager, available, current int) {
-	if uint64(available) != bm.available {
+func expectBalance(t *testing.T, bm balanceManager, available, current uint64) {
+	if available != bm.available {
 		_, fname, lnum, _ := runtime.Caller(1)
 		t.Errorf("Expected available %d, found %d\n%s:%d", available, bm.available, fname, lnum)
 	}
-	if uint64(current) != bm.current {
+	if current != bm.current {
 		_, fname, lnum, _ := runtime.Caller(1)
 		t.Errorf("Expected current %d, found %d\n%s:%d", current, bm.current, fname, lnum)
 	}

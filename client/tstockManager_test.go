@@ -6,7 +6,7 @@ import (
 )
 
 func TestCanSell(t *testing.T) {
-	stocks := newStockManager(map[uint32]uint32{1: 1, 2: 2, 3: 3})
+	stocks := newStockManager(map[uint64]uint64{1: 1, 2: 2, 3: 3})
 	canSell(t, stocks, 1, 1)
 	canSell(t, stocks, 2, 1)
 	canSell(t, stocks, 2, 2)
@@ -16,7 +16,7 @@ func TestCanSell(t *testing.T) {
 }
 
 func TestCannotSellWhatYouDoNotHave(t *testing.T) {
-	stocks := newStockManager(map[uint32]uint32{1: 1, 2: 2, 3: 3})
+	stocks := newStockManager(map[uint64]uint64{1: 1, 2: 2, 3: 3})
 	cannotSell(t, stocks, 4, 1)
 	cannotSell(t, stocks, 5, 1)
 	cannotSell(t, stocks, 6, 1)
@@ -26,7 +26,7 @@ func TestCannotSellWhatYouDoNotHave(t *testing.T) {
 }
 
 func TestCannotSellMoreThanHeld(t *testing.T) {
-	stocks := newStockManager(map[uint32]uint32{1: 1, 2: 2, 3: 3})
+	stocks := newStockManager(map[uint64]uint64{1: 1, 2: 2, 3: 3})
 	cannotSell(t, stocks, 1, 2)
 	cannotSell(t, stocks, 1, 3)
 	cannotSell(t, stocks, 1, 4)
@@ -39,111 +39,111 @@ func TestCannotSellMoreThanHeld(t *testing.T) {
 }
 
 func TestSubmitSellCancel(t *testing.T) {
-	init := map[uint32]uint32{1: 1, 2: 7}
+	init := map[uint64]uint64{1: 1, 2: 7}
 	stocks := newStockManager(init)
 	// Initial state
 	canSell(t, stocks, 1, 1)
 	expectInMap(t, stocks.held, init)
-	expectInMap(t, stocks.toSell, map[uint32]uint32{})
+	expectInMap(t, stocks.toSell, map[uint64]uint64{})
 	// Submitted sell
-	stocks.submitSell(uint32(1), uint32(1))
-	expectInMap(t, stocks.held, map[uint32]uint32{1: 0, 2: 7})
-	expectInMap(t, stocks.toSell, map[uint32]uint32{1: 1})
+	stocks.submitSell(1, 1)
+	expectInMap(t, stocks.held, map[uint64]uint64{1: 0, 2: 7})
+	expectInMap(t, stocks.toSell, map[uint64]uint64{1: 1})
 	// Completed sell
-	stocks.cancelSell(uint32(1), uint32(1))
+	stocks.cancelSell(1, 1)
 	expectInMap(t, stocks.held, init)
-	expectInMap(t, stocks.toSell, map[uint32]uint32{})
+	expectInMap(t, stocks.toSell, map[uint64]uint64{})
 }
 
 func TestSubmitSellCancelPartialSell(t *testing.T) {
-	init := map[uint32]uint32{1: 1, 2: 7}
+	init := map[uint64]uint64{1: 1, 2: 7}
 	stocks := newStockManager(init)
 	// Initial state
 	canSell(t, stocks, 2, 5)
 	expectInMap(t, stocks.held, init)
-	expectInMap(t, stocks.toSell, map[uint32]uint32{})
+	expectInMap(t, stocks.toSell, map[uint64]uint64{})
 	// Submitted sell
-	stocks.submitSell(uint32(2), uint32(5))
-	expectInMap(t, stocks.held, map[uint32]uint32{1: 1, 2: 2})
-	expectInMap(t, stocks.toSell, map[uint32]uint32{2: 5})
+	stocks.submitSell(2, 5)
+	expectInMap(t, stocks.held, map[uint64]uint64{1: 1, 2: 2})
+	expectInMap(t, stocks.toSell, map[uint64]uint64{2: 5})
 	// Completed sell
-	stocks.cancelSell(uint32(2), uint32(5))
+	stocks.cancelSell(2, 5)
 	expectInMap(t, stocks.held, init)
-	expectInMap(t, stocks.toSell, map[uint32]uint32{})
+	expectInMap(t, stocks.toSell, map[uint64]uint64{})
 }
 
 func TestSubmitSellComplete(t *testing.T) {
-	init := map[uint32]uint32{1: 1, 2: 7}
+	init := map[uint64]uint64{1: 1, 2: 7}
 	stocks := newStockManager(init)
 	// Initial state
 	canSell(t, stocks, 1, 1)
 	expectInMap(t, stocks.held, init)
-	expectInMap(t, stocks.toSell, map[uint32]uint32{})
+	expectInMap(t, stocks.toSell, map[uint64]uint64{})
 	// Submitted sell
-	stocks.submitSell(uint32(1), uint32(1))
-	expectInMap(t, stocks.held, map[uint32]uint32{1: 0, 2: 7})
-	expectInMap(t, stocks.toSell, map[uint32]uint32{1: 1})
+	stocks.submitSell(1, 1)
+	expectInMap(t, stocks.held, map[uint64]uint64{1: 0, 2: 7})
+	expectInMap(t, stocks.toSell, map[uint64]uint64{1: 1})
 	// Completed sell
-	stocks.completeSell(uint32(1), uint32(1))
-	expectInMap(t, stocks.held, map[uint32]uint32{2: 7})
-	expectInMap(t, stocks.toSell, map[uint32]uint32{})
+	stocks.completeSell(1, 1)
+	expectInMap(t, stocks.held, map[uint64]uint64{2: 7})
+	expectInMap(t, stocks.toSell, map[uint64]uint64{})
 }
 
 func TestSubmitSellCompletePartialSell(t *testing.T) {
-	init := map[uint32]uint32{1: 1, 2: 7}
+	init := map[uint64]uint64{1: 1, 2: 7}
 	stocks := newStockManager(init)
 	// Initial state
 	canSell(t, stocks, 2, 5)
 	expectInMap(t, stocks.held, init)
-	expectInMap(t, stocks.toSell, map[uint32]uint32{})
+	expectInMap(t, stocks.toSell, map[uint64]uint64{})
 	// Submitted sell
-	stocks.submitSell(uint32(2), uint32(5))
-	expectInMap(t, stocks.held, map[uint32]uint32{1: 1, 2: 2})
-	expectInMap(t, stocks.toSell, map[uint32]uint32{2: 5})
+	stocks.submitSell(2, 5)
+	expectInMap(t, stocks.held, map[uint64]uint64{1: 1, 2: 2})
+	expectInMap(t, stocks.toSell, map[uint64]uint64{2: 5})
 	// Completed sell
-	stocks.completeSell(uint32(2), uint32(5))
-	expectInMap(t, stocks.held, map[uint32]uint32{1: 1, 2: 2})
-	expectInMap(t, stocks.toSell, map[uint32]uint32{})
+	stocks.completeSell(2, 5)
+	expectInMap(t, stocks.held, map[uint64]uint64{1: 1, 2: 2})
+	expectInMap(t, stocks.toSell, map[uint64]uint64{})
 }
 
 func TestCompleteBuyNewStock(t *testing.T) {
-	init := map[uint32]uint32{1: 1, 2: 7}
+	init := map[uint64]uint64{1: 1, 2: 7}
 	stocks := newStockManager(init)
 	// Complete buy
 	stocks.completeBuy(3, 4)
-	expectInMap(t, stocks.held, map[uint32]uint32{1: 1, 2: 7, 3: 4})
-	expectInMap(t, stocks.toSell, map[uint32]uint32{})
+	expectInMap(t, stocks.held, map[uint64]uint64{1: 1, 2: 7, 3: 4})
+	expectInMap(t, stocks.toSell, map[uint64]uint64{})
 }
 
 func TestCompleteBuyOwnedStock(t *testing.T) {
-	init := map[uint32]uint32{1: 1, 2: 7}
+	init := map[uint64]uint64{1: 1, 2: 7}
 	stocks := newStockManager(init)
 	// Complete buy
 	stocks.completeBuy(1, 4)
-	expectInMap(t, stocks.held, map[uint32]uint32{1: 5, 2: 7})
-	expectInMap(t, stocks.toSell, map[uint32]uint32{})
+	expectInMap(t, stocks.held, map[uint64]uint64{1: 5, 2: 7})
+	expectInMap(t, stocks.toSell, map[uint64]uint64{})
 }
 
-func canSell(t *testing.T, stocks stockManager, stock, amount int) {
+func canSell(t *testing.T, stocks stockManager, stock, amount uint64) {
 	expectCanSell(t, stocks, stock, amount, true)
 }
 
-func cannotSell(t *testing.T, stocks stockManager, stock, amount int) {
+func cannotSell(t *testing.T, stocks stockManager, stock, amount uint64) {
 	expectCanSell(t, stocks, stock, amount, false)
 }
 
-func expectCanSell(t *testing.T, stocks stockManager, stock, amount int, canSell bool) {
+func expectCanSell(t *testing.T, stocks stockManager, stock, amount uint64, canSell bool) {
 	mod := ""
 	if !canSell {
 		mod = "not "
 	}
-	if canSell != stocks.canSell(uint32(stock), uint32(amount)) {
+	if canSell != stocks.canSell(stock, amount) {
 		_, fname, lnum, _ := runtime.Caller(2)
 		t.Errorf("Expected to %sbe able to sell %d of %d. Held %v, To Sell %v\n%s:%d", mod, amount, stock, stocks.held, stocks.toSell, fname, lnum)
 	}
 }
 
-func expectInMap(t *testing.T, expected, actual map[uint32]uint32) {
+func expectInMap(t *testing.T, expected, actual map[uint64]uint64) {
 	for stock, eAmount := range expected {
 		aAmount := actual[stock]
 		if aAmount != eAmount {

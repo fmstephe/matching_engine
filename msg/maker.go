@@ -64,15 +64,15 @@ func (mm *MessageMaker) ValRangeFlat(n int, low, high uint64) []uint64 {
 	return vals
 }
 
-func (mm *MessageMaker) MkBuys(prices []uint64, stockId uint32) []Message {
+func (mm *MessageMaker) MkBuys(prices []uint64, stockId uint64) []Message {
 	return mm.MkOrders(prices, stockId, BUY)
 }
 
-func (mm *MessageMaker) MkSells(prices []uint64, stockId uint32) []Message {
+func (mm *MessageMaker) MkSells(prices []uint64, stockId uint64) []Message {
 	return mm.MkOrders(prices, stockId, SELL)
 }
 
-func (mm *MessageMaker) MkOrders(prices []uint64, stockId uint32, kind MsgKind) []Message {
+func (mm *MessageMaker) MkOrders(prices []uint64, stockId uint64, kind MsgKind) []Message {
 	msgs := make([]Message, len(prices))
 	for i, price := range prices {
 		mm.traderId++

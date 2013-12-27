@@ -118,5 +118,5 @@ func mkData(useful []string) (m *msg.Message, err error) {
 	if err != nil {
 		return nil, err
 	}
-	return &msg.Message{Price: uint64(price), Amount: uint32(amount), TraderId: uint32(traderId), TradeId: uint32(tradeId), StockId: uint32(1)}, nil
+	return &msg.Message{Price: uint64(price), Amount: uint64(amount), TraderId: uint32(traderId), TradeId: uint32(tradeId), StockId: uint64(1)}, nil
 }

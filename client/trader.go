@@ -16,8 +16,8 @@ const (
 const initialBalance = 100
 
 // Temporary function while we are creating new traders when a connection is established
-func initialStocks() map[uint32]uint32 {
-	return map[uint32]uint32{1: 10, 2: 10, 3: 10}
+func initialStocks() map[uint64]uint64 {
+	return map[uint64]uint64{1: 10, 2: 10, 3: 10}
 }
 
 type trader struct {
@@ -112,10 +112,10 @@ func (t *trader) makeResponse(m *msg.Message, accepted bool, comment string) *Re
 
 // TODO this is the wrong place for this - we need to move this whole state out of the trader struct and into the managers
 // then we can reconsider how to copy across the trader's state into the *Response struct
-func mapToJson(in map[uint32]uint32) map[string]uint32 {
-	out := make(map[string]uint32)
+func mapToJson(in map[uint64]uint64) map[string]uint64 {
+	out := make(map[string]uint64)
 	for k, v := range in {
-		ks := strconv.Itoa(int(k))
+		ks := strconv.FormatUint(k, 10)
 		out[ks] = v
 	}
 	return out

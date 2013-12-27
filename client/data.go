@@ -18,7 +18,7 @@ type Response struct {
 type traderState struct {
 	CurrentBalance   uint64            `json:"currentBalance"`
 	AvailableBalance uint64            `json:"availableBalance"`
-	StocksHeld       map[string]uint32 `json:"stocksHeld"`
-	StocksToSell     map[string]uint32 `json:"stocksToSell"`
+	StocksHeld       map[string]uint64 `json:"stocksHeld"`
+	StocksToSell     map[string]uint64 `json:"stocksToSell"`
 	Outstanding      []msg.Message     `json:"outstanding"`
 }

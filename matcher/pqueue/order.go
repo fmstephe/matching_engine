@@ -10,8 +10,8 @@ import (
 type OrderNode struct {
 	priceNode node
 	guidNode  node
-	amount    uint32
-	stockId   uint32
+	amount    uint64
+	stockId   uint64
 	kind      msg.MsgKind
 	nextFree  *OrderNode
 }
@@ -53,15 +53,15 @@ func (o *OrderNode) TradeId() uint32 {
 	return ints.Low32(o.guidNode.val)
 }
 
-func (o *OrderNode) Amount() uint32 {
+func (o *OrderNode) Amount() uint64 {
 	return o.amount
 }
 
-func (o *OrderNode) ReduceAmount(s uint32) {
+func (o *OrderNode) ReduceAmount(s uint64) {
 	o.amount -= s
 }
 
-func (o *OrderNode) StockId() uint32 {
+func (o *OrderNode) StockId() uint64 {
 	return o.stockId
 }
 

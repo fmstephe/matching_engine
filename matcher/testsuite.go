@@ -332,14 +332,14 @@ func testThreeBuysMatchedToOneSell(t *testing.T, mkr MatchTesterMaker) {
 	mt.Expect(t, es3)
 }
 
-func addLowBuys(t *testing.T, mt MatchTester, highestPrice uint64, stockId uint32) {
+func addLowBuys(t *testing.T, mt MatchTester, highestPrice uint64, stockId uint64) {
 	buys := suiteMaker.MkBuys(suiteMaker.ValRangeFlat(10, 1, highestPrice), stockId)
 	for i := range buys {
 		mt.Send(t, &buys[i])
 	}
 }
 
-func addHighSells(t *testing.T, mt MatchTester, lowestPrice uint64, stockId uint32) {
+func addHighSells(t *testing.T, mt MatchTester, lowestPrice uint64, stockId uint64) {
 	sells := suiteMaker.MkSells(suiteMaker.ValRangeFlat(10, lowestPrice, lowestPrice+10000), stockId)
 	for i := range sells {
 		mt.Send(t, &sells[i])
