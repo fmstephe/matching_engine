@@ -6,7 +6,7 @@ import (
 	"unsafe"
 )
 
-type MsgKind byte
+type MsgKind uint64
 
 const (
 	NO_KIND       = MsgKind(iota)
@@ -20,7 +20,7 @@ const (
 	REJECTED      = MsgKind(iota)
 	SHUTDOWN      = MsgKind(iota)
 	NEW_TRADER    = MsgKind(iota)
-	NUM_OF_KIND   = int32(iota)
+	NUM_OF_KIND   = int(iota)
 )
 
 func (k MsgKind) String() string {
@@ -96,6 +96,11 @@ func (m *Message) WriteCancelFor(om *Message) {
 	*m = *om
 	m.Kind = CANCEL
 }
+
+// TODO the WriteTo and WriteFrom methods are not sufficient for marshalling/unmarshalling
+// messages between separate applications. This is because different compilers may pack or
+// pad the Message struct differently producing incompatible []byte representations.
+// TODO we need to implement an unambiguous []byte marshalling system for Message structs
 
 func (m *Message) WriteTo(b []byte) {
 	p := unsafe.Pointer(m)
