@@ -5,7 +5,7 @@ import (
 )
 
 func messageBuffer() []byte {
-	return make([]byte, byteSize)
+	return make([]byte, ByteSize)
 }
 
 func TestMarshallDoesNotDestroyMesssage(t *testing.T) {
@@ -13,7 +13,7 @@ func TestMarshallDoesNotDestroyMesssage(t *testing.T) {
 	m1 := &Message{}
 	*m1 = *ref
 	b := messageBuffer()
-	if err := Marshal(b, m1); err != nil {
+	if err := m1.Marshal(b); err != nil {
 		t.Errorf("Unexpected marshalling error %s", err.Error())
 	}
 	if *m1 != *ref {
@@ -24,11 +24,11 @@ func TestMarshallDoesNotDestroyMesssage(t *testing.T) {
 func TestMarshallUnMarshalPairsProducesSameMessage(t *testing.T) {
 	m1 := &Message{Kind: 1, Price: 2, Amount: 3, StockId: 4, TraderId: 5, TradeId: 6}
 	b := messageBuffer()
-	if err := Marshal(b, m1); err != nil {
+	if err := m1.Marshal(b); err != nil {
 		t.Errorf("Unexpected marshalling error %s", err.Error())
 	}
 	m2 := &Message{}
-	if err := Unmarshal(b, m2); err != nil {
+	if err := m2.Unmarshal(b); err != nil {
 		t.Errorf("Unexpected unmarshalling error %s", err.Error())
 	}
 	if *m2 != *m1 {
@@ -38,32 +38,32 @@ func TestMarshallUnMarshalPairsProducesSameMessage(t *testing.T) {
 
 func TestMarshalWithSmallBufferErrors(t *testing.T) {
 	m1 := &Message{Kind: 1, Price: 2, Amount: 3, StockId: 4, TraderId: 5, TradeId: 6}
-	b := make([]byte, byteSize-1)
-	if err := Marshal(b, m1); err == nil {
+	b := make([]byte, ByteSize-1)
+	if err := m1.Marshal(b); err == nil {
 		t.Error("Expected marshalling error. Found none")
 	}
 }
 
 func TestMarshalWithLargeBufferErrors(t *testing.T) {
 	m1 := &Message{Kind: 1, Price: 2, Amount: 3, StockId: 4, TraderId: 5, TradeId: 6}
-	b := make([]byte, byteSize+1)
-	if err := Marshal(b, m1); err == nil {
+	b := make([]byte, ByteSize+1)
+	if err := m1.Marshal(b); err == nil {
 		t.Error("Expected marshalling error. Found none")
 	}
 }
 
 func TestUnmarshalWithSmallBufferErrors(t *testing.T) {
 	m1 := &Message{}
-	b := make([]byte, byteSize-1)
-	if err := Unmarshal(b, m1); err == nil {
+	b := make([]byte, ByteSize-1)
+	if err := m1.Unmarshal(b); err == nil {
 		t.Error("Expected marshalling error. Found none")
 	}
 }
 
 func TestUnmarshalWithLargeBufferErrors(t *testing.T) {
 	m1 := &Message{}
-	b := make([]byte, byteSize+1)
-	if err := Unmarshal(b, m1); err == nil {
+	b := make([]byte, ByteSize+1)
+	if err := m1.Unmarshal(b); err == nil {
 		t.Error("Expected marshalling error. Found none")
 	}
 }

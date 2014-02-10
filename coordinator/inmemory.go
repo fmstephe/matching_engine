@@ -46,14 +46,16 @@ func (l *inMemoryListener) Run() {
 }
 
 func (l *inMemoryListener) deserialise() *msg.Message {
-	b := make([]byte, msg.SizeofMessage)
+	b := make([]byte, msg.ByteSize)
 	m := &msg.Message{}
 	n, err := l.reader.Read(b)
-	m.WriteFrom(b[:n])
 	if err != nil {
 		panic("Listener - UDP Read: " + err.Error())
-	} else if n != msg.SizeofMessage {
-		panic(fmt.Sprintf("Listener: Error incorrect number of bytes. Expecting %d, found %d in %v", msg.SizeofMessage, n, b))
+	} else if n != msg.ByteSize {
+		panic(fmt.Sprintf("Listener: Error incorrect number of bytes. Expecting %d, found %d in %v", msg.ByteSize, n, b))
+	}
+	if err := m.Unmarshal(b[:n]); err != nil {
+		panic(err.Error())
 	}
 	return m
 }
@@ -94,14 +96,16 @@ func (r *inMemoryResponder) Run() {
 }
 
 func (r *inMemoryResponder) write(m *msg.Message) {
-	b := make([]byte, msg.SizeofMessage)
-	m.WriteTo(b)
+	b := make([]byte, msg.ByteSize)
+	if err := m.Marshal(b); err != nil {
+		panic(err.Error())
+	}
 	n, err := r.writer.Write(b)
 	if err != nil {
 		panic(err.Error())
 	}
-	if n != msg.SizeofMessage {
-		panic(fmt.Sprintf("Write Error: Wrong sized message. Found %d, expecting %d", n, msg.SizeofMessage))
+	if n != msg.ByteSize {
+		panic(fmt.Sprintf("Write Error: Wrong sized message. Found %d, expecting %d", n, msg.ByteSize))
 	}
 }
 

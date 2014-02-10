@@ -97,11 +97,6 @@ func (m *Message) WriteCancelFor(om *Message) {
 	m.Kind = CANCEL
 }
 
-// TODO the WriteTo and WriteFrom methods are not sufficient for marshalling/unmarshalling
-// messages between separate applications. This is because different compilers may pack or
-// pad the Message struct differently producing incompatible []byte representations.
-// TODO we need to implement an unambiguous []byte marshalling system for Message structs
-
 func (m *Message) WriteTo(b []byte) {
 	p := unsafe.Pointer(m)
 	mb := (*([SizeofMessage]byte))(p)[:]

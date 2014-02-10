@@ -115,6 +115,15 @@ func (rm *RMessage) WriteAckFor(orm *RMessage) {
 	rm.direction = OUT
 }
 
+// TODO write marshal unmarshal methods here
+
+//
+// TODO
+// unsafe casting is innapropriate for a binary format, especially
+// one intended to work across the network.
+// Should replicate the work done in the msg.Un/Marshal functions
+//
+
 func (rm *RMessage) WriteTo(b []byte) {
 	p := unsafe.Pointer(rm)
 	mb := (*([SizeofRMessage]byte))(p)[:]
