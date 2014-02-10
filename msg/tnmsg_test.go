@@ -5,7 +5,7 @@ import (
 )
 
 func messageBuffer() []byte {
-	return make([]byte, binarySize)
+	return make([]byte, byteSize)
 }
 
 func TestMarshallDoesNotDestroyMesssage(t *testing.T) {
@@ -38,7 +38,7 @@ func TestMarshallUnMarshalPairsProducesSameMessage(t *testing.T) {
 
 func TestMarshalWithSmallBufferErrors(t *testing.T) {
 	m1 := &Message{Kind: 1, Price: 2, Amount: 3, StockId: 4, TraderId: 5, TradeId: 6}
-	b := make([]byte, binarySize-1)
+	b := make([]byte, byteSize-1)
 	if err := Marshal(b, m1); err == nil {
 		t.Error("Expected marshalling error. Found none")
 	}
@@ -46,7 +46,7 @@ func TestMarshalWithSmallBufferErrors(t *testing.T) {
 
 func TestMarshalWithLargeBufferErrors(t *testing.T) {
 	m1 := &Message{Kind: 1, Price: 2, Amount: 3, StockId: 4, TraderId: 5, TradeId: 6}
-	b := make([]byte, binarySize+1)
+	b := make([]byte, byteSize+1)
 	if err := Marshal(b, m1); err == nil {
 		t.Error("Expected marshalling error. Found none")
 	}
@@ -54,7 +54,7 @@ func TestMarshalWithLargeBufferErrors(t *testing.T) {
 
 func TestUnmarshalWithSmallBufferErrors(t *testing.T) {
 	m1 := &Message{}
-	b := make([]byte, binarySize-1)
+	b := make([]byte, byteSize-1)
 	if err := Unmarshal(b, m1); err == nil {
 		t.Error("Expected marshalling error. Found none")
 	}
@@ -62,7 +62,7 @@ func TestUnmarshalWithSmallBufferErrors(t *testing.T) {
 
 func TestUnmarshalWithLargeBufferErrors(t *testing.T) {
 	m1 := &Message{}
-	b := make([]byte, binarySize+1)
+	b := make([]byte, byteSize+1)
 	if err := Unmarshal(b, m1); err == nil {
 		t.Error("Expected marshalling error. Found none")
 	}
