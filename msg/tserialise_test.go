@@ -16,9 +16,7 @@ func TestMarshallDoesNotDestroyMesssage(t *testing.T) {
 	if err := m1.Marshal(b); err != nil {
 		t.Errorf("Unexpected marshalling error %s", err.Error())
 	}
-	if *m1 != *ref {
-		t.Errorf("Expected to find %v, found %v instead. Marshalled from %v", ref, m1, b)
-	}
+	assertEquivalent(t, ref, m1, b)
 }
 
 func TestMarshallUnMarshalPairsProducesSameMessage(t *testing.T) {
@@ -31,8 +29,12 @@ func TestMarshallUnMarshalPairsProducesSameMessage(t *testing.T) {
 	if err := m2.Unmarshal(b); err != nil {
 		t.Errorf("Unexpected unmarshalling error %s", err.Error())
 	}
-	if *m2 != *m1 {
-		t.Errorf("Expected to find %v, found %v instead. Marshalled from %v", m1, m2, b)
+	assertEquivalent(t, m1, m2, b)
+}
+
+func assertEquivalent(t *testing.T, exp, fnd *Message, b []byte) {
+	if *fnd != *exp {
+		t.Errorf("\nExpected to find %v\nfound %v\nMarshalled from %v", exp, fnd, b)
 	}
 }
 

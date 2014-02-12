@@ -3,7 +3,6 @@ package coordinator
 import (
 	"fmt"
 	"github.com/fmstephe/matching_engine/msg"
-	"unsafe"
 )
 
 type MsgStatus byte
@@ -79,19 +78,15 @@ func (r MsgRoute) String() string {
 
 // Flat description of an incoming message
 type RMessage struct {
+	// Body
+	message msg.Message
 	// Headers
 	status    MsgStatus
 	direction MsgDirection
 	route     MsgRoute
 	originId  uint32
 	msgId     uint32
-	// Body
-	message msg.Message
 }
-
-const (
-	SizeofRMessage = int(unsafe.Sizeof(RMessage{}))
-)
 
 func (rm *RMessage) Valid() bool {
 	// A message must always have a direction
@@ -113,27 +108,6 @@ func (rm *RMessage) WriteAckFor(orm *RMessage) {
 	*rm = *orm
 	rm.route = ACK
 	rm.direction = OUT
-}
-
-// TODO write marshal unmarshal methods here
-
-//
-// TODO
-// unsafe casting is innapropriate for a binary format, especially
-// one intended to work across the network.
-// Should replicate the work done in the msg.Un/Marshal functions
-//
-
-func (rm *RMessage) WriteTo(b []byte) {
-	p := unsafe.Pointer(rm)
-	mb := (*([SizeofRMessage]byte))(p)[:]
-	copy(b, mb)
-}
-
-func (rm *RMessage) WriteFrom(b []byte) {
-	p := unsafe.Pointer(rm)
-	mb := (*([SizeofRMessage]byte))(p)[:]
-	copy(mb, b)
 }
 
 func (rm *RMessage) String() string {

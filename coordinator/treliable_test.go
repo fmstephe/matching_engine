@@ -17,7 +17,7 @@ func newChanWriter(out chan *RMessage) *chanWriter {
 
 func (c chanWriter) Write(b []byte) (int, error) {
 	r := &RMessage{}
-	r.WriteFrom(b)
+	r.Unmarshal(b)
 	c.out <- r
 	return len(b), nil
 }
@@ -42,19 +42,19 @@ func TestAppMsgWrittenOut(t *testing.T) {
 	m := &Message{Kind: BUY, TraderId: 1, TradeId: 1, StockId: 1, Price: 1, Amount: 1}
 	rm := &RMessage{route: APP, direction: IN, originId: 1, msgId: 1, message: *m}
 	fromApp <- m
-	validateR(t, <-out, rm, 1)
+	validateRMsg(t, <-out, rm, 1)
 	m1 := &Message{Kind: SELL, TraderId: 2, TradeId: 2, StockId: 2, Price: 2, Amount: 2}
 	rm1 := &RMessage{route: APP, direction: IN, originId: 1, msgId: 2, message: *m1}
 	fromApp <- m1
-	validateR(t, <-out, rm1, 1)
+	validateRMsg(t, <-out, rm1, 1)
 	m2 := &Message{Kind: PARTIAL, TraderId: 3, TradeId: 3, StockId: 3, Price: 3, Amount: 3}
 	rm2 := &RMessage{route: APP, direction: IN, originId: 1, msgId: 3, message: *m2}
 	fromApp <- m2
-	validateR(t, <-out, rm2, 1)
+	validateRMsg(t, <-out, rm2, 1)
 	m3 := &Message{Kind: FULL, TraderId: 4, TradeId: 4, StockId: 4, Price: 4, Amount: 4}
 	rm3 := &RMessage{route: APP, direction: IN, originId: 1, msgId: 4, message: *m3}
 	fromApp <- m3
-	validateR(t, <-out, rm3, 1)
+	validateRMsg(t, <-out, rm3, 1)
 }
 
 func TestOutAckWrittenOut(t *testing.T) {
@@ -66,7 +66,7 @@ func TestOutAckWrittenOut(t *testing.T) {
 	rm.originId = 1
 	rm.msgId = 1
 	fromListener <- a
-	validateR(t, <-out, rm, 1)
+	validateRMsg(t, <-out, rm, 1)
 	a1 := &RMessage{route: ACK, direction: OUT, originId: 2, msgId: 11, message: Message{Kind: BUY, TraderId: 2, TradeId: 2, StockId: 2, Price: 2, Amount: 2}}
 	rm1 := &RMessage{}
 	*rm1 = *a1
@@ -74,7 +74,7 @@ func TestOutAckWrittenOut(t *testing.T) {
 	rm1.originId = 1
 	rm1.msgId = 2
 	fromListener <- a1
-	validateR(t, <-out, rm1, 1)
+	validateRMsg(t, <-out, rm1, 1)
 	a2 := &RMessage{route: ACK, direction: OUT, originId: 3, msgId: 12, message: Message{Kind: BUY, TraderId: 3, TradeId: 3, StockId: 3, Price: 3, Amount: 3}}
 	rm2 := &RMessage{}
 	*rm2 = *a2
@@ -82,7 +82,7 @@ func TestOutAckWrittenOut(t *testing.T) {
 	rm2.originId = 1
 	rm2.msgId = 3
 	fromListener <- a2
-	validateR(t, <-out, rm2, 1)
+	validateRMsg(t, <-out, rm2, 1)
 	a3 := &RMessage{route: ACK, direction: OUT, originId: 4, msgId: 13, message: Message{Kind: BUY, TraderId: 4, TradeId: 4, StockId: 4, Price: 4, Amount: 4}}
 	rm3 := &RMessage{}
 	*rm3 = *a3
@@ -90,7 +90,7 @@ func TestOutAckWrittenOut(t *testing.T) {
 	rm3.originId = 1
 	rm3.msgId = 4
 	fromListener <- a3
-	validateR(t, <-out, rm3, 1)
+	validateRMsg(t, <-out, rm3, 1)
 }
 
 // Two response messages with the same traderId/tradeId should both be resent (until acked)
@@ -224,8 +224,8 @@ type chanReader struct {
 }
 
 func newChanReader(in chan *RMessage, shouldErr bool, writeN int) *chanReader {
-	if writeN > SizeofRMessage || writeN < 0 {
-		writeN = SizeofRMessage
+	if writeN > rmsgByteSize || writeN < 0 {
+		writeN = rmsgByteSize
 	}
 	return &chanReader{in: in, shouldErr: shouldErr, writeN: writeN}
 }
@@ -233,7 +233,7 @@ func newChanReader(in chan *RMessage, shouldErr bool, writeN int) *chanReader {
 func (r *chanReader) Read(b []byte) (int, error) {
 	bb := b[:r.writeN]
 	m := <-r.in
-	m.WriteTo(bb)
+	m.Marshal(bb)
 	if r.shouldErr {
 		return len(bb), errors.New("fake error")
 	}
@@ -256,7 +256,7 @@ func startMockedListener(shouldErr bool, writeN int) (in chan *RMessage, outApp 
 }
 
 func TestSmallReadError(t *testing.T) {
-	in, outApp, outResponder := startMockedListener(false, SizeofRMessage-1)
+	in, outApp, outResponder := startMockedListener(false, rmsgByteSize-1)
 	m := &RMessage{route: APP, direction: IN, originId: 1, msgId: 1, message: Message{Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}}
 	in <- m
 	// Expected server ack
@@ -266,12 +266,12 @@ func TestSmallReadError(t *testing.T) {
 	// Expected response
 	r := &Message{}
 	*r = m.message
-	validateR(t, <-outResponder, a, 1)
-	validate(t, <-outApp, r, 1)
+	validateRMsg(t, <-outResponder, a, 1)
+	validateMsg(t, <-outApp, r, 1)
 }
 
 func TestReadError(t *testing.T) {
-	in, outApp, outResponder := startMockedListener(true, SizeofRMessage)
+	in, outApp, outResponder := startMockedListener(true, rmsgByteSize)
 	m := &RMessage{route: APP, direction: IN, originId: 1, msgId: 1, message: Message{Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}}
 	in <- m
 	// Expected server ack
@@ -281,12 +281,12 @@ func TestReadError(t *testing.T) {
 	// Expected response
 	r := &Message{}
 	*r = m.message
-	validateR(t, <-outResponder, a, 1)
-	validate(t, <-outApp, r, 1)
+	validateRMsg(t, <-outResponder, a, 1)
+	validateMsg(t, <-outApp, r, 1)
 }
 
 func TestDuplicate(t *testing.T) {
-	in, outApp, outResponder := startMockedListener(false, SizeofRMessage)
+	in, outApp, outResponder := startMockedListener(false, rmsgByteSize)
 	m := &RMessage{route: APP, direction: IN, originId: 1, msgId: 1, message: Message{Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}}
 	in <- m
 	in <- m
@@ -297,9 +297,9 @@ func TestDuplicate(t *testing.T) {
 	am := &Message{}
 	*am = m.message
 	// Expect an ack for both messages but the message is only forwarded on once
-	validateR(t, <-outResponder, a, 1)
-	validate(t, <-outApp, am, 1)
-	validateR(t, <-outResponder, a, 1)
+	validateRMsg(t, <-outResponder, a, 1)
+	validateMsg(t, <-outApp, am, 1)
+	validateRMsg(t, <-outResponder, a, 1)
 	m2 := &RMessage{route: APP, direction: IN, originId: 1, msgId: 2, message: Message{Kind: SELL, Price: 7, Amount: 1, TraderId: 2, TradeId: 1, StockId: 1}}
 	in <- m2
 	// Expected server ack 2
@@ -309,21 +309,21 @@ func TestDuplicate(t *testing.T) {
 	am2 := &Message{}
 	*am2 = m2.message
 	// An ack for m2 and m2 (but nothing relating to m)
-	validateR(t, <-outResponder, a2, 1)
-	validate(t, <-outApp, am2, 1)
+	validateRMsg(t, <-outResponder, a2, 1)
+	validateMsg(t, <-outApp, am2, 1)
 }
 
 // Test ACK sent in, twice, expect ACK both times
 func TestDuplicateAck(t *testing.T) {
-	in, _, outResponder := startMockedListener(false, SizeofRMessage)
+	in, _, outResponder := startMockedListener(false, rmsgByteSize)
 	m := &RMessage{route: ACK, direction: IN, originId: 1, msgId: 1, message: Message{Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}}
 	in <- m
 	in <- m
 	in <- m
 	// Expect the ack to be passed through both times
-	validateR(t, <-outResponder, m, 1)
-	validateR(t, <-outResponder, m, 1)
-	validateR(t, <-outResponder, m, 1)
+	validateRMsg(t, <-outResponder, m, 1)
+	validateRMsg(t, <-outResponder, m, 1)
+	validateRMsg(t, <-outResponder, m, 1)
 }
 
 func TestOrdersAckedSentAndDeduped(t *testing.T) {
@@ -351,7 +351,7 @@ func TestOrdersAckedSentAndDeduped(t *testing.T) {
 }
 
 func sendThriceAckMsgAckAck(t *testing.T, m *RMessage) {
-	in, outApp, outResponder := startMockedListener(false, SizeofRMessage)
+	in, outApp, outResponder := startMockedListener(false, rmsgByteSize)
 	in <- m
 	in <- m
 	in <- m
@@ -361,20 +361,20 @@ func sendThriceAckMsgAckAck(t *testing.T, m *RMessage) {
 	// App
 	am := &Message{}
 	*am = m.message
-	validateR(t, <-outResponder, a, 2)
-	validate(t, <-outApp, am, 2)
-	validateR(t, <-outResponder, a, 2)
-	validateR(t, <-outResponder, a, 2)
+	validateRMsg(t, <-outResponder, a, 2)
+	validateMsg(t, <-outApp, am, 2)
+	validateRMsg(t, <-outResponder, a, 2)
+	validateRMsg(t, <-outResponder, a, 2)
 }
 
-func validate(t *testing.T, m, e *Message, stackOffset int) {
+func validateMsg(t *testing.T, m, e *Message, stackOffset int) {
 	if *m != *e {
 		_, fname, lnum, _ := runtime.Caller(stackOffset)
 		t.Errorf("\nExpecting: %v\nFound:     %v \n%s:%d", e, m, fname, lnum)
 	}
 }
 
-func validateR(t *testing.T, m, e *RMessage, stackOffset int) {
+func validateRMsg(t *testing.T, m, e *RMessage, stackOffset int) {
 	if *m != *e {
 		_, fname, lnum, _ := runtime.Caller(stackOffset)
 		t.Errorf("\nExpecting: %v\nFound:     %v \n%s:%d", e, m, fname, lnum)

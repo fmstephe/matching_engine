@@ -97,18 +97,6 @@ func (m *Message) WriteCancelFor(om *Message) {
 	m.Kind = CANCEL
 }
 
-func (m *Message) WriteTo(b []byte) {
-	p := unsafe.Pointer(m)
-	mb := (*([SizeofMessage]byte))(p)[:]
-	copy(b, mb)
-}
-
-func (m *Message) WriteFrom(b []byte) {
-	p := unsafe.Pointer(m)
-	mb := (*([SizeofMessage]byte))(p)[:]
-	copy(mb, b)
-}
-
 func (m *Message) String() string {
 	if m == nil {
 		return "<nil>"

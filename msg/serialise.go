@@ -28,7 +28,7 @@ func (m *Message) Marshal(b []byte) error {
 	binCoder.PutUint64(b[amountOffset:stockIdOffset], uint64(m.Amount))
 	binCoder.PutUint64(b[stockIdOffset:traderIdOffset], uint64(m.StockId))
 	binCoder.PutUint32(b[traderIdOffset:tradeIdOffset], uint32(m.TraderId))
-	binCoder.PutUint32(b[tradeIdOffset:ByteSize], uint32(m.TradeId))
+	binCoder.PutUint32(b[tradeIdOffset:], uint32(m.TradeId))
 	return nil
 }
 
@@ -42,6 +42,6 @@ func (m *Message) Unmarshal(b []byte) error {
 	m.Amount = binCoder.Uint64(b[amountOffset:stockIdOffset])
 	m.StockId = binCoder.Uint64(b[stockIdOffset:traderIdOffset])
 	m.TraderId = binCoder.Uint32(b[traderIdOffset:tradeIdOffset])
-	m.TradeId = binCoder.Uint32(b[tradeIdOffset:ByteSize])
+	m.TradeId = binCoder.Uint32(b[tradeIdOffset:])
 	return nil
 }

@@ -56,16 +56,16 @@ func (l *reliableListener) Run() {
 }
 
 func (l *reliableListener) deserialise() *RMessage {
-	b := make([]byte, SizeofRMessage)
+	b := make([]byte, rmsgByteSize)
 	rm := &RMessage{}
 	n, err := l.reader.Read(b)
-	rm.WriteFrom(b[:n])
+	rm.Unmarshal(b[:n])
 	if err != nil {
 		rm.status = READ_ERROR
 		l.logErr("Listener - UDP Read: " + err.Error())
-	} else if n != SizeofRMessage {
+	} else if n != rmsgByteSize {
 		rm.status = SMALL_READ_ERROR
-		l.logErr(fmt.Sprintf("Listener: Error incorrect number of bytes. Expecting %d, found %d in %v", SizeofRMessage, n, b))
+		l.logErr(fmt.Sprintf("Listener: Error incorrect number of bytes. Expecting %d, found %d in %v", rmsgByteSize, n, b))
 	}
 	return rm
 }
@@ -190,22 +190,23 @@ func (r *reliableResponder) resend() {
 }
 
 func (r *reliableResponder) write(rm *RMessage) {
-	b := make([]byte, SizeofRMessage)
-	rm.WriteTo(b)
+	b := make([]byte, rmsgByteSize)
+	rm.Marshal(b)
 	n, err := r.writer.Write(b)
 	if err != nil {
 		r.handleError(rm, err, WRITE_ERROR)
 	}
-	if n != SizeofRMessage {
+	if n != rmsgByteSize {
 		r.handleError(rm, err, SMALL_WRITE_ERROR)
 	}
 }
 
 func (r *reliableResponder) handleError(rm *RMessage, err error, s MsgStatus) {
-	em := &RMessage{}
-	*em = *rm
-	em.status = s
-	println(rm.String(), err.Error())
+	var errMsg string
+	if err != nil {
+		errMsg = err.Error()
+	}
+	println(rm.String(), errMsg)
 	if e, ok := err.(net.Error); ok && !e.Temporary() {
 		os.Exit(1)
 	}
