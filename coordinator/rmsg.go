@@ -5,6 +5,7 @@ import (
 	"github.com/fmstephe/matching_engine/msg"
 )
 
+// TODO this can probably be removed. If we log all reads but don't pass the malformed ones into the application then this is redundant.
 type MsgStatus byte
 
 const (

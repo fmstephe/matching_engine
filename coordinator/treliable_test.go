@@ -2,6 +2,7 @@ package coordinator
 
 import (
 	"errors"
+	"fmt"
 	. "github.com/fmstephe/matching_engine/msg"
 	"runtime"
 	"testing"
@@ -218,37 +219,57 @@ func allOfIn(t *testing.T, first, second []*RMessage) {
 }
 
 type chanReader struct {
-	in        chan *RMessage
-	shouldErr bool
-	writeN    int
+	in         chan *RMessage
+	readErrors []bool
+	readSizes  []int
 }
 
-func newChanReader(in chan *RMessage, shouldErr bool, writeN int) *chanReader {
-	if writeN > rmsgByteSize || writeN < 0 {
-		writeN = rmsgByteSize
-	}
-	return &chanReader{in: in, shouldErr: shouldErr, writeN: writeN}
+func newChanReader(in chan *RMessage, readErrors []bool, readSizes []int) *chanReader {
+	return &chanReader{in: in, readErrors: readErrors, readSizes: readSizes}
 }
 
 func (r *chanReader) Read(b []byte) (int, error) {
-	bb := b[:r.writeN]
+	bb := b[:r.readSize()]
 	m := <-r.in
 	m.Marshal(bb)
-	if r.shouldErr {
-		return len(bb), errors.New("fake error")
+	if r.readError() {
+		return 0, errors.New("fake error")
 	}
 	return len(bb), nil
+}
+
+func (r *chanReader) readSize() int {
+	var bytes = r.readSizes[0]
+	if len(r.readSizes) > 1 {
+		r.readSizes = r.readSizes[1:]
+	}
+	if bytes > rmsgByteSize || bytes < 0 {
+		panic(fmt.Sprintf("Illegal readSizes value (%d). Must be between 0 and %d", bytes, rmsgByteSize))
+	}
+	return bytes
+}
+
+func (r *chanReader) readError() bool {
+	var err = r.readErrors[0]
+	if len(r.readErrors) > 1 {
+		r.readErrors = r.readErrors[1:]
+	}
+	return err
 }
 
 func (r *chanReader) Close() error {
 	return nil
 }
 
-func startMockedListener(shouldErr bool, writeN int) (in chan *RMessage, outApp chan *Message, outResponder chan *RMessage) {
+func startMockedListener() (in chan *RMessage, outApp chan *Message, outResponder chan *RMessage) {
+	return startMockedListenerFaulty([]bool{false}, []int{rmsgByteSize})
+}
+
+func startMockedListenerFaulty(shouldErr []bool, readN []int) (in chan *RMessage, outApp chan *Message, outResponder chan *RMessage) {
 	in = make(chan *RMessage, 100)
 	outApp = make(chan *Message, 100)
 	outResponder = make(chan *RMessage, 100)
-	r := newChanReader(in, shouldErr, writeN)
+	r := newChanReader(in, shouldErr, readN)
 	originId := uint32(1)
 	l := newReliableListener(r, outApp, outResponder, "Mocked Listener", originId, false)
 	go l.Run()
@@ -256,37 +277,39 @@ func startMockedListener(shouldErr bool, writeN int) (in chan *RMessage, outApp 
 }
 
 func TestSmallReadError(t *testing.T) {
-	in, outApp, outResponder := startMockedListener(false, rmsgByteSize-1)
-	m := &RMessage{route: APP, direction: IN, originId: 1, msgId: 1, message: Message{Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}}
-	in <- m
-	// Expected server ack
+	in, outApp, outResponder := startMockedListenerFaulty([]bool{false}, []int{rmsgByteSize - 1, rmsgByteSize})
+	rmSmall := &RMessage{route: APP, direction: IN, originId: 1, msgId: 1, message: Message{Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}}
+	rm := &RMessage{route: APP, direction: IN, originId: 1, msgId: 2, message: Message{Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 2, StockId: 1}}
+	in <- rmSmall
+	in <- rm
+	// Expected server ack only for rm
 	a := &RMessage{}
-	a.WriteAckFor(m)
-	a.status = SMALL_READ_ERROR
-	// Expected response
-	r := &Message{}
-	*r = m.message
+	a.WriteAckFor(rm)
+	// Expect app to receive rm.message
+	m := &Message{}
+	*m = rm.message
 	validateRMsg(t, <-outResponder, a, 1)
-	validateMsg(t, <-outApp, r, 1)
+	validateMsg(t, <-outApp, m, 1)
 }
 
 func TestReadError(t *testing.T) {
-	in, outApp, outResponder := startMockedListener(true, rmsgByteSize)
-	m := &RMessage{route: APP, direction: IN, originId: 1, msgId: 1, message: Message{Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}}
-	in <- m
-	// Expected server ack
+	in, outApp, outResponder := startMockedListenerFaulty([]bool{true, false}, []int{rmsgByteSize})
+	rmBroken := &RMessage{route: APP, direction: IN, originId: 1, msgId: 1, message: Message{Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}}
+	rm := &RMessage{route: APP, direction: IN, originId: 1, msgId: 2, message: Message{Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 2, StockId: 1}}
+	in <- rmBroken
+	in <- rm
+	// Expected server ack only for rm
 	a := &RMessage{}
-	a.WriteAckFor(m)
-	a.status = READ_ERROR
-	// Expected response
-	r := &Message{}
-	*r = m.message
+	a.WriteAckFor(rm)
+	// Expect app to receive rm.message
+	m := &Message{}
+	*m = rm.message
 	validateRMsg(t, <-outResponder, a, 1)
-	validateMsg(t, <-outApp, r, 1)
+	validateMsg(t, <-outApp, m, 1)
 }
 
 func TestDuplicate(t *testing.T) {
-	in, outApp, outResponder := startMockedListener(false, rmsgByteSize)
+	in, outApp, outResponder := startMockedListener()
 	m := &RMessage{route: APP, direction: IN, originId: 1, msgId: 1, message: Message{Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}}
 	in <- m
 	in <- m
@@ -315,7 +338,7 @@ func TestDuplicate(t *testing.T) {
 
 // Test ACK sent in, twice, expect ACK both times
 func TestDuplicateAck(t *testing.T) {
-	in, _, outResponder := startMockedListener(false, rmsgByteSize)
+	in, _, outResponder := startMockedListener()
 	m := &RMessage{route: ACK, direction: IN, originId: 1, msgId: 1, message: Message{Kind: SELL, Price: 7, Amount: 1, TraderId: 1, TradeId: 1, StockId: 1}}
 	in <- m
 	in <- m
@@ -351,7 +374,7 @@ func TestOrdersAckedSentAndDeduped(t *testing.T) {
 }
 
 func sendThriceAckMsgAckAck(t *testing.T, m *RMessage) {
-	in, outApp, outResponder := startMockedListener(false, rmsgByteSize)
+	in, outApp, outResponder := startMockedListener()
 	in <- m
 	in <- m
 	in <- m
@@ -367,6 +390,10 @@ func sendThriceAckMsgAckAck(t *testing.T, m *RMessage) {
 	validateRMsg(t, <-outResponder, a, 2)
 }
 
+func TestBadNetwork(t *testing.T) {
+	testBadNetwork(t, 0.5, Reliable)
+}
+
 func validateMsg(t *testing.T, m, e *Message, stackOffset int) {
 	if *m != *e {
 		_, fname, lnum, _ := runtime.Caller(stackOffset)
@@ -379,8 +406,4 @@ func validateRMsg(t *testing.T, m, e *RMessage, stackOffset int) {
 		_, fname, lnum, _ := runtime.Caller(stackOffset)
 		t.Errorf("\nExpecting: %v\nFound:     %v \n%s:%d", e, m, fname, lnum)
 	}
-}
-
-func TestBadNetwork(t *testing.T) {
-	testBadNetwork(t, 0.5, Reliable)
 }

@@ -46,7 +46,11 @@ func newReliableListener(reader io.ReadCloser, toApp chan *msg.Message, toRespon
 func (l *reliableListener) Run() {
 	defer l.shutdown()
 	for {
-		rm := l.deserialise()
+		rm, err := l.deserialise()
+		if err != nil {
+			l.logErr("Listener - " + err.Error())
+			continue
+		}
 		shutdown := rm.message.Kind == msg.SHUTDOWN
 		l.forward(rm)
 		if shutdown {
@@ -55,19 +59,18 @@ func (l *reliableListener) Run() {
 	}
 }
 
-func (l *reliableListener) deserialise() *RMessage {
+func (l *reliableListener) deserialise() (*RMessage, error) {
 	b := make([]byte, rmsgByteSize)
 	rm := &RMessage{}
 	n, err := l.reader.Read(b)
-	rm.Unmarshal(b[:n])
 	if err != nil {
-		rm.status = READ_ERROR
-		l.logErr("Listener - UDP Read: " + err.Error())
-	} else if n != rmsgByteSize {
-		rm.status = SMALL_READ_ERROR
-		l.logErr(fmt.Sprintf("Listener: Error incorrect number of bytes. Expecting %d, found %d in %v", rmsgByteSize, n, b))
+		return nil, err
 	}
-	return rm
+	err = rm.Unmarshal(b[:n])
+	if err != nil {
+		return nil, err
+	}
+	return rm, nil
 }
 
 func (l *reliableListener) logErr(errStr string) {
