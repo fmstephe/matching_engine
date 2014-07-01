@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"github.com/fmstephe/fstrconv"
+	"github.com/fmstephe/flib/fstrconv"
 	"github.com/fmstephe/matching_engine/matcher"
 	"github.com/fmstephe/matching_engine/msg"
 	"log"
@@ -32,7 +32,7 @@ func main() {
 func doPerf(log bool) {
 	flag.Parse()
 	orderData := getData()
-	orderCount := fstrconv.Itoa64Comma(int64(len(orderData)))
+	orderCount := fstrconv.ItoaComma(int64(len(orderData)))
 	if log {
 		println(orderCount, "OrderNodes Built")
 	}
@@ -51,10 +51,10 @@ func doPerf(log bool) {
 	if log {
 		println("Buffer Writes: ", len(out))
 		total := time.Now().UnixNano() - start
-		println("Nanos\t", fstrconv.Itoa64Comma(total))
-		println("Micros\t", fstrconv.Itoa64Comma(total/1000))
-		println("Millis\t", fstrconv.Itoa64Comma(total/(1000*1000)))
-		println("Seconds\t", fstrconv.Itoa64Comma(total/(1000*1000*1000)))
+		println("Nanos\t", fstrconv.ItoaComma(total))
+		println("Micros\t", fstrconv.ItoaComma(total/1000))
+		println("Millis\t", fstrconv.ItoaComma(total/(1000*1000)))
+		println("Seconds\t", fstrconv.ItoaComma(total/(1000*1000*1000)))
 	}
 }
 

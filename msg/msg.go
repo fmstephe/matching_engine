@@ -2,7 +2,7 @@ package msg
 
 import (
 	"fmt"
-	"github.com/fmstephe/fstrconv"
+	"github.com/fmstephe/flib/fstrconv"
 	"unsafe"
 )
 
@@ -101,10 +101,10 @@ func (m *Message) String() string {
 	if m == nil {
 		return "<nil>"
 	}
-	price := fstrconv.Itoa64Delim(int64(m.Price), ',')
-	amount := fstrconv.Itoa64Delim(int64(m.Amount), ',')
-	traderId := fstrconv.Itoa64Delim(int64(m.TraderId), ' ')
-	tradeId := fstrconv.Itoa64Delim(int64(m.TradeId), ' ')
-	stockId := fstrconv.Itoa64Delim(int64(m.StockId), ' ')
+	price := fstrconv.ItoaDelim(int64(m.Price), ',')
+	amount := fstrconv.ItoaDelim(int64(m.Amount), ',')
+	traderId := fstrconv.ItoaDelim(int64(m.TraderId), ' ')
+	tradeId := fstrconv.ItoaDelim(int64(m.TradeId), ' ')
+	stockId := fstrconv.ItoaDelim(int64(m.StockId), ' ')
 	return fmt.Sprintf("%v, price %s, amount %s, trader %s, trade %s, stock %s", m.Kind, price, amount, traderId, tradeId, stockId)
 }

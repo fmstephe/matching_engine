@@ -2,7 +2,7 @@ package pqueue
 
 import (
 	"fmt"
-	"github.com/fmstephe/fstrconv"
+	"github.com/fmstephe/flib/fstrconv"
 	"github.com/fmstephe/matching_engine/ints"
 	"github.com/fmstephe/matching_engine/msg"
 )
@@ -73,11 +73,11 @@ func (o *OrderNode) String() string {
 	if o == nil {
 		return "<nil>"
 	}
-	price := fstrconv.Itoa64Delim(int64(o.Price()), ',')
-	amount := fstrconv.Itoa64Delim(int64(o.Amount()), ',')
-	traderId := fstrconv.Itoa64Delim(int64(o.TraderId()), '-')
-	tradeId := fstrconv.Itoa64Delim(int64(o.TradeId()), '-')
-	stockId := fstrconv.Itoa64Delim(int64(o.StockId()), '-')
+	price := fstrconv.ItoaDelim(int64(o.Price()), ',')
+	amount := fstrconv.ItoaDelim(int64(o.Amount()), ',')
+	traderId := fstrconv.ItoaDelim(int64(o.TraderId()), '-')
+	tradeId := fstrconv.ItoaDelim(int64(o.TradeId()), '-')
+	stockId := fstrconv.ItoaDelim(int64(o.StockId()), '-')
 	kind := o.kind
 	return fmt.Sprintf("%v, price %s, amount %s, trader %s, trade %s, stock %s", kind, price, amount, traderId, tradeId, stockId)
 }
