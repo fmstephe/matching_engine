@@ -1,7 +1,9 @@
 package matcher
 
 import (
+	"unsafe"
 	"github.com/fmstephe/matching_engine/msg"
+	"github.com/fmstephe/flib/queues/spscq"
 	"runtime"
 	"testing"
 )
@@ -53,8 +55,8 @@ type testerMaker struct {
 }
 
 func (tm *testerMaker) Make() MatchTester {
-	in := make(chan *msg.Message, 30)
-	out := make(chan *msg.Message, 30)
+	in, _ := spscq.NewPointerQ(32, 0)
+	out, _ := spscq.NewPointerQ(32, 0)
 	m := NewMatcher(100)
 	m.Config("Matcher", in, out)
 	go m.Run()
@@ -62,17 +64,17 @@ func (tm *testerMaker) Make() MatchTester {
 }
 
 type localTester struct {
-	in  chan *msg.Message
-	out chan *msg.Message
+	in  *spscq.PointerQ
+	out *spscq.PointerQ
 }
 
 func (lt *localTester) Send(t *testing.T, m *msg.Message) {
-	lt.in <- m
+	lt.in.WriteSingleBlocking(unsafe.Pointer(m))
 }
 
 func (lt *localTester) Expect(t *testing.T, ref *msg.Message) {
 	var m *msg.Message
-	m = <-lt.out
+	m = (*msg.Message)(lt.out.ReadSingleBlocking())
 	if *ref != *m {
 		_, fname, lnum, _ := runtime.Caller(1)
 		t.Errorf("\nExpecting: %v\nFound:     %v\n%s:%d", ref, m, fname, lnum)
@@ -80,8 +82,9 @@ func (lt *localTester) Expect(t *testing.T, ref *msg.Message) {
 }
 
 func (lt *localTester) ExpectEmpty(t *testing.T, traderId uint32) {
-	if len(lt.out) != 0 {
-		t.Errorf("\nExpecting Empty:\nFound: %v", <-lt.out)
+	m := (*msg.Message)(lt.out.ReadSingleBlocking())
+	if m != nil {
+		t.Errorf("\nExpecting Empty:\nFound: %v", m)
 	}
 }
 

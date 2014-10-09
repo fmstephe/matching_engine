@@ -1,6 +1,8 @@
 package matcher
 
 import (
+	"unsafe"
+	"github.com/fmstephe/flib/queues/spscq"
 	"github.com/fmstephe/matching_engine/coordinator"
 	"github.com/fmstephe/matching_engine/msg"
 	"net"
@@ -34,29 +36,29 @@ func (tm *netwkTesterMaker) Make() MatchTester {
 	m := NewMatcher(100)
 	coordinator.InMemory(mkReadConn(serverPort), mkWriteConn(clientPort), m, matcherOrigin, "Matching Engine", false)
 	// Build client
-	receivedMsgs := make(chan *msg.Message, 1000)
-	toSendMsgs := make(chan *msg.Message, 1000)
+	receivedMsgs, _:= spscq.NewPointerQ(1024, 1000 * 1000)
+	toSendMsgs, _ := spscq.NewPointerQ(1024, 1000 * 1000)
 	c := newClient(receivedMsgs, toSendMsgs)
 	coordinator.InMemory(mkReadConn(clientPort), mkWriteConn(serverPort), c, clientOrigin, "Test Client    ", false)
 	return &netwkTester{receivedMsgs: receivedMsgs, toSendMsgs: toSendMsgs}
 }
 
 type netwkTester struct {
-	receivedMsgs chan *msg.Message
-	toSendMsgs   chan *msg.Message
+	receivedMsgs *spscq.PointerQ
+	toSendMsgs   *spscq.PointerQ
 }
 
 func (nt *netwkTester) Send(t *testing.T, m *msg.Message) {
-	nt.toSendMsgs <- m
+	nt.toSendMsgs.WriteSingleBlocking(unsafe.Pointer(m))
 }
 
 func (nt *netwkTester) Expect(t *testing.T, e *msg.Message) {
-	r := <-nt.receivedMsgs
+	r := (*msg.Message)(nt.receivedMsgs.ReadSingleBlocking())
 	validate(t, r, e, 2)
 }
 
 func (nt *netwkTester) ExpectOneOf(t *testing.T, es ...*msg.Message) {
-	r := <-nt.receivedMsgs
+	r := (*msg.Message)(nt.receivedMsgs.ReadSingleBlocking())
 	for _, e := range es {
 		if *e == *r {
 			return
@@ -68,32 +70,32 @@ func (nt *netwkTester) ExpectOneOf(t *testing.T, es ...*msg.Message) {
 func (nt *netwkTester) Cleanup(t *testing.T) {
 	m := &msg.Message{}
 	m.Kind = msg.SHUTDOWN
-	nt.toSendMsgs <- m
+	nt.toSendMsgs.WriteSingleBlocking(unsafe.Pointer(m))
 }
 
 type client struct {
 	coordinator.AppMsgHelper
-	receivedMsgs chan *msg.Message
-	toSendMsgs   chan *msg.Message
+	receivedMsgs *spscq.PointerQ
+	toSendMsgs   *spscq.PointerQ
 }
 
-func newClient(receivedMsgs, toSendMsgs chan *msg.Message) *client {
+func newClient(receivedMsgs, toSendMsgs *spscq.PointerQ) *client {
 	return &client{receivedMsgs: receivedMsgs, toSendMsgs: toSendMsgs}
 }
 
 func (c *client) Run() {
 	for {
-		select {
-		case m := <-c.In:
+		m := (*msg.Message)(c.In.ReadSingle())
+		if m != nil {
+			c.receivedMsgs.WriteSingleBlocking(unsafe.Pointer(m))
 			if m.Kind == msg.SHUTDOWN {
-				c.Out <- m
+				c.Out.WriteSingleBlocking(unsafe.Pointer(m))
 				return
 			}
-			if m != nil {
-				c.receivedMsgs <- m
-			}
-		case m := <-c.toSendMsgs:
-			c.Out <- m
+		}
+		m = (*msg.Message)(c.toSendMsgs.ReadSingle())
+		if m != nil {
+			c.Out.WriteSingleBlocking(unsafe.Pointer(m))
 		}
 	}
 }

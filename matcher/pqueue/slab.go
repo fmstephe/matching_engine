@@ -7,7 +7,7 @@ type Slab struct {
 	orders []OrderNode
 }
 
-func NewSlab(size int) *Slab {
+func NewSlab(size int64) *Slab {
 	s := &Slab{orders: make([]OrderNode, size)}
 	s.free = &s.orders[0]
 	prev := s.free

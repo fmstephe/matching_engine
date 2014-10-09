@@ -1,10 +1,12 @@
 package matcher
 
 import (
+	"unsafe"
 	"fmt"
 	"github.com/fmstephe/matching_engine/coordinator"
 	"github.com/fmstephe/matching_engine/matcher/pqueue"
 	"github.com/fmstephe/matching_engine/msg"
+	"github.com/fmstephe/flib/queues/spscq"
 )
 
 type M struct {
@@ -13,7 +15,7 @@ type M struct {
 	slab        *pqueue.Slab
 }
 
-func NewMatcher(slabSize int) *M {
+func NewMatcher(slabSize int64) *M {
 	matchQueues := make(map[uint64]*pqueue.MatchQueues)
 	slab := pqueue.NewSlab(slabSize)
 	return &M{matchQueues: matchQueues, slab: slab}
@@ -21,9 +23,9 @@ func NewMatcher(slabSize int) *M {
 
 func (m *M) Run() {
 	for {
-		o := <-m.In
+		o := (*msg.Message)(m.In.ReadSingleBlocking())
 		if o.Kind == msg.SHUTDOWN {
-			m.Out <- o
+			m.Out.WriteSingleBlocking(unsafe.Pointer(o))
 			return
 		}
 		if o != nil {
@@ -163,23 +165,23 @@ func price(bPrice, sPrice uint64) uint64 {
 	return sPrice + (d / 2)
 }
 
-func completeTrade(out chan<- *msg.Message, brk, srk msg.MsgKind, b, s *pqueue.OrderNode, price, amount uint64) {
+func completeTrade(out *spscq.PointerQ, brk, srk msg.MsgKind, b, s *pqueue.OrderNode, price, amount uint64) {
 	br := &msg.Message{Kind: brk, Price: price, Amount: amount, TraderId: b.TraderId(), TradeId: b.TradeId(), StockId: b.StockId()}
 	sr := &msg.Message{Kind: srk, Price: price, Amount: amount, TraderId: s.TraderId(), TradeId: s.TradeId(), StockId: s.StockId()}
-	out <- br
-	out <- sr
+	out.WriteSingleBlocking(unsafe.Pointer(br))
+	out.WriteSingleBlocking(unsafe.Pointer(sr))
 }
 
-func completeCancelled(out chan<- *msg.Message, c *pqueue.OrderNode) {
+func completeCancelled(out *spscq.PointerQ, c *pqueue.OrderNode) {
 	cm := &msg.Message{}
 	c.CopyTo(cm)
 	cm.Kind = msg.CANCELLED
-	out <- cm
+	out.WriteSingleBlocking(unsafe.Pointer(cm))
 }
 
-func completeNotCancelled(out chan<- *msg.Message, nc *pqueue.OrderNode) {
+func completeNotCancelled(out *spscq.PointerQ, nc *pqueue.OrderNode) {
 	ncm := &msg.Message{}
 	nc.CopyTo(ncm)
 	ncm.Kind = msg.NOT_CANCELLED
-	out <- ncm
+	out.WriteSingleBlocking(unsafe.Pointer(ncm))
 }

@@ -1,6 +1,7 @@
 package matcher
 
 import (
+	"unsafe"
 	"github.com/fmstephe/matching_engine/coordinator"
 	"github.com/fmstephe/matching_engine/matcher/pqueue"
 	"github.com/fmstephe/matching_engine/msg"
@@ -18,9 +19,12 @@ func newRefmatcher(lowPrice, highPrice uint64) *refmatcher {
 
 func (rm *refmatcher) Run() {
 	for {
-		m := <-rm.In
+		m := (*msg.Message)(rm.In.ReadSingleBlocking())
+		for m == nil {
+			m = (*msg.Message)(rm.In.ReadSingleBlocking())
+		}
 		if m.Kind == msg.SHUTDOWN {
-			rm.Out <- m
+			rm.Out.WriteSingleBlocking(unsafe.Pointer(m))
 			return
 		}
 		if m != nil {

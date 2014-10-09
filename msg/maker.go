@@ -82,7 +82,7 @@ func (mm *MessageMaker) MkOrders(prices []uint64, stockId uint64, kind MsgKind) 
 	return msgs
 }
 
-func (mm *MessageMaker) RndTradeSet(size, depth int, low, high uint64) ([]Message, error) {
+func (mm *MessageMaker) RndTradeSet(size, depth int64, low, high uint64) ([]Message, error) {
 	if depth > size {
 		return nil, errors.New(fmt.Sprintf("Size (%d) must be greater than or equal to (%d)", size, depth))
 	}
@@ -90,7 +90,7 @@ func (mm *MessageMaker) RndTradeSet(size, depth int, low, high uint64) ([]Messag
 	buys := make([]*Message, 0, size)
 	sells := make([]*Message, 0, size)
 	idx := 0
-	for i := 0; i < size+depth; i++ {
+	for i := int64(0); i < size+depth; i++ {
 		if i < size {
 			b := &orders[idx]
 			idx++

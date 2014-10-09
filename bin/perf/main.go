@@ -1,10 +1,12 @@
 package main
 
 import (
+	"unsafe"
 	"flag"
 	"github.com/fmstephe/flib/fstrconv"
 	"github.com/fmstephe/matching_engine/matcher"
 	"github.com/fmstephe/matching_engine/msg"
+	"github.com/fmstephe/flib/queues/spscq"
 	"log"
 	"math/rand"
 	"os"
@@ -19,8 +21,8 @@ const (
 var (
 	filePath   = flag.String("f", "", "Relative path to an ITCH file providing test data")
 	profile    = flag.String("p", "", "Write out a profile of this application, 'cpu' and 'mem' supported")
-	orderNum   = flag.Int("o", 100, "The number of orders to generate. Ignored if -f is provided")
-	delDelay   = flag.Int("d", 10, "The number of orders generated before we begin deleting existing orders")
+	orderNum   = flag.Int64("o", 1, "The number of orders to generate (in millions). Ignored if -f is provided")
+	delDelay   = flag.Int64("d", 10, "The number of orders generated before we begin deleting existing orders")
 	perfRand   = rand.New(rand.NewSource(1))
 	orderMaker = msg.NewMessageMaker(1)
 )
@@ -36,27 +38,46 @@ func doPerf(log bool) {
 	if log {
 		println(orderCount, "OrderNodes Built")
 	}
-	in := make(chan *msg.Message, len(orderData))
-	out := make(chan *msg.Message, len(orderData))
+	in, err := spscq.NewPointerQ(1024, 1000 * 1000)
+	if err != nil {
+		panic(err.Error())
+	}
+	out, err := spscq.NewPointerQ(1024, 1000 * 1000)
+	if err != nil {
+		panic(err.Error())
+	}
 	m := matcher.NewMatcher(*delDelay * 2)
 	m.Config("Perf Matcher", in, out)
 	go m.Run()
 	startProfile()
 	defer endProfile()
-	start := time.Now().UnixNano()
-	for i := range orderData {
-		in <- &orderData[i]
-	}
-	// TODO this is only testing how fast we can push messages into the matcher, not useful
-	if log {
-		println("Buffer Writes: ", len(out))
-		total := time.Now().UnixNano() - start
-		println("Nanos\t", fstrconv.ItoaComma(total))
-		println("Micros\t", fstrconv.ItoaComma(total/1000))
-		println("Millis\t", fstrconv.ItoaComma(total/(1000*1000)))
-		println("Seconds\t", fstrconv.ItoaComma(total/(1000*1000*1000)))
-	}
+	go write(in, orderData)
+	read(out)
 }
+
+func write(q *spscq.PointerQ, orders []msg.Message) {
+	for i := range orders {
+		q.WriteSingleBlocking(unsafe.Pointer(&orders[i]))
+	}
+	s := &msg.Message{Kind: msg.SHUTDOWN}
+	q.WriteSingleBlocking(unsafe.Pointer(s))
+}
+
+func read(q *spscq.PointerQ) {
+	start := time.Now().UnixNano()
+	for {
+		m := (*msg.Message)(q.ReadSingleBlocking())
+		if m.Kind == msg.SHUTDOWN {
+			break
+		}
+	}
+	total := time.Now().UnixNano() - start
+	println("Nanos\t", fstrconv.ItoaComma(total))
+	println("Micros\t", fstrconv.ItoaComma(total/1000))
+	println("Millis\t", fstrconv.ItoaComma(total/(1000*1000)))
+	println("Seconds\t", fstrconv.ItoaComma(total/(1000*1000*1000)))
+}
+
 
 func startProfile() {
 	if *profile == "cpu" {
@@ -82,7 +103,7 @@ func endProfile() {
 }
 
 func getData() []msg.Message {
-	orders, err := orderMaker.RndTradeSet(*orderNum, *delDelay, 1000, 1500)
+	orders, err := orderMaker.RndTradeSet(*orderNum * 1000 * 1000, *delDelay, 1000, 1500)
 	if err != nil {
 		panic(err.Error())
 	}

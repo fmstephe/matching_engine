@@ -1,14 +1,16 @@
 package coordinator
 
 import (
+	"unsafe"
 	"fmt"
+	"github.com/fmstephe/flib/queues/spscq"
 	"github.com/fmstephe/matching_engine/msg"
 	"io"
 )
 
 func InMemory(reader io.ReadCloser, writer io.WriteCloser, app AppMsgRunner, unused uint32, name string, log bool) {
-	toApp := make(chan *msg.Message)
-	toResponder := make(chan *msg.Message)
+	toApp, _ := spscq.NewPointerQ(1, 0)
+	toResponder, _ := spscq.NewPointerQ(1, 0)
 	listener := newInMemoryListener(reader, toApp, name, log)
 	responder := newInMemoryResponder(writer, toResponder, name, log)
 	app.Config(name, toApp, toResponder)
@@ -19,12 +21,12 @@ func InMemory(reader io.ReadCloser, writer io.WriteCloser, app AppMsgRunner, unu
 
 type inMemoryListener struct {
 	reader io.ReadCloser
-	toApp  chan *msg.Message
+	toApp  *spscq.PointerQ
 	name   string
 	log    bool
 }
 
-func newInMemoryListener(reader io.ReadCloser, toApp chan *msg.Message, name string, log bool) *inMemoryListener {
+func newInMemoryListener(reader io.ReadCloser, toApp *spscq.PointerQ, name string, log bool) *inMemoryListener {
 	l := &inMemoryListener{}
 	l.reader = reader
 	l.toApp = toApp
@@ -38,7 +40,7 @@ func (l *inMemoryListener) Run() {
 	for {
 		m := l.deserialise()
 		shutdown := m.Kind == msg.SHUTDOWN
-		l.toApp <- m
+		l.toApp.WriteSingleBlocking(unsafe.Pointer(m))
 		if shutdown {
 			return
 		}
@@ -66,12 +68,12 @@ func (l *inMemoryListener) shutdown() {
 
 type inMemoryResponder struct {
 	writer  io.WriteCloser
-	fromApp <-chan *msg.Message
+	fromApp *spscq.PointerQ
 	name    string
 	log     bool
 }
 
-func newInMemoryResponder(writer io.WriteCloser, fromApp chan *msg.Message, name string, log bool) *inMemoryResponder {
+func newInMemoryResponder(writer io.WriteCloser, fromApp *spscq.PointerQ, name string, log bool) *inMemoryResponder {
 	r := &inMemoryResponder{}
 	r.writer = writer
 	r.fromApp = fromApp
@@ -83,7 +85,7 @@ func newInMemoryResponder(writer io.WriteCloser, fromApp chan *msg.Message, name
 func (r *inMemoryResponder) Run() {
 	defer r.shutdown()
 	for {
-		m := <-r.fromApp
+		m := (*msg.Message)(r.fromApp.ReadSingleBlocking())
 		if r.log {
 			println(r.name + ": " + m.String())
 		}

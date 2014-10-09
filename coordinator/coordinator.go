@@ -1,29 +1,29 @@
 package coordinator
 
 import (
-	"github.com/fmstephe/matching_engine/msg"
+	"github.com/fmstephe/flib/queues/spscq"
 	"io"
 )
 
 type CoordinatorFunc func(reader io.ReadCloser, writer io.WriteCloser, app AppMsgRunner, originId uint32, name string, log bool)
 
 type msgRunner interface {
-	Config(originId uint32, log bool, name string, msgs chan *msg.Message)
+	Config(originId uint32, log bool, name string, msgs *spscq.PointerQ)
 	Run()
 }
 
 type AppMsgRunner interface {
-	Config(name string, in, out chan *msg.Message)
+	Config(name string, in, out *spscq.PointerQ)
 	Run()
 }
 
 type AppMsgHelper struct {
 	Name string
-	In   <-chan *msg.Message
-	Out  chan<- *msg.Message
+	In   *spscq.PointerQ
+	Out  *spscq.PointerQ
 }
 
-func (a *AppMsgHelper) Config(name string, in, out chan *msg.Message) {
+func (a *AppMsgHelper) Config(name string, in, out *spscq.PointerQ) {
 	a.Name = name
 	a.In = in
 	a.Out = out
