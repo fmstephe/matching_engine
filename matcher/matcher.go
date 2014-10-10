@@ -116,7 +116,6 @@ func (m *M) fillableBuy(b *pqueue.OrderNode, q *pqueue.MatchQueues) bool {
 			return false
 		}
 	}
-	panic("Unreachable")
 }
 
 func (m *M) fillableSell(s *pqueue.OrderNode, q *pqueue.MatchQueues) bool {
@@ -154,7 +153,6 @@ func (m *M) fillableSell(s *pqueue.OrderNode, q *pqueue.MatchQueues) bool {
 			return false
 		}
 	}
-	panic("Unreachable")
 }
 
 func price(bPrice, sPrice uint64) uint64 {
