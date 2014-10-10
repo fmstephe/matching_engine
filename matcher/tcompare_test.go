@@ -10,7 +10,6 @@ var cmprMaker = msg.NewMessageMaker(1)
 func TestCompareMatchers(t *testing.T) {
 	compareMatchers(t, 100, 1, 1, 1)
 	compareMatchers(t, 100, 10, 1, 1)
-	compareMatchers(t, 100, 100, 1, 1)
 	//
 	compareMatchers(t, 100, 1, 1, 2)
 	compareMatchers(t, 100, 10, 1, 2)
@@ -27,27 +26,27 @@ func TestCompareMatchers(t *testing.T) {
 
 func compareMatchers(t *testing.T, orderPairs, depth int, lowPrice, highPrice uint64) {
 	refIn := make(chan *msg.Message)
-	refOut := make(chan *msg.Message, orderPairs*2)
+	refOut := make(chan *msg.Message, orderPairs*4)
 	refm := newRefmatcher(lowPrice, highPrice)
 	refm.Config("Reference Matcher", refIn, refOut)
 	in := make(chan *msg.Message)
-	out := make(chan *msg.Message, orderPairs*2)
-	m := NewMatcher(orderPairs * 2)
+	out := make(chan *msg.Message, orderPairs*4)
+	m := NewMatcher(orderPairs * 4)
 	m.Config("Real Matcher", in, out)
 	testSet, err := cmprMaker.RndTradeSet(orderPairs, depth, lowPrice, highPrice)
-	go m.Run()
-	go refm.Run()
 	if err != nil {
 		panic(err.Error())
 	}
+	go m.Run()
+	go refm.Run()
 	for i := 0; i < len(testSet); i++ {
 		o := &testSet[i]
 		refIn <- o
-		refIn <- o
 		in <- o
-		in <- o
-		checkBuffers(t, refOut, out)
 	}
+	refIn <- &msg.Message{Kind: msg.SHUTDOWN}
+	in <- &msg.Message{Kind: msg.SHUTDOWN}
+	checkBuffers(t, refOut, out)
 }
 
 func checkBuffers(t *testing.T, refrc, rc chan *msg.Message) {
@@ -55,6 +54,7 @@ func checkBuffers(t *testing.T, refrc, rc chan *msg.Message) {
 	rs := drain(rc)
 	if len(refrs) != len(rs) {
 		t.Errorf("Different number of writes detected. Simple: %d, Real: %d", len(refrs), len(rs))
+		return
 	}
 	for i := 0; i < len(rs); i++ {
 		refr := refrs[i]
@@ -69,12 +69,10 @@ func checkBuffers(t *testing.T, refrc, rc chan *msg.Message) {
 func drain(c chan *msg.Message) []*msg.Message {
 	rs := make([]*msg.Message, 0)
 	for {
-		select {
-		case r := <-c:
-			rs = append(rs, r)
-		default:
+		r := <-c
+		rs = append(rs, r)
+		if r.Kind == msg.SHUTDOWN {
 			return rs
 		}
 	}
-	panic("Unreachable")
 }

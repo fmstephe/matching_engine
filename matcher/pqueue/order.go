@@ -2,8 +2,8 @@ package pqueue
 
 import (
 	"fmt"
-	"github.com/fmstephe/flib/fstrconv"
 	"github.com/fmstephe/flib/fmath"
+	"github.com/fmstephe/flib/fstrconv"
 	"github.com/fmstephe/matching_engine/msg"
 )
 
