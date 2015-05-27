@@ -26,7 +26,7 @@ func newEchoClient(complete chan bool) *echoClient {
 func (c *echoClient) Run() {
 	go sendAll(c.Out)
 	for {
-		m := <-c.In
+		m := c.In.Read()
 		if m.Kind == SHUTDOWN {
 			return
 		}
@@ -52,10 +52,10 @@ func full(received []*Message) bool {
 	return true
 }
 
-func sendAll(out chan<- *Message) {
+func sendAll(out MsgWriter) {
 	for i := uint32(1); i <= TO_SEND; i++ {
 		m := &Message{Kind: SELL, TraderId: 1, TradeId: i, StockId: 1, Price: 7, Amount: 1}
-		out <- m
+		out.Write(m)
 	}
 }
 
@@ -65,14 +65,14 @@ type echoServer struct {
 
 func (s *echoServer) Run() {
 	for {
-		m := <-s.In
+		m := s.In.Read()
 		if m.Kind == SHUTDOWN {
 			return
 		}
 		r := &Message{}
 		*r = *m
 		r.Kind = BUY
-		s.Out <- r
+		s.Out.Write(r)
 	}
 }
 

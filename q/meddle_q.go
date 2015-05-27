@@ -23,13 +23,24 @@ type meddleQ struct {
 }
 
 func NewMeddleQ(name string, meddler Meddler) *meddleQ {
-	q := &meddleQ{name: name, writeChan: make(chan []byte, 100), readChan: make(chan []byte, 100), shutdown: make(chan bool), buf: list.New(), meddler: meddler}
+	q := &meddleQ{
+		name:      name,
+		writeChan: make(chan []byte, 100),
+		readChan:  make(chan []byte, 100),
+		shutdown:  make(chan bool),
+		buf:       list.New(),
+		meddler:   meddler}
 	go q.run()
 	return q
 }
 
 func NewSimpleQ(name string) *meddleQ {
-	q := &meddleQ{name: name, writeChan: make(chan []byte, 100), readChan: make(chan []byte, 100), shutdown: make(chan bool), buf: list.New(), meddler: &notMeddler{}}
+	q := &meddleQ{name: name,
+		writeChan: make(chan []byte, 100),
+		readChan:  make(chan []byte, 100),
+		shutdown:  make(chan bool),
+		buf:       list.New(),
+		meddler:   &notMeddler{}}
 	go q.run()
 	return q
 }

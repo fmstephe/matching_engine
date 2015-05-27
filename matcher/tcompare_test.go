@@ -1,6 +1,7 @@
 package matcher
 
 import (
+	"github.com/fmstephe/matching_engine/coordinator"
 	"github.com/fmstephe/matching_engine/msg"
 	"testing"
 )
@@ -25,12 +26,12 @@ func TestCompareMatchers(t *testing.T) {
 }
 
 func compareMatchers(t *testing.T, orderPairs, depth int, lowPrice, highPrice uint64) {
-	refIn := make(chan *msg.Message)
-	refOut := make(chan *msg.Message, orderPairs*4)
+	refIn := coordinator.NewChanReaderWriter(1)
+	refOut := coordinator.NewChanReaderWriter(orderPairs * 4)
 	refm := newRefmatcher(lowPrice, highPrice)
 	refm.Config("Reference Matcher", refIn, refOut)
-	in := make(chan *msg.Message)
-	out := make(chan *msg.Message, orderPairs*4)
+	in := coordinator.NewChanReaderWriter(1)
+	out := coordinator.NewChanReaderWriter(orderPairs * 4)
 	m := NewMatcher(orderPairs * 4)
 	m.Config("Real Matcher", in, out)
 	testSet, err := cmprMaker.RndTradeSet(orderPairs, depth, lowPrice, highPrice)
@@ -41,15 +42,15 @@ func compareMatchers(t *testing.T, orderPairs, depth int, lowPrice, highPrice ui
 	go refm.Run()
 	for i := 0; i < len(testSet); i++ {
 		o := &testSet[i]
-		refIn <- o
-		in <- o
+		refIn.Write(o)
+		in.Write(o)
 	}
-	refIn <- &msg.Message{Kind: msg.SHUTDOWN}
-	in <- &msg.Message{Kind: msg.SHUTDOWN}
+	refIn.Write(&msg.Message{Kind: msg.SHUTDOWN})
+	in.Write(&msg.Message{Kind: msg.SHUTDOWN})
 	checkBuffers(t, refOut, out)
 }
 
-func checkBuffers(t *testing.T, refrc, rc chan *msg.Message) {
+func checkBuffers(t *testing.T, refrc, rc coordinator.MsgReader) {
 	refrs := drain(refrc)
 	rs := drain(rc)
 	if len(refrs) != len(rs) {
@@ -66,13 +67,13 @@ func checkBuffers(t *testing.T, refrc, rc chan *msg.Message) {
 	}
 }
 
-func drain(c chan *msg.Message) []*msg.Message {
-	rs := make([]*msg.Message, 0)
+func drain(r coordinator.MsgReader) []*msg.Message {
+	ms := make([]*msg.Message, 0)
 	for {
-		r := <-c
-		rs = append(rs, r)
-		if r.Kind == msg.SHUTDOWN {
-			return rs
+		m := r.Read()
+		ms = append(ms, m)
+		if m.Kind == msg.SHUTDOWN {
+			return ms
 		}
 	}
 }

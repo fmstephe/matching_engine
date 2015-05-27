@@ -18,9 +18,9 @@ func newRefmatcher(lowPrice, highPrice uint64) *refmatcher {
 
 func (rm *refmatcher) Run() {
 	for {
-		m := <-rm.In
+		m := rm.In.Read()
 		if m.Kind == msg.SHUTDOWN {
-			rm.Out <- m
+			rm.Out.Write(m)
 			return
 		}
 		if m != nil {
@@ -29,10 +29,10 @@ func (rm *refmatcher) Run() {
 			if o.Kind() == msg.CANCEL {
 				co := rm.matchQueues.Cancel(o)
 				if co != nil {
-					completeCancelled(rm.Out, co)
+					rm.completeCancelled(co)
 				}
 				if co == nil {
-					completeNotCancelled(rm.Out, o)
+					rm.completeNotCancelled(o)
 				}
 			} else {
 				rm.push(o)
@@ -70,7 +70,7 @@ func (rm *refmatcher) match() {
 			rm.matchQueues.PopBuy()
 			amount := s.Amount()
 			price := price(b.Price(), s.Price())
-			completeTrade(rm.Out, msg.FULL, msg.FULL, b, s, price, amount)
+			rm.completeTrade(msg.FULL, msg.FULL, b, s, price, amount)
 		}
 		if s.Amount() > b.Amount() {
 			// pop buy
@@ -78,7 +78,7 @@ func (rm *refmatcher) match() {
 			amount := b.Amount()
 			price := price(b.Price(), s.Price())
 			s.ReduceAmount(b.Amount())
-			completeTrade(rm.Out, msg.FULL, msg.PARTIAL, b, s, price, amount)
+			rm.completeTrade(msg.FULL, msg.PARTIAL, b, s, price, amount)
 		}
 		if b.Amount() > s.Amount() {
 			// pop sell
@@ -86,7 +86,28 @@ func (rm *refmatcher) match() {
 			amount := s.Amount()
 			price := price(b.Price(), s.Price())
 			b.ReduceAmount(s.Amount())
-			completeTrade(rm.Out, msg.PARTIAL, msg.FULL, b, s, price, amount)
+			rm.completeTrade(msg.PARTIAL, msg.FULL, b, s, price, amount)
 		}
 	}
+}
+
+func (rm *refmatcher) completeTrade(brk, srk msg.MsgKind, b, s *pqueue.OrderNode, price, amount uint64) {
+	br := &msg.Message{Kind: brk, Price: price, Amount: amount, TraderId: b.TraderId(), TradeId: b.TradeId(), StockId: b.StockId()}
+	sr := &msg.Message{Kind: srk, Price: price, Amount: amount, TraderId: s.TraderId(), TradeId: s.TradeId(), StockId: s.StockId()}
+	rm.Out.Write(br)
+	rm.Out.Write(sr)
+}
+
+func (rm *refmatcher) completeCancelled(c *pqueue.OrderNode) {
+	cm := &msg.Message{}
+	c.CopyTo(cm)
+	cm.Kind = msg.CANCELLED
+	rm.Out.Write(cm)
+}
+
+func (rm *refmatcher) completeNotCancelled(nc *pqueue.OrderNode) {
+	ncm := &msg.Message{}
+	nc.CopyTo(ncm)
+	ncm.Kind = msg.NOT_CANCELLED
+	rm.Out.Write(ncm)
 }

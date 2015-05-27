@@ -11,11 +11,6 @@ import (
 
 // Because we are communicating via UDP, messages could arrive out of order, in practice they travel in-order via localhost
 
-const (
-	matcherOrigin = iota
-	clientOrigin  = iota
-)
-
 type netwkTesterMaker struct {
 	ip       [4]byte
 	freePort int
@@ -32,31 +27,28 @@ func (tm *netwkTesterMaker) Make() MatchTester {
 	tm.freePort++
 	// Build matcher
 	m := NewMatcher(100)
-	coordinator.InMemory(mkReadConn(serverPort), mkWriteConn(clientPort), m, matcherOrigin, "Matching Engine", false)
+	coordinator.InMemory(mkReadConn(serverPort), mkWriteConn(clientPort), m, 0, "Matching Engine", false)
 	// Build client
-	receivedMsgs := make(chan *msg.Message, 1000)
-	toSendMsgs := make(chan *msg.Message, 1000)
-	c := newClient(receivedMsgs, toSendMsgs)
-	coordinator.InMemory(mkReadConn(clientPort), mkWriteConn(serverPort), c, clientOrigin, "Test Client    ", false)
-	return &netwkTester{receivedMsgs: receivedMsgs, toSendMsgs: toSendMsgs}
+	fromListener, toResponder := coordinator.InMemoryListenerResponder(mkReadConn(clientPort), mkWriteConn(serverPort), "Test Client    ", false)
+	return &netwkTester{receivedMsgs: fromListener, toSendMsgs: toResponder}
 }
 
 type netwkTester struct {
-	receivedMsgs chan *msg.Message
-	toSendMsgs   chan *msg.Message
+	receivedMsgs coordinator.MsgReader
+	toSendMsgs   coordinator.MsgWriter
 }
 
 func (nt *netwkTester) Send(t *testing.T, m *msg.Message) {
-	nt.toSendMsgs <- m
+	nt.toSendMsgs.Write(m)
 }
 
 func (nt *netwkTester) Expect(t *testing.T, e *msg.Message) {
-	r := <-nt.receivedMsgs
+	r := nt.receivedMsgs.Read()
 	validate(t, r, e, 2)
 }
 
 func (nt *netwkTester) ExpectOneOf(t *testing.T, es ...*msg.Message) {
-	r := <-nt.receivedMsgs
+	r := nt.receivedMsgs.Read()
 	for _, e := range es {
 		if *e == *r {
 			return
@@ -66,36 +58,10 @@ func (nt *netwkTester) ExpectOneOf(t *testing.T, es ...*msg.Message) {
 }
 
 func (nt *netwkTester) Cleanup(t *testing.T) {
-	m := &msg.Message{}
-	m.Kind = msg.SHUTDOWN
-	nt.toSendMsgs <- m
-}
-
-type client struct {
-	coordinator.AppMsgHelper
-	receivedMsgs chan *msg.Message
-	toSendMsgs   chan *msg.Message
-}
-
-func newClient(receivedMsgs, toSendMsgs chan *msg.Message) *client {
-	return &client{receivedMsgs: receivedMsgs, toSendMsgs: toSendMsgs}
-}
-
-func (c *client) Run() {
-	for {
-		select {
-		case m := <-c.In:
-			if m.Kind == msg.SHUTDOWN {
-				c.Out <- m
-				return
-			}
-			if m != nil {
-				c.receivedMsgs <- m
-			}
-		case m := <-c.toSendMsgs:
-			c.Out <- m
-		}
+	m := &msg.Message{
+		Kind: msg.SHUTDOWN,
 	}
+	nt.toSendMsgs.Write(m)
 }
 
 func mkWriteConn(port int) *net.UDPConn {

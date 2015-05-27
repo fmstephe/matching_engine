@@ -5,6 +5,7 @@ import (
 	"github.com/fmstephe/matching_engine/coordinator"
 	"github.com/fmstephe/matching_engine/matcher/pqueue"
 	"github.com/fmstephe/matching_engine/msg"
+	"runtime"
 )
 
 type M struct {
@@ -20,25 +21,24 @@ func NewMatcher(slabSize int) *M {
 }
 
 func (m *M) Run() {
+	runtime.LockOSThread()
 	for {
-		o := <-m.In
+		o := m.In.Read()
 		if o.Kind == msg.SHUTDOWN {
-			m.Out <- o
+			m.Out.Write(o)
 			return
 		}
-		if o != nil {
-			on := m.slab.Malloc()
-			on.CopyFrom(o)
-			switch on.Kind() {
-			case msg.BUY:
-				m.addBuy(on)
-			case msg.SELL:
-				m.addSell(on)
-			case msg.CANCEL:
-				m.cancel(on)
-			default:
-				panic(fmt.Sprintf("MsgKind %v not supported", on))
-			}
+		on := m.slab.Malloc()
+		on.CopyFrom(o)
+		switch on.Kind() {
+		case msg.BUY:
+			m.addBuy(on)
+		case msg.SELL:
+			m.addSell(on)
+		case msg.CANCEL:
+			m.cancel(on)
+		default:
+			panic(fmt.Sprintf("MsgKind %v not supported", on))
 		}
 	}
 }
@@ -73,10 +73,10 @@ func (m *M) cancel(o *pqueue.OrderNode) {
 	q := m.getMatchQueues(o.StockId())
 	ro := q.Cancel(o)
 	if ro != nil {
-		completeCancelled(m.Out, ro)
+		m.completeCancelled(ro)
 		m.slab.Free(ro)
 	} else {
-		completeNotCancelled(m.Out, o)
+		m.completeNotCancelled(o)
 	}
 	m.slab.Free(o)
 }
@@ -93,21 +93,21 @@ func (m *M) fillableBuy(b *pqueue.OrderNode, q *pqueue.MatchQueues) bool {
 				price := price(b.Price(), s.Price())
 				m.slab.Free(q.PopSell())
 				b.ReduceAmount(amount)
-				completeTrade(m.Out, msg.PARTIAL, msg.FULL, b, s, price, amount)
+				m.completeTrade(msg.PARTIAL, msg.FULL, b, s, price, amount)
 				continue
 			}
 			if s.Amount() > b.Amount() {
 				amount := b.Amount()
 				price := price(b.Price(), s.Price())
 				s.ReduceAmount(amount)
-				completeTrade(m.Out, msg.FULL, msg.PARTIAL, b, s, price, amount)
+				m.completeTrade(msg.FULL, msg.PARTIAL, b, s, price, amount)
 				m.slab.Free(b)
 				return true // The buy has been used up
 			}
 			if s.Amount() == b.Amount() {
 				amount := b.Amount()
 				price := price(b.Price(), s.Price())
-				completeTrade(m.Out, msg.FULL, msg.FULL, b, s, price, amount)
+				m.completeTrade(msg.FULL, msg.FULL, b, s, price, amount)
 				m.slab.Free(q.PopSell())
 				m.slab.Free(b)
 				return true // The buy has been used up
@@ -129,7 +129,7 @@ func (m *M) fillableSell(s *pqueue.OrderNode, q *pqueue.MatchQueues) bool {
 				amount := s.Amount()
 				price := price(b.Price(), s.Price())
 				b.ReduceAmount(amount)
-				completeTrade(m.Out, msg.PARTIAL, msg.FULL, b, s, price, amount)
+				m.completeTrade(msg.PARTIAL, msg.FULL, b, s, price, amount)
 				m.slab.Free(s)
 				return true // The sell has been used up
 			}
@@ -137,14 +137,14 @@ func (m *M) fillableSell(s *pqueue.OrderNode, q *pqueue.MatchQueues) bool {
 				amount := b.Amount()
 				price := price(b.Price(), s.Price())
 				s.ReduceAmount(amount)
-				completeTrade(m.Out, msg.FULL, msg.PARTIAL, b, s, price, amount)
+				m.completeTrade(msg.FULL, msg.PARTIAL, b, s, price, amount)
 				m.slab.Free(q.PopBuy())
 				continue
 			}
 			if s.Amount() == b.Amount() {
 				amount := b.Amount()
 				price := price(b.Price(), s.Price())
-				completeTrade(m.Out, msg.FULL, msg.FULL, b, s, price, amount)
+				m.completeTrade(msg.FULL, msg.FULL, b, s, price, amount)
 				m.slab.Free(q.PopBuy())
 				m.slab.Free(s)
 				return true // The sell has been used up
@@ -163,23 +163,23 @@ func price(bPrice, sPrice uint64) uint64 {
 	return sPrice + (d / 2)
 }
 
-func completeTrade(out chan<- *msg.Message, brk, srk msg.MsgKind, b, s *pqueue.OrderNode, price, amount uint64) {
+func (m *M) completeTrade(brk, srk msg.MsgKind, b, s *pqueue.OrderNode, price, amount uint64) {
 	br := &msg.Message{Kind: brk, Price: price, Amount: amount, TraderId: b.TraderId(), TradeId: b.TradeId(), StockId: b.StockId()}
 	sr := &msg.Message{Kind: srk, Price: price, Amount: amount, TraderId: s.TraderId(), TradeId: s.TradeId(), StockId: s.StockId()}
-	out <- br
-	out <- sr
+	m.Out.Write(br)
+	m.Out.Write(sr)
 }
 
-func completeCancelled(out chan<- *msg.Message, c *pqueue.OrderNode) {
+func (m *M) completeCancelled(c *pqueue.OrderNode) {
 	cm := &msg.Message{}
 	c.CopyTo(cm)
 	cm.Kind = msg.CANCELLED
-	out <- cm
+	m.Out.Write(cm)
 }
 
-func completeNotCancelled(out chan<- *msg.Message, nc *pqueue.OrderNode) {
+func (m *M) completeNotCancelled(nc *pqueue.OrderNode) {
 	ncm := &msg.Message{}
 	nc.CopyTo(ncm)
 	ncm.Kind = msg.NOT_CANCELLED
-	out <- ncm
+	m.Out.Write(ncm)
 }

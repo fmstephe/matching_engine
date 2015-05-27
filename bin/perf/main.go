@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"github.com/fmstephe/flib/fstrconv"
+	"github.com/fmstephe/matching_engine/coordinator"
 	"github.com/fmstephe/matching_engine/matcher"
 	"github.com/fmstephe/matching_engine/msg"
 	"log"
@@ -36,37 +37,40 @@ func doPerf(log bool) {
 	if log {
 		println(orderCount, "OrderNodes Built")
 	}
-	in := make(chan *msg.Message, 1024)
-	out := make(chan *msg.Message, 1024)
+	in := coordinator.NewSPSCQReaderWriter(1024 * 1024)
+	out := coordinator.NewSPSCQReaderWriter(1024 * 1024)
+	//in := coordinator.NewPreloadedReaderWriter(orderData)
+	//out := coordinator.NewShutdownReaderWriter()
+	//in := coordinator.NewChanReaderWriter(1024)
+	//out := coordinator.NewChanReaderWriter(1024)
 	m := matcher.NewMatcher(*delDelay * 2)
 	m.Config("Perf Matcher", in, out)
+	start := time.Now().UnixNano()
 	go m.Run()
 	startProfile()
 	defer endProfile()
 	go write(in, orderData)
-	read(out)
-}
-
-func write(in chan *msg.Message, msgs []msg.Message) {
-	for i := range msgs {
-		in <- &msgs[i]
-	}
-	in <- &msg.Message{Kind: msg.SHUTDOWN}
-}
-
-func read(out chan *msg.Message) {
-	start := time.Now().UnixNano()
+	// Read all messages coming out of the matching engine
 	for {
-		m := <-out
+		m := out.Read()
 		if m.Kind == msg.SHUTDOWN {
 			break
 		}
 	}
-	total := time.Now().UnixNano() - start
-	println("Nanos\t", fstrconv.ItoaComma(total))
-	println("Micros\t", fstrconv.ItoaComma(total/1000))
-	println("Millis\t", fstrconv.ItoaComma(total/(1000*1000)))
-	println("Seconds\t", fstrconv.ItoaComma(total/(1000*1000*1000)))
+	if log {
+		total := time.Now().UnixNano() - start
+		println("Nanos\t", fstrconv.ItoaComma(total))
+		println("Micros\t", fstrconv.ItoaComma(total/1000))
+		println("Millis\t", fstrconv.ItoaComma(total/(1000*1000)))
+		println("Seconds\t", fstrconv.ItoaComma(total/(1000*1000*1000)))
+	}
+}
+
+func write(in coordinator.MsgWriter, msgs []msg.Message) {
+	for i := range msgs {
+		in.Write(&msgs[i])
+	}
+	in.Write(&msg.Message{Kind: msg.SHUTDOWN})
 }
 
 func startProfile() {
@@ -93,7 +97,7 @@ func endProfile() {
 }
 
 func getData() []msg.Message {
-	orders, err := orderMaker.RndTradeSet(*orderNum * 1000 * 1000, *delDelay, 1000, 1500)
+	orders, err := orderMaker.RndTradeSet(*orderNum*1000*1000, *delDelay, 1000, 1500)
 	if err != nil {
 		panic(err.Error())
 	}
