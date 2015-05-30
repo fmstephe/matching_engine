@@ -39,19 +39,18 @@ type netwkTester struct {
 }
 
 func (nt *netwkTester) Send(t *testing.T, m *msg.Message) {
-	*(nt.toSendMsgs.GetForWrite()) = *m
-	nt.toSendMsgs.Write()
+	nt.toSendMsgs.Write(*m)
 }
 
 func (nt *netwkTester) Expect(t *testing.T, e *msg.Message) {
 	r := &msg.Message{}
-	nt.receivedMsgs.Read(r)
+	*r = nt.receivedMsgs.Read()
 	validate(t, r, e, 2)
 }
 
 func (nt *netwkTester) ExpectOneOf(t *testing.T, es ...*msg.Message) {
 	r := &msg.Message{}
-	nt.receivedMsgs.Read(r)
+	*r = nt.receivedMsgs.Read()
 	for _, e := range es {
 		if *e == *r {
 			return
@@ -61,10 +60,7 @@ func (nt *netwkTester) ExpectOneOf(t *testing.T, es ...*msg.Message) {
 }
 
 func (nt *netwkTester) Cleanup(t *testing.T) {
-	*(nt.toSendMsgs.GetForWrite()) = msg.Message{
-		Kind: msg.SHUTDOWN,
-	}
-	nt.toSendMsgs.Write()
+	nt.toSendMsgs.Write(msg.Message{Kind: msg.SHUTDOWN})
 }
 
 func mkWriteConn(port int) *net.UDPConn {

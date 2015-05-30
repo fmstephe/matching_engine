@@ -22,11 +22,9 @@ func NewMatcher(slabSize int) *M {
 func (m *M) Run() {
 	o := &msg.Message{}
 	for {
-		m.In.Read(o)
+		*o = m.In.Read()
 		if o.Kind == msg.SHUTDOWN {
-			cm := m.Out.GetForWrite()
-			*cm = *o
-			m.Out.Write()
+			m.Out.Write(*o)
 			return
 		}
 		m.Submit(o)
@@ -169,24 +167,20 @@ func price(bPrice, sPrice uint64) uint64 {
 }
 
 func (m *M) completeTrade(brk, srk msg.MsgKind, b, s *pqueue.OrderNode, price, amount uint64) {
-	br := m.Out.GetForWrite()
-	*br = msg.Message{Kind: brk, Price: price, Amount: amount, TraderId: b.TraderId(), TradeId: b.TradeId(), StockId: b.StockId()}
-	m.Out.Write()
-	sr := m.Out.GetForWrite()
-	*sr = msg.Message{Kind: srk, Price: price, Amount: amount, TraderId: s.TraderId(), TradeId: s.TradeId(), StockId: s.StockId()}
-	m.Out.Write()
+	m.Out.Write(msg.Message{Kind: brk, Price: price, Amount: amount, TraderId: b.TraderId(), TradeId: b.TradeId(), StockId: b.StockId()})
+	m.Out.Write(msg.Message{Kind: srk, Price: price, Amount: amount, TraderId: s.TraderId(), TradeId: s.TradeId(), StockId: s.StockId()})
 }
 
 func (m *M) completeCancelled(c *pqueue.OrderNode) {
-	cm := m.Out.GetForWrite()
-	c.CopyTo(cm)
+	cm := msg.Message{}
+	c.CopyTo(&cm)
 	cm.Kind = msg.CANCELLED
-	m.Out.Write()
+	m.Out.Write(cm)
 }
 
 func (m *M) completeNotCancelled(nc *pqueue.OrderNode) {
-	ncm := m.Out.GetForWrite()
-	nc.CopyTo(ncm)
+	ncm := msg.Message{}
+	nc.CopyTo(&ncm)
 	ncm.Kind = msg.NOT_CANCELLED
-	m.Out.Write()
+	m.Out.Write(ncm)
 }

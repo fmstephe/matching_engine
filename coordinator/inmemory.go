@@ -43,8 +43,7 @@ func (l *inMemoryListener) Run() {
 	for {
 		m := l.deserialise()
 		shutdown := m.Kind == msg.SHUTDOWN
-		*(l.toApp.GetForWrite()) = *m
-		l.toApp.Write()
+		l.toApp.Write(*m)
 		if shutdown {
 			return
 		}
@@ -90,7 +89,7 @@ func (r *inMemoryResponder) Run() {
 	defer r.shutdown()
 	m := &msg.Message{}
 	for {
-		r.fromApp.Read(m)
+		*m = r.fromApp.Read()
 		if r.log {
 			println(r.name + ": " + m.String())
 		}

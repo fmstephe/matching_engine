@@ -41,15 +41,11 @@ func compareMatchers(t *testing.T, orderPairs, depth int, lowPrice, highPrice ui
 	go m.Run()
 	go refm.Run()
 	for i := 0; i < len(testSet); i++ {
-		*(refIn.GetForWrite()) = testSet[i]
-		refIn.Write()
-		*(in.GetForWrite()) = testSet[i]
-		in.Write()
+		refIn.Write(testSet[i])
+		in.Write(testSet[i])
 	}
-	*(refIn.GetForWrite()) = msg.Message{Kind: msg.SHUTDOWN}
-	refIn.Write()
-	*(in.GetForWrite()) = msg.Message{Kind: msg.SHUTDOWN}
-	in.Write()
+	refIn.Write(msg.Message{Kind: msg.SHUTDOWN})
+	in.Write(msg.Message{Kind: msg.SHUTDOWN})
 	checkBuffers(t, refOut, out)
 }
 
@@ -74,7 +70,7 @@ func drain(r coordinator.MsgReader) []*msg.Message {
 	ms := make([]*msg.Message, 0)
 	for {
 		m := &msg.Message{}
-		r.Read(m)
+		*m = r.Read()
 		ms = append(ms, m)
 		if m.Kind == msg.SHUTDOWN {
 			return ms

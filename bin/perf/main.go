@@ -85,9 +85,8 @@ func multiThreaded(log bool, data []msg.Message, in, out coordinator.MsgReaderWr
 }
 
 func read(reader coordinator.MsgReader) {
-	m := &msg.Message{}
 	for {
-		reader.Read(m)
+		m := reader.Read()
 		if m.Kind == msg.SHUTDOWN {
 			break
 		}
@@ -104,11 +103,9 @@ func run(r runner) {
 
 func write(in coordinator.MsgWriter, msgs []msg.Message) {
 	for i := range msgs {
-		*(in.GetForWrite()) = msgs[i]
-		in.Write()
+		in.Write(msgs[i])
 	}
-	*(in.GetForWrite()) = msg.Message{Kind: msg.SHUTDOWN}
-	in.Write()
+	in.Write(msg.Message{Kind: msg.SHUTDOWN})
 }
 
 func startProfile() {
