@@ -1,0 +1,141 @@
+<html>
+	<head>
+		<script type="text/javascript">
+
+var lastMessage;
+var BUY = 1;
+var SELL = 2;
+var CANCEL = 3;
+var PARTIAL = 4;
+var FULL = 5;
+var CANCELLED = 6;
+var NOT_CANCELLED = 7;
+var REJECTED = 8;
+var SHUTDOWN = 9;
+var NEW_TRADER = 10;
+
+var kindMap = {
+	"1": "BUY",
+	"2": "SELL",
+	"3": "CANCEL",
+	"4": "PARTIAL",
+	"5": "FULL",
+	"6": "CANCELLED",
+	"7": "NOT_CANCELLED",
+	"8": "REJECTED",
+	"9": "SHUTDOWN",
+	"10": "NEW_TRADER"};
+
+function $() {
+	return document.getElementById(arguments[0]);
+}
+
+function Order(kind, price, amount, stockId, tradeId) {
+	this.kind = kind;
+	this.price = price;
+	this.amount = amount;
+	this.stockId = stockId;
+	this.tradeId = tradeId;
+}
+
+function sendOrder(kind) {
+	var obj = new Object();
+	var price = Number($("price").value);
+	var amount = Number($("amount").value);
+	var stockId = Number($("stockId").value);
+	var order = new Order(kind, price, amount, stockId);
+	console.log("  To: " + JSON.stringify(order));
+	ws.send(JSON.stringify(order));
+}
+
+function receiveMessage(sMsg) {
+	var jMsg = JSON.parse(sMsg);
+	lastMessage = jMsg;
+	displayMessage();
+}
+
+function displayMessage() {
+	var p = $("msgs");
+	var msgsInner = "";
+	var outstanding = lastMessage.state.outstanding;
+	for (var i = 0; i < outstanding.length; i++) {
+		msgsInner += createCancel(outstanding[i]);
+	}
+	$("msgs").innerHTML = msgsInner;
+	$("receivedMessage").innerHTML = "Received Message: " + readableReceived(lastMessage.received);
+	$("curBal").innerHTML = "Current Balance: " + lastMessage.state.currentBalance;
+	$("availBal").innerHTML = "Available Balance: " + lastMessage.state.availableBalance;
+	$("stocksHeld").innerHTML = "Stocks Held: " + JSON.stringify(lastMessage.state.stocksHeld);
+	$("stocksToSell").innerHTML = "Stocks To Sell: " + JSON.stringify(lastMessage.state.stocksToSell);
+}
+
+function readableReceived(received) {
+	var sReceived = JSON.stringify(received);
+	var rReceived = JSON.parse(sReceived);
+	rReceived.message = readableMessage(rReceived.message);
+	return JSON.stringify(rReceived);
+}
+
+function readableMessage(msg) {
+	var sMsg = JSON.stringify(msg);
+	var rMsg = JSON.parse(sMsg);
+	rMsg.kind = kindMap[msg.kind];
+	return JSON.stringify(rMsg);
+}
+
+function createCancel(msg) {
+	return "<div><a onclick=\"submitCancel(" + msg.tradeId  + ")\">Cancel</a><span>" + readableMessage(msg) + "</span></div>";
+}
+
+function submitCancel(tradeId) {
+	var outstanding = lastMessage.state.outstanding;
+	for (var i = 0; i < outstanding.length; i++) {
+		var msg = outstanding[i];
+		if (msg.tradeId == tradeId) {
+			var cancel = new Object();
+			cancel.kind = CANCEL;
+			cancel.price = msg.price;
+			cancel.amount = msg.amount;
+			cancel.stockId = msg.stockId;
+			cancel.tradeId = msg.tradeId;
+			ws.send(JSON.stringify(cancel));
+			break;
+		}
+	}
+}
+
+function doWebsocket() {
+	ws = new WebSocket("ws://localhost:8081/wsconn");
+	ws.onopen = function() {
+		console.log("open");
+	}
+	ws.onmessage = function(m) {
+		console.log("From: " + m.data);
+		receiveMessage(m.data);
+	}
+	ws.onclose = function() {
+		console.log("closed");
+	}
+}
+
+</script>
+
+	</head>
+
+	<body onload="doWebsocket()">
+		<form name="buy-form" action="http://localhost:8081/buy" method="get">
+			Price: <input type="text" name="price" id="price"></input><br/>
+			Amount: <input type="text" name="amount" id="amount"></input><br/>
+			StockId: <input type="text" name="stockId" id="stockId"></input><br/>
+		</form>
+		<button onClick="sendOrder(BUY)">BUY</button>
+		<button onClick="sendOrder(SELL)">SELL</button>
+		<p id="receivedMessage"></p>
+		<p id="curBal"></p>
+		<p id="availBal"></p>
+		<p id="stocksHeld"></p>
+		<p id="stocksToSell"></p>
+		<p id="msgs"></p>
+	</body>
+
+</html>
