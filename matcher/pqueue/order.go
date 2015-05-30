@@ -69,6 +69,11 @@ func (o *OrderNode) Kind() msg.MsgKind {
 	return o.kind
 }
 
+func (o *OrderNode) Remove() {
+	o.priceNode.pop()
+	o.guidNode.pop()
+}
+
 func (o *OrderNode) String() string {
 	if o == nil {
 		return "<nil>"

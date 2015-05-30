@@ -94,10 +94,11 @@ func (m *M) fillableBuy(b *pqueue.OrderNode, q *pqueue.MatchQueues) bool {
 			if b.Amount() > s.Amount() {
 				amount := s.Amount()
 				price := price(b.Price(), s.Price())
-				m.slab.Free(q.PopSell())
+				s.Remove()
+				m.slab.Free(s)
 				b.ReduceAmount(amount)
 				m.completeTrade(msg.PARTIAL, msg.FULL, b, s, price, amount)
-				continue
+				continue // The sell has been used up
 			}
 			if s.Amount() > b.Amount() {
 				amount := b.Amount()
@@ -111,9 +112,10 @@ func (m *M) fillableBuy(b *pqueue.OrderNode, q *pqueue.MatchQueues) bool {
 				amount := b.Amount()
 				price := price(b.Price(), s.Price())
 				m.completeTrade(msg.FULL, msg.FULL, b, s, price, amount)
-				m.slab.Free(q.PopSell())
+				s.Remove()
+				m.slab.Free(s)
 				m.slab.Free(b)
-				return true // The buy has been used up
+				return true // The buy and sell have been used up
 			}
 		} else {
 			return false
@@ -133,6 +135,7 @@ func (m *M) fillableSell(s *pqueue.OrderNode, q *pqueue.MatchQueues) bool {
 				price := price(b.Price(), s.Price())
 				b.ReduceAmount(amount)
 				m.completeTrade(msg.PARTIAL, msg.FULL, b, s, price, amount)
+				s.Remove()
 				m.slab.Free(s)
 				return true // The sell has been used up
 			}
@@ -141,16 +144,18 @@ func (m *M) fillableSell(s *pqueue.OrderNode, q *pqueue.MatchQueues) bool {
 				price := price(b.Price(), s.Price())
 				s.ReduceAmount(amount)
 				m.completeTrade(msg.FULL, msg.PARTIAL, b, s, price, amount)
-				m.slab.Free(q.PopBuy())
+				b.Remove()
+				m.slab.Free(b) // The buy has been used up
 				continue
 			}
 			if s.Amount() == b.Amount() {
 				amount := b.Amount()
 				price := price(b.Price(), s.Price())
 				m.completeTrade(msg.FULL, msg.FULL, b, s, price, amount)
-				m.slab.Free(q.PopBuy())
+				b.Remove()
+				m.slab.Free(b)
 				m.slab.Free(s)
-				return true // The sell has been used up
+				return true // The sell and buy have been used up
 			}
 		} else {
 			return false
