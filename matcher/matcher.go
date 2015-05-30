@@ -5,7 +5,6 @@ import (
 	"github.com/fmstephe/matching_engine/coordinator"
 	"github.com/fmstephe/matching_engine/matcher/pqueue"
 	"github.com/fmstephe/matching_engine/msg"
-	"runtime"
 )
 
 type M struct {
@@ -21,25 +20,31 @@ func NewMatcher(slabSize int) *M {
 }
 
 func (m *M) Run() {
-	runtime.LockOSThread()
+	o := &msg.Message{}
 	for {
-		o := m.In.Read()
+		m.In.Read(o)
 		if o.Kind == msg.SHUTDOWN {
-			m.Out.Write(o)
+			cm := m.Out.GetForWrite()
+			*cm = *o
+			m.Out.Write()
 			return
 		}
-		on := m.slab.Malloc()
-		on.CopyFrom(o)
-		switch on.Kind() {
-		case msg.BUY:
-			m.addBuy(on)
-		case msg.SELL:
-			m.addSell(on)
-		case msg.CANCEL:
-			m.cancel(on)
-		default:
-			panic(fmt.Sprintf("MsgKind %v not supported", on))
-		}
+		m.Submit(o)
+	}
+}
+
+func (m *M) Submit(o *msg.Message) {
+	on := m.slab.Malloc()
+	on.CopyFrom(o)
+	switch on.Kind() {
+	case msg.BUY:
+		m.addBuy(on)
+	case msg.SELL:
+		m.addSell(on)
+	case msg.CANCEL:
+		m.cancel(on)
+	default:
+		panic(fmt.Sprintf("MsgKind %v not supported", on))
 	}
 }
 
@@ -164,22 +169,24 @@ func price(bPrice, sPrice uint64) uint64 {
 }
 
 func (m *M) completeTrade(brk, srk msg.MsgKind, b, s *pqueue.OrderNode, price, amount uint64) {
-	br := &msg.Message{Kind: brk, Price: price, Amount: amount, TraderId: b.TraderId(), TradeId: b.TradeId(), StockId: b.StockId()}
-	sr := &msg.Message{Kind: srk, Price: price, Amount: amount, TraderId: s.TraderId(), TradeId: s.TradeId(), StockId: s.StockId()}
-	m.Out.Write(br)
-	m.Out.Write(sr)
+	br := m.Out.GetForWrite()
+	*br = msg.Message{Kind: brk, Price: price, Amount: amount, TraderId: b.TraderId(), TradeId: b.TradeId(), StockId: b.StockId()}
+	m.Out.Write()
+	sr := m.Out.GetForWrite()
+	*sr = msg.Message{Kind: srk, Price: price, Amount: amount, TraderId: s.TraderId(), TradeId: s.TradeId(), StockId: s.StockId()}
+	m.Out.Write()
 }
 
 func (m *M) completeCancelled(c *pqueue.OrderNode) {
-	cm := &msg.Message{}
+	cm := m.Out.GetForWrite()
 	c.CopyTo(cm)
 	cm.Kind = msg.CANCELLED
-	m.Out.Write(cm)
+	m.Out.Write()
 }
 
 func (m *M) completeNotCancelled(nc *pqueue.OrderNode) {
-	ncm := &msg.Message{}
+	ncm := m.Out.GetForWrite()
 	nc.CopyTo(ncm)
 	ncm.Kind = msg.NOT_CANCELLED
-	m.Out.Write(ncm)
+	m.Out.Write()
 }

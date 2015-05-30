@@ -32,45 +32,83 @@ func main() {
 
 func doPerf(log bool) {
 	flag.Parse()
-	orderData := getData()
-	orderCount := fstrconv.ItoaComma(int64(len(orderData)))
+	data := getData()
 	if log {
+		orderCount := fstrconv.ItoaComma(int64(len(data)))
 		println(orderCount, "OrderNodes Built")
 	}
-	in := coordinator.NewSPSCQReaderWriter(1024 * 1024)
-	out := coordinator.NewSPSCQReaderWriter(1024 * 1024)
-	//in := coordinator.NewPreloadedReaderWriter(orderData)
-	//out := coordinator.NewShutdownReaderWriter()
-	//in := coordinator.NewChanReaderWriter(1024)
-	//out := coordinator.NewChanReaderWriter(1024)
-	m := matcher.NewMatcher(*delDelay * 2)
-	m.Config("Perf Matcher", in, out)
-	start := time.Now().UnixNano()
-	go m.Run()
+	start := time.Now()
+	defer func() {
+		if log {
+			println("Running Time: ", time.Now().Sub(start).String())
+		}
+	}()
 	startProfile()
 	defer endProfile()
-	go write(in, orderData)
+	singleThreaded(log, data)
+}
+
+func singleThreaded(log bool, data []msg.Message) {
+	inout := coordinator.NewNoopReaderWriter()
+	mchr := matcher.NewMatcher(*delDelay * 2)
+	mchr.Config("Perf Matcher", inout, inout)
+	for i := range data {
+		mchr.Submit(&data[i])
+	}
+}
+
+func multiThreadedChan(log bool, data []msg.Message) {
+	in := coordinator.NewChanReaderWriter(1024)
+	out := coordinator.NewChanReaderWriter(1024)
+	multiThreaded(log, data, in, out)
+}
+
+func multiThreadedPreloaded(log bool, data []msg.Message) {
+	in := coordinator.NewPreloadedReaderWriter(data)
+	out := coordinator.NewShutdownReaderWriter()
+	multiThreaded(log, data, in, out)
+}
+
+func multiThreadedSPSCQ(log bool, data []msg.Message) {
+	in := coordinator.NewSPSCQReaderWriter(1024 * 1024)
+	out := coordinator.NewSPSCQReaderWriter(1024 * 1024)
+	multiThreaded(log, data, in, out)
+}
+
+func multiThreaded(log bool, data []msg.Message, in, out coordinator.MsgReaderWriter) {
+	mchr := matcher.NewMatcher(*delDelay * 2)
+	mchr.Config("Perf Matcher", in, out)
+	go run(mchr)
+	go write(in, data)
 	// Read all messages coming out of the matching engine
+	read(out)
+}
+
+func read(reader coordinator.MsgReader) {
+	m := &msg.Message{}
 	for {
-		m := out.Read()
+		reader.Read(m)
 		if m.Kind == msg.SHUTDOWN {
 			break
 		}
 	}
-	if log {
-		total := time.Now().UnixNano() - start
-		println("Nanos\t", fstrconv.ItoaComma(total))
-		println("Micros\t", fstrconv.ItoaComma(total/1000))
-		println("Millis\t", fstrconv.ItoaComma(total/(1000*1000)))
-		println("Seconds\t", fstrconv.ItoaComma(total/(1000*1000*1000)))
-	}
+}
+
+type runner interface {
+	Run()
+}
+
+func run(r runner) {
+	r.Run()
 }
 
 func write(in coordinator.MsgWriter, msgs []msg.Message) {
 	for i := range msgs {
-		in.Write(&msgs[i])
+		*(in.GetForWrite()) = msgs[i]
+		in.Write()
 	}
-	in.Write(&msg.Message{Kind: msg.SHUTDOWN})
+	*(in.GetForWrite()) = msg.Message{Kind: msg.SHUTDOWN}
+	in.Write()
 }
 
 func startProfile() {

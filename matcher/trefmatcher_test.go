@@ -17,10 +17,12 @@ func newRefmatcher(lowPrice, highPrice uint64) *refmatcher {
 }
 
 func (rm *refmatcher) Run() {
+	m := &msg.Message{}
 	for {
-		m := rm.In.Read()
+		rm.In.Read(m)
 		if m.Kind == msg.SHUTDOWN {
-			rm.Out.Write(m)
+			*(rm.Out.GetForWrite()) = *m
+			rm.Out.Write()
 			return
 		}
 		if m != nil {
@@ -92,22 +94,24 @@ func (rm *refmatcher) match() {
 }
 
 func (rm *refmatcher) completeTrade(brk, srk msg.MsgKind, b, s *pqueue.OrderNode, price, amount uint64) {
-	br := &msg.Message{Kind: brk, Price: price, Amount: amount, TraderId: b.TraderId(), TradeId: b.TradeId(), StockId: b.StockId()}
-	sr := &msg.Message{Kind: srk, Price: price, Amount: amount, TraderId: s.TraderId(), TradeId: s.TradeId(), StockId: s.StockId()}
-	rm.Out.Write(br)
-	rm.Out.Write(sr)
+	br := rm.Out.GetForWrite()
+	*br = msg.Message{Kind: brk, Price: price, Amount: amount, TraderId: b.TraderId(), TradeId: b.TradeId(), StockId: b.StockId()}
+	rm.Out.Write()
+	sr := rm.Out.GetForWrite()
+	*sr = msg.Message{Kind: srk, Price: price, Amount: amount, TraderId: s.TraderId(), TradeId: s.TradeId(), StockId: s.StockId()}
+	rm.Out.Write()
 }
 
 func (rm *refmatcher) completeCancelled(c *pqueue.OrderNode) {
-	cm := &msg.Message{}
+	cm := rm.Out.GetForWrite()
 	c.CopyTo(cm)
 	cm.Kind = msg.CANCELLED
-	rm.Out.Write(cm)
+	rm.Out.Write()
 }
 
 func (rm *refmatcher) completeNotCancelled(nc *pqueue.OrderNode) {
-	ncm := &msg.Message{}
+	ncm := rm.Out.GetForWrite()
 	nc.CopyTo(ncm)
 	ncm.Kind = msg.NOT_CANCELLED
-	rm.Out.Write(ncm)
+	rm.Out.Write()
 }

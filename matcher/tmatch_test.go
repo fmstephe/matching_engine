@@ -68,11 +68,13 @@ type localTester struct {
 }
 
 func (lt *localTester) Send(t *testing.T, m *msg.Message) {
-	lt.in.Write(m)
+	*(lt.in.GetForWrite()) = *m
+	lt.in.Write()
 }
 
 func (lt *localTester) Expect(t *testing.T, ref *msg.Message) {
-	m := lt.out.Read()
+	m := &msg.Message{}
+	lt.out.Read(m)
 	if *ref != *m {
 		_, fname, lnum, _ := runtime.Caller(1)
 		t.Errorf("\nExpecting: %v\nFound:     %v\n%s:%d", ref, m, fname, lnum)
