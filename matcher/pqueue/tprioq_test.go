@@ -153,7 +153,7 @@ func testPushPopRandom(t *testing.T, pushCount int, lowPrice, highPrice uint64, 
 			popCheck(t, priceTree, guidTree, q, popper)
 		}
 	}
-	for priceTree.peekMin() == nil {
+	for priceTree.peekMin() != nil {
 		po := priceTree.popMax().getOrderNode()
 		fo := q.popMax()
 		if fo != po {
