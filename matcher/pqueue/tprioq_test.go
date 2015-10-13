@@ -254,17 +254,17 @@ func checkStructure(t *testing.T, n *node) {
 	if *n.pp != n {
 		t.Errorf("Parent pointer does not point to child node")
 	}
-	if n.left != nil {
-		if n.val <= n.left.val {
-			t.Errorf("Left value is greater than or equal to node value. Left value: %d Node value %d", n.left.val, n.val)
+	if n.children[leftChild] != nil {
+		if n.val <= n.children[leftChild].val {
+			t.Errorf("Left value is greater than or equal to node value. Left value: %d Node value %d", n.children[leftChild].val, n.val)
 		}
-		checkStructure(t, n.left)
+		checkStructure(t, n.children[leftChild])
 	}
-	if n.right != nil {
-		if n.val >= n.right.val {
-			t.Errorf("Right value is less than or equal to node value. Right value: %d Node value %d", n.right.val, n.val)
+	if n.children[rightChild] != nil {
+		if n.val >= n.children[rightChild].val {
+			t.Errorf("Right value is less than or equal to node value. Right value: %d Node value %d", n.children[rightChild].val, n.val)
 		}
-		checkStructure(t, n.right)
+		checkStructure(t, n.children[rightChild])
 	}
 }
 
@@ -278,10 +278,10 @@ func checkQueue(t *testing.T, n *node) {
 		if curr.pp != nil {
 			t.Errorf("Internal queue node with non-nil parent pointer")
 		}
-		if curr.left != nil {
+		if curr.children[leftChild] != nil {
 			t.Errorf("Internal queue node has non-nil left child")
 		}
-		if curr.right != nil {
+		if curr.children[rightChild] != nil {
 			t.Errorf("Internal queue node has non-nil right child")
 		}
 		if curr.order == nil {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/fmstephe/flib/fmath"
 	"strconv"
 )
 
@@ -15,10 +16,10 @@ func (b *rbtree) String() string {
 	return b.root.String()
 }
 
-func (b *rbtree) push(in *node) {
+func (b *rbtree) push(nn *node) {
 	if b.root == nil {
-		b.root = in
-		in.pp = &b.root
+		b.root = nn
+		nn.parentIdx = -2 // Special case for root
 		return
 	}
 	b.root.push(in)
@@ -29,8 +30,8 @@ func (b *rbtree) peekMin() *node {
 	if n == nil {
 		return nil
 	}
-	for n.left != nil {
-		n = n.left
+	for n.children[leftChild] != nil {
+		n = n.children[leftChild]
 	}
 	return n
 }
@@ -50,8 +51,8 @@ func (b *rbtree) peekMax() *node {
 	if n == nil {
 		return nil
 	}
-	for n.right != nil {
-		n = n.right
+	for n.children[rightChild] != nil {
+		n = n.children[rightChild]
 	}
 	return n
 }
@@ -89,23 +90,23 @@ func (b *rbtree) get(val uint64) *node {
 		if val == n.val {
 			return n
 		}
-		if val < n.val {
-			n = n.left
-		} else {
-			n = n.right
-		}
+		child := fmath.UGreaterThan(val, n.val)
+		n = n.children[child]
 	}
-	panic("Unreachable")
 }
+
+const (
+	leftChild  = 0
+	rightChild = 1
+)
 
 type node struct {
 	black bool
 	// Tree fields
-	val    uint64
-	left   *node
-	right  *node
-	parent *node
-	pp     **node
+	val       uint64
+	children  [2]*node
+	parent    *node
+	parentIdx int // TODO this is bigger than it needs to be uint8?
 	// Limit queue fields
 	next *node
 	prev *node
@@ -128,11 +129,11 @@ func (n *node) String() string {
 	b.WriteString("(")
 	b.WriteString(valStr)
 	b.WriteString(colour)
-	if !(n.left == nil && n.right == nil) {
+	if !(n.children[leftChild] == nil && n.children[rightChild] == nil) {
 		b.WriteString(", ")
-		b.WriteString(n.left.String())
+		b.WriteString(n.children[leftChild].String())
 		b.WriteString(", ")
-		b.WriteString(n.right.String())
+		b.WriteString(n.children[rightChild].String())
 	}
 	b.WriteString(")")
 	return b.String()
@@ -143,6 +144,7 @@ func initNode(o *OrderNode, val uint64, n, other *node) {
 	n.next = n
 	n.prev = n
 	n.black = false
+	n.parentIdx = -1
 }
 
 func (n *node) getOrderNode() *OrderNode {
@@ -161,11 +163,11 @@ func (n *node) isRed() bool {
 
 func (n *node) isFree() bool {
 	switch {
-	case n.left != nil:
+	case n.children[leftChild] != nil:
 		return false
-	case n.right != nil:
+	case n.children[rightChild] != nil:
 		return false
-	case n.pp != nil:
+	case n.parentIdx != -1:
 		return false
 	case n.next != n:
 		return false
@@ -176,7 +178,62 @@ func (n *node) isFree() bool {
 }
 
 func (n *node) isHead() bool {
-	return n.pp != nil
+	return n.parentIdx != -1
+}
+
+func (n *node) rotSingle(dir int) {
+	oDir := fmath.UINot(dir)
+	s := n.children[oDir]
+	n.setChild(s.children[dir], oDir)
+	s.setChild(n, dir)
+	n.red = true
+	s.red = false
+}
+
+func (n *node) rotDouble() {
+	oDir := fmath.UINot(dir)
+	rotSingle(n.children[oDir], oDir)
+	rotSingle(n, dir)
+}
+
+func insert(root, nn *node) {
+	p := root
+	for {
+		if p.val == nn.val {
+			p.appendNode(nn)
+			return
+		}
+		dir := fmath.UIGTE(p.val, nn.val)
+		child := p.children[dir]
+		if child == nil {
+			p.setChild(nn, dir)
+			break
+		}
+		p = child
+	}
+	n = p
+	p = n.parent
+	for p != nil {
+		dir := n.parentIdx
+		oDir := fmath.UINot(dir)
+		if n.isRed() {
+			s := p.children[oDir]
+			if s.isRed() {
+				// Asking for a nil pointer panic
+				p.black = false
+				n.black = true
+				s.black = true
+			} else {
+				if n.children[dir].isRed() {
+					p.rotSingle(oDir)
+				} else if n.children[oDir].isRed() {
+					p.rotDouble(oDir)
+				}
+			}
+		}
+		n = p
+		p = n.parent
+	}
 }
 
 func (n *node) getSibling() *node {
@@ -184,13 +241,10 @@ func (n *node) getSibling() *node {
 	if p == nil {
 		return nil
 	}
-	if p.left == n {
-		return p.right
-	}
-	return p.left
+	p.children[fmath.UINot(n.parentIdx)]
 }
 
-func (n *node) addLast(in *node) {
+func (n *node) appendNode(in *node) {
 	last := n.next
 	last.prev = in
 	in.next = last
@@ -198,89 +252,55 @@ func (n *node) addLast(in *node) {
 	n.next = in
 }
 
-func (n *node) giveParent(nn *node) {
-	nn.parent = n.parent
-	nn.pp = n.pp
-	*nn.pp = nn
-	n.parent = nil
-	n.pp = nil
-}
-
-func (n *node) giveChildren(nn *node) {
-	nn.left = n.left
-	nn.right = n.right
-	if nn.left != nil {
-		nn.left.parent = nn
-		nn.left.pp = &nn.left
-	}
-	if nn.right != nil {
-		nn.right.parent = nn
-		nn.right.pp = &nn.right
-	}
-	n.left = nil
-	n.right = nil
-}
-
 func (n *node) givePosition(nn *node) {
 	n.giveParent(nn)
 	n.giveChildren(nn)
 	nn.black = n.black
-	// Guarantee: Each of n.parent/pp/left/right are now nil
+	// Guarantee: Each of n.parent/parentIdx/left/right are now nil
 }
 
-func (n *node) push(in *node) {
-	for {
-		switch {
-		case in.val == n.val:
-			n.addLast(in)
-			return
-		case in.val < n.val:
-			if n.left == nil {
-				in.toLeftOf(n)
-				repairInsert(n)
-				return
-			} else {
-				n = n.left
-			}
-		case in.val > n.val:
-			if n.right == nil {
-				in.toRightOf(n)
-				repairInsert(n)
-				return
-			} else {
-				n = n.right
-			}
-		}
-	}
+func (n *node) giveParent(nn *node) {
+	nn.parent = n.parent
+	nn.parentIdx = n.parentIdx
+	nn.parent.children[nn.parentIdx] = nn
+	n.parent = nil
+	n.parentIdx = -1
+}
+
+func (n *node) giveChildren(nn *node) {
+	nn.setChild(n.children[leftChild], leftChild)
+	nn.setChild(n.children[rightChild], rightChild)
+	n.children[leftChild] = nil
+	n.children[rightChild] = nil
 }
 
 func (n *node) detach() {
-	p := n.parent
-	s := n.getSibling()
 	var nn *node
 	switch {
-	case n.right == nil && n.left == nil:
-		*n.pp = nil
-		n.pp = nil
+	case n.children[rightChild] == nil && n.children[leftChild] == nil:
+		n.parent.children[n.parentIdx] = nil
 		n.parent = nil
-	case n.right == nil:
-		nn = n.left
+		n.parentIdx = -1
+	case n.children[rightChild] == nil:
+		nn = n.children[leftChild]
 		n.giveParent(nn)
-		n.left = nil
-	case n.left == nil:
-		nn = n.right
+		n.children[leftChild] = nil
+	case n.children[leftChild] == nil:
+		nn = n.children[rightChild]
 		n.giveParent(nn)
-		n.right = nil
+		n.children[rightChild] = nil
 	default:
-		nn = n.left.detachMax()
+		nn = n.children[leftChild].detachMax()
 		n.givePosition(nn)
 		return
 	}
+	p := n.parent
+	s := n.getSibling()
 	repairDetach(p, n, s, nn)
 }
 
 func repairDetach(p, n, s, nn *node) {
-	// Guarantee: Each of n.parent/pp/left/right are now nil
+	// Guarantee: Each of n.parent/parentIdx/left/right are now nil
 	if n.isRed() {
 		return
 	}
@@ -298,17 +318,17 @@ func repairToRoot(p, s *node) {
 			return
 		}
 		if s.isRed() { // Perform a rotation to make sibling black
-			if p.left == s {
+			if p.children[leftChild] == s {
 				p.rotateRight()
-				s = p.left
+				s = p.children[leftChild]
 			} else {
 				p.rotateLeft()
-				s = p.right
+				s = p.children[rightChild]
 			}
 		}
 		pRed := p.isRed()
-		slRed := s.left.isRed()
-		srRed := s.right.isRed()
+		slRed := s.children[leftChild].isRed()
+		srRed := s.children[rightChild].isRed()
 		if !slRed && !srRed {
 			if pRed { // Sibling's children are black and parent is red
 				p.black = true
@@ -318,7 +338,7 @@ func repairToRoot(p, s *node) {
 				s.black = false
 			}
 		} else { // One of sibling's children is red
-			if p.left == s {
+			if p.children[leftChild] == s {
 				if slRed {
 					p = p.rotateRight()
 				} else {
@@ -334,8 +354,8 @@ func repairToRoot(p, s *node) {
 				}
 			}
 			p.black = !pRed
-			p.left.black = true
-			p.right.black = true
+			p.children[leftChild].black = true
+			p.children[rightChild].black = true
 			return
 		}
 		s = p.getSibling()
@@ -345,24 +365,24 @@ func repairToRoot(p, s *node) {
 
 func repairInsert(n *node) {
 	for n != nil {
-		if n.left.isRed() && n.right.isRed() {
+		if n.children[leftChild].isRed() && n.children[rightChild].isRed() {
 			n.flip()
 		}
-		if n.left.isRed() {
-			if n.left.left.isRed() {
+		if n.children[leftChild].isRed() {
+			if n.children[leftChild].children[leftChild].isRed() {
 				n = n.rotateRight()
 			}
-			if n.left.right.isRed() {
-				n.left.rotateLeft()
+			if n.children[leftChild].children[rightChild].isRed() {
+				n.children[leftChild].rotateLeft()
 				n = n.rotateRight()
 			}
 		}
-		if n.right.isRed() {
-			if n.right.right.isRed() {
+		if n.children[rightChild].isRed() {
+			if n.children[rightChild].children[rightChild].isRed() {
 				n = n.rotateLeft()
 			}
-			if n.right.left.isRed() {
-				n.right.rotateRight()
+			if n.children[rightChild].children[leftChild].isRed() {
+				n.children[rightChild].rotateRight()
 				n = n.rotateLeft()
 			}
 		}
@@ -375,10 +395,12 @@ func (n *node) pop() {
 	case !n.isHead():
 		n.prev.next = n.next
 		n.next.prev = n.prev
-		n.parent = nil
-		n.pp = nil
-		n.left = nil
-		n.right = nil
+		/*
+			n.parent = nil
+			n.parentIdx = -1
+			n.children[leftChild] = nil
+			n.children[rightChild] = nil
+		*/
 	case n.next != n:
 		n.prev.next = n.next
 		n.next.prev = n.prev
@@ -389,53 +411,36 @@ func (n *node) pop() {
 	}
 	n.next = n
 	n.prev = n
-	// Guarantee: Each of n.parent/pp/left/right are now nil
-	// Guarantee: Both n.left/right point to n
+	// Guarantee: Each of n.parent/parentIdx/left/right are now nil
+	// Guarantee: Both n.children[leftChild]/right point to n
 }
 
 func (n *node) detachMax() *node {
 	m := n
 	for {
-		if m.right == nil {
+		if m.children[rightChild] == nil {
 			break
 		}
-		m = m.right
+		m = m.children[rightChild]
 	}
 	m.detach()
 	return m
 }
 
-func (n *node) toRightOf(to *node) {
-	to.right = n
-	if n != nil {
-		n.parent = to
-		n.pp = &to.right
+func (n *node) setChild(child *node, childIdx int) {
+	n.children[childIdx] = child
+	if child != nil {
+		child.parent = n
+		child.parentIdx = childIdx
 	}
 }
 
-func (n *node) toLeftOf(to *node) {
-	to.left = n
-	if n != nil {
-		n.parent = to
-		n.pp = &to.left
-	}
-}
-
-func (n *node) rotateLeft() *node {
-	r := n.right
-	n.giveParent(r)
-	r.left.toRightOf(n)
-	n.toLeftOf(r)
-	r.black = n.black
-	n.black = false
-	return r
-}
-
-func (n *node) rotateRight() *node {
-	l := n.left
+func (n *node) rotate(dir int) *node {
+	odir := fmath.UIComplement(dir)
+	l := n.children[dir]
 	n.giveParent(l)
-	l.right.toLeftOf(n)
-	n.toRightOf(l)
+	l.children[odir].makeChildOf(n, dir)
+	n.makeChildOf(l, odir)
 	l.black = n.black
 	n.black = false
 	return l
@@ -443,22 +448,32 @@ func (n *node) rotateRight() *node {
 
 func (n *node) flip() {
 	n.black = !n.black
-	n.left.black = !n.left.black
-	n.right.black = !n.right.black
+	n.children[leftChild].black = !n.children[leftChild].black
+	n.children[rightChild].black = !n.children[rightChild].black
+}
+
+func (n *node) moveRed(dir int) {
+	odir := fmath.UIComplement(dir)
+	n.flip()
+	if n.children[odir].children[dir].isRed() {
+		n.children[odir].rotate(odir)
+		n.rotate(dir)
+		n.parent.flip()
+	}
 }
 
 func (n *node) moveRedLeft() {
 	n.flip()
-	if n.right.left.isRed() {
-		n.right.rotateRight()
-		n.rotateLeft()
+	if n.children[rightChild].children[leftChild].isRed() {
+		n.children[rightChild].rotate(rightChild)
+		n.rotate(leftChild)
 		n.parent.flip()
 	}
 }
 
 func (n *node) moveRedRight() {
 	n.flip()
-	if n.left.left.isRed() {
+	if n.children[leftChild].children[leftChild].isRed() {
 		n.rotateRight()
 		n.parent.flip()
 	}
@@ -479,8 +494,8 @@ func blackBalance(n *node, depth int) int {
 	if n == nil {
 		return 0
 	}
-	lb := blackBalance(n.left, depth+1)
-	rb := blackBalance(n.right, depth+1)
+	lb := blackBalance(n.children[leftChild], depth+1)
+	rb := blackBalance(n.children[rightChild], depth+1)
 	if lb != rb {
 		panic(errors.New(fmt.Sprintf("Unbalanced rbtree found at depth %d. Left: , %d Right: %d", depth, lb, rb)))
 	}
@@ -495,9 +510,9 @@ func testReds(n *node, depth int) {
 	if n == nil {
 		return
 	}
-	if n.isRed() && (n.left.isRed() || n.right.isRed()) && depth != 0 {
+	if n.isRed() && (n.children[leftChild].isRed() || n.children[rightChild].isRed()) && depth != 0 {
 		panic(errors.New(fmt.Sprintf("Red violation found at depth %d", depth)))
 	}
-	testReds(n.left, depth+1)
-	testReds(n.right, depth+1)
+	testReds(n.children[leftChild], depth+1)
+	testReds(n.children[rightChild], depth+1)
 }
