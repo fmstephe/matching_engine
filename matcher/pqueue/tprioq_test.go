@@ -251,7 +251,7 @@ func checkStructure(t *testing.T, n *node) {
 		return
 	}
 	checkQueue(t, n)
-	if *n.pp != n {
+	if n.parent.children[n.parentIdx] != n {
 		t.Errorf("Parent pointer does not point to child node")
 	}
 	if n.children[leftChild] != nil {
@@ -275,7 +275,7 @@ func checkQueue(t *testing.T, n *node) {
 		if curr.prev != prev {
 			t.Errorf("Bad queue next/prev pair")
 		}
-		if curr.pp != nil {
+		if curr.parentIdx != nilParentIdx {
 			t.Errorf("Internal queue node with non-nil parent pointer")
 		}
 		if curr.children[leftChild] != nil {
