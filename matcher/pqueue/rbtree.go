@@ -26,7 +26,7 @@ func (b *rbtree) String() string {
 func (b *rbtree) push(nn *node) {
 	if b.root == nil {
 		b.root = nn
-		nn.parentIdx = 2 // Special case for root
+		nn.parentIdx = rootParentIdx
 		return
 	}
 	insert(b.root, nn)
@@ -157,6 +157,7 @@ func (n *node) getOrderNode() *OrderNode {
 }
 
 func (n *node) isRed() bool {
+	// TODO return n == nil || !n.black
 	if n != nil {
 		return !n.black
 	}
@@ -184,19 +185,20 @@ func (n *node) isHead() bool {
 }
 
 func (n *node) rotSingle(dir uint8) *node {
-	oDir := fmath.UI8Not(dir)
-	s := n.children[oDir]
-	n.setChild(s.children[dir], oDir)
-	s.setChild(n, dir)
+	oDir := dir ^ 1
+	nr := n.children[oDir]
+	n.setChild(nr.children[dir], oDir)
+	n.giveParent(nr)
+	nr.setChild(n, dir)
 	n.black = false
-	s.black = true
-	return s
+	nr.black = true
+	return nr
 }
 
-func (n *node) rotDouble(dir uint8) *node {
-	oDir := fmath.UI8Not(dir)
-	s := n.children[oDir].rotSingle(oDir)
-	return s.rotSingle(dir)
+func (n *node) rotDouble(dir uint8) {
+	oDir := dir ^ 1
+	n.children[oDir].rotSingle(oDir)
+	n.rotSingle(dir)
 }
 
 func insert(root, nn *node) {
@@ -214,32 +216,42 @@ func insert(root, nn *node) {
 		}
 		p = child
 	}
-	repairInsert(p)
+	repairInsert(nn)
 }
 
-func repairInsert(n *node) {
-	p := n.parent
-	for p != nil {
+func repairInsert(nn *node) {
+	n := nn       // node
+	p := n.parent // parent
+	g := p.parent // grandparent
+	for g != nil || p.black {
 		dir := n.parentIdx
-		oDir := fmath.UI8Not(dir)
+		oDir := dir ^ 1
 		if n.isRed() {
-			s := p.children[oDir]
-			if s.isRed() {
-				// Asking for a nil pointer panic
-				p.black = false
-				n.black = true
-				s.black = true
-			} else {
-				if n.children[dir].isRed() {
-					p = p.rotSingle(oDir)
-				} else if n.children[oDir].isRed() {
-					p = p.rotDouble(oDir)
+			u := g.getOtherChild(p.parentIdx) // uncle
+			if u.isRed() {
+				g.black = false
+				p.black = true
+				u.black = true
+				n = g // rebalancing skips to grandparent
+				if g.parent == nil {
+					return
 				}
+			} else {
+				if n.parentIdx == p.parentIdx {
+					g.rotSingle(oDir)
+				} else {
+					g.rotDouble(oDir)
+				}
+				return
 			}
 		}
-		n = p
 		p = n.parent
+		g = p.parent
 	}
+}
+
+func (n *node) getOtherChild(dir uint8) *node {
+	return n.children[dir^1]
 }
 
 func (n *node) getSibling() *node {
@@ -247,7 +259,7 @@ func (n *node) getSibling() *node {
 	if p == nil {
 		return nil
 	}
-	return p.children[fmath.UI8Not(n.parentIdx)]
+	return p.children[n.parentIdx^1]
 }
 
 func (n *node) appendNode(in *node) {
@@ -268,7 +280,9 @@ func (n *node) givePosition(nn *node) {
 func (n *node) giveParent(nn *node) {
 	nn.parent = n.parent
 	nn.parentIdx = n.parentIdx
-	nn.parent.children[nn.parentIdx] = nn
+	if n.parent != nil {
+		nn.parent.children[nn.parentIdx] = nn
+	}
 	n.parent = nil
 	n.parentIdx = nilParentIdx
 }
@@ -301,7 +315,7 @@ func (n *node) detach() {
 		return
 	}
 	p := n.parent
-	s := n.getSibling()
+	s := p.getOtherChild(n.parentIdx)
 	repairDetach(p, n, s, nn)
 }
 

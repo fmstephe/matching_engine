@@ -22,6 +22,7 @@ func TestPush(t *testing.T) {
 	testPushSimple(t, 1000, 100, 10000, msg.BUY)
 }
 
+/*
 func TestPushPopSimpleMin(t *testing.T) {
 	// buys
 	testPushPopSimple(t, 1, 1, 1, msg.BUY, maxPopper)
@@ -81,6 +82,7 @@ func TestAddRemoveRandom(t *testing.T) {
 	testAddRemoveRandom(t, 100, 100, 10000, msg.SELL)
 	testAddRemoveRandom(t, 1000, 100, 10000, msg.SELL)
 }
+*/
 
 func testPushAscDesc(t *testing.T, pushCount int, kind msg.MsgKind) {
 	priceTree := &rbtree{}
@@ -251,7 +253,7 @@ func checkStructure(t *testing.T, n *node) {
 		return
 	}
 	checkQueue(t, n)
-	if n.parent.children[n.parentIdx] != n {
+	if n.parentIdx != nilParentIdx && n.parentIdx != rootParentIdx && n.parent.children[n.parentIdx] != n {
 		t.Errorf("Parent pointer does not point to child node")
 	}
 	if n.children[leftChild] != nil {
