@@ -244,8 +244,8 @@ func validate(t *testing.T, priceTree, guidTree *rbtree) {
 	if err := validateRBT(guidTree); err != nil {
 		t.Errorf("%s", err.Error())
 	}
-	checkStructure(t, priceTree.root)
-	checkStructure(t, guidTree.root)
+	checkStructure(t, priceTree.getRoot())
+	checkStructure(t, guidTree.getRoot())
 }
 
 func checkStructure(t *testing.T, n *node) {
@@ -253,7 +253,7 @@ func checkStructure(t *testing.T, n *node) {
 		return
 	}
 	checkQueue(t, n)
-	if n.parentIdx != nilParentIdx && n.parentIdx != rootParentIdx && n.parent.children[n.parentIdx] != n {
+	if n.parentDir != nilParentDir && n.parentDir != rootParentDir && n.parent.children[n.parentDir] != n {
 		t.Errorf("Parent pointer does not point to child node")
 	}
 	if n.children[leftChild] != nil {
@@ -277,8 +277,11 @@ func checkQueue(t *testing.T, n *node) {
 		if curr.prev != prev {
 			t.Errorf("Bad queue next/prev pair")
 		}
-		if curr.parentIdx != nilParentIdx {
-			t.Errorf("Internal queue node with non-nil parent pointer")
+		if curr.parent != nil {
+			t.Errorf("Internal queue node with non-nil parent")
+		}
+		if curr.parentDir != nilParentDir {
+			t.Errorf("Internal queue node with non nilParentDir")
 		}
 		if curr.children[leftChild] != nil {
 			t.Errorf("Internal queue node has non-nil left child")
