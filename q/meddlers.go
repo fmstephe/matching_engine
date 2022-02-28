@@ -33,7 +33,7 @@ type probDropMeddler struct {
 
 func NewProbDropMeddler(prob float64) *probDropMeddler {
 	if prob < 0 || prob > 1 {
-		panic(fmt.Sprintf("Probability (%d) must be 0.0 <= x <= 1.0", prob))
+		panic(fmt.Sprintf("Probability (%f) must be 0.0 <= x <= 1.0", prob))
 	}
 	return &probDropMeddler{prob: prob}
 }
